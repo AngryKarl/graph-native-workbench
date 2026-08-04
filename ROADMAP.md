@@ -71,7 +71,8 @@ but the boundary does not change casually.
 - [x] Verified publisher, expiry, compatibility and permission presentation
 - [x] One-action Registry installation with server-side re-verification
 - [x] Out-of-band local trust configuration and publisher key rotation
-- [ ] Public reference Registry and automated Pack publishing workflow
+- [x] Reproducible reference Registry build and automated signed publishing workflow
+- [ ] Activate the public Reference Registry after repository visibility and signing-key setup
 
 ## Before 1.0
 

@@ -20,6 +20,15 @@ Only install Packs whose publisher you trust, and use a separate OS account or
 container when network denial or stronger tenant isolation is required. See the
 [trust and isolation model](docs/TRUST_AND_ISOLATION.md).
 
+## Registry signing keys
+
+Publisher private keys must be stored only in an approved secret manager. The
+reference publishing workflow reads `REGISTRY_ED25519_PRIVATE_KEY` from GitHub
+Actions secrets, writes it only to an ephemeral runner directory, and never
+uploads it. Rotate the key and publish a new trusted key id if private material
+is exposed in logs, artifacts or a Pack repository. See the
+[Registry publishing guide](docs/REGISTRY_PUBLISHING.md).
+
 ## Reporting a vulnerability
 
 Do not open a public issue for a suspected vulnerability. Use GitHub Private

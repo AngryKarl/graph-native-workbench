@@ -65,6 +65,8 @@ See [`.gpack` Package Format](PACK_FORMAT.md) for compatibility, integrity,
 permissions, side-by-side versions and rollback behavior. Installed third-party
 handlers and projectors run in restricted child Workers by default; see
 [Registry trust and Worker isolation](TRUST_AND_ISOLATION.md).
+Registry operators can use the reusable release definition and CI flow in the
+[Registry publishing guide](REGISTRY_PUBLISHING.md).
 
 ## Version 0.1 constraints
 

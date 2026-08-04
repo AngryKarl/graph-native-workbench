@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { readFile, writeFile } from 'node:fs/promises';
-import { relative, resolve } from 'node:path';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, relative, resolve } from 'node:path';
 import { industryPackJsonSchema, type GraphEvent } from '@graph-native/contracts';
 import {
   compilePack,
@@ -16,6 +16,7 @@ import {
 import {
   activateInstalledPack,
   buildPackArtifact,
+  buildPackRegistryRelease,
   formatArtifactInspection,
   formatFixtureResult,
   formatPackInspection,
@@ -74,7 +75,34 @@ function assignments(flag: string): Record<string, unknown> {
 }
 
 function usage(): string {
-  return `Graph Native Workbench\n\nUsage:\n  graphwork demo [--pause]\n  graphwork pack init <pack-id> [directory]\n  graphwork pack validate [module-or-json]\n  graphwork pack inspect [module-or-json-or-gpack]\n  graphwork pack test [module] [--fixture fixture-id]\n  graphwork pack demo [module] [--fixture fixture-id]\n  graphwork pack build <module> [--output pack.gpack] [--engine ^0.1.0]\n  graphwork pack install <pack.gpack> --trust [--root .graphwork/packs]\n  graphwork pack registry sign <payload.json> --key-id publisher --private-key key.pem --output registry.json\n  graphwork pack registry verify <registry.json-or-url> --key publisher=public.pem [--allow-http]\n  graphwork pack registry install <pack-id>@<version> --registry https://... --key publisher=public.pem\n  graphwork pack list [--root .graphwork/packs]\n  graphwork pack activate <pack-id>@<version> [--root .graphwork/packs]\n  graphwork pack rollback <pack-id> [--root .graphwork/packs]\n  graphwork pack uninstall <pack-id> [--version 0.1.0] [--root .graphwork/packs]\n  graphwork pack run <module> --set topic=hello [--decision approval=true] [--database runs.sqlite]\n  graphwork pack run <pack-id> --installed --set topic=hello [--root .graphwork/packs]\n  graphwork pack resume <module-or-pack-id> --run <run-id> --database runs.sqlite [--installed]\n  graphwork pack schema [output.json]\n\nRepeat --set/--decision/--permission for more values. --input/--decisions also accept JSON or @file.json.\nExecutable local .gpack artifacts require explicit --trust. Signed registries require a configured publisher key.`;
+  return [
+    'Graph Native Workbench',
+    '',
+    'Usage:',
+    '  graphwork demo [--pause]',
+    '  graphwork pack init <pack-id> [directory]',
+    '  graphwork pack validate [module-or-json]',
+    '  graphwork pack inspect [module-or-json-or-gpack]',
+    '  graphwork pack test [module] [--fixture fixture-id]',
+    '  graphwork pack demo [module] [--fixture fixture-id]',
+    '  graphwork pack build <module> [--output pack.gpack] [--engine ^0.1.0]',
+    '  graphwork pack install <pack.gpack> --trust [--root .graphwork/packs]',
+    '  graphwork pack registry build <release.json> --artifact-base-url https://... [--output-dir registry-dist]',
+    '  graphwork pack registry sign <payload.json> --key-id publisher --private-key key.pem --output registry.json',
+    '  graphwork pack registry verify <registry.json-or-url> --key publisher=public.pem [--allow-http]',
+    '  graphwork pack registry install <pack-id>@<version> --registry https://... --key publisher=public.pem',
+    '  graphwork pack list [--root .graphwork/packs]',
+    '  graphwork pack activate <pack-id>@<version> [--root .graphwork/packs]',
+    '  graphwork pack rollback <pack-id> [--root .graphwork/packs]',
+    '  graphwork pack uninstall <pack-id> [--version 0.1.0] [--root .graphwork/packs]',
+    '  graphwork pack run <module> --set topic=hello [--decision approval=true] [--database runs.sqlite]',
+    '  graphwork pack run <pack-id> --installed --set topic=hello [--root .graphwork/packs]',
+    '  graphwork pack resume <module-or-pack-id> --run <run-id> --database runs.sqlite [--installed]',
+    '  graphwork pack schema [output.json]',
+    '',
+    'Repeat --set/--decision/--permission for more values. --input/--decisions also accept JSON or @file.json.',
+    'Executable local .gpack artifacts require explicit --trust. Signed registries require a configured publisher key.',
+  ].join('\n');
 }
 
 function printEvent(event: GraphEvent): void {
@@ -148,6 +176,30 @@ async function trustedRegistryKeys(): Promise<Record<string, string>> {
 async function registryCommand(): Promise<void> {
   const action = args[2];
   const subject = args[3];
+  if (action === 'build') {
+    if (!subject) throw new Error('Missing Registry release config path.');
+    const artifactBaseUrl = valueAfter('--artifact-base-url');
+    if (!artifactBaseUrl) throw new Error('Registry build requires --artifact-base-url <https-url>.');
+    const outputDirectory = resolve(valueAfter('--output-dir') ?? 'registry-dist');
+    const expiresInDays = Number(valueAfter('--expires-in-days') ?? 30);
+    const configPath = resolve(subject);
+    const release = await buildPackRegistryRelease(
+      JSON.parse(await readFile(configPath, 'utf8')) as unknown,
+      {
+        configDirectory: dirname(configPath),
+        outputDirectory,
+        artifactBaseUrl,
+        expiresInDays,
+      },
+    );
+    const payloadPath = resolve(valueAfter('--output') ?? resolve(outputDirectory, 'registry-payload.json'));
+    await mkdir(dirname(payloadPath), { recursive: true });
+    await writeFile(payloadPath, `${JSON.stringify(release.payload, null, 2)}\n`, 'utf8');
+    console.log(`✓ Built Registry payload ${release.payload.registry.id}`);
+    console.log(`  Packs: ${release.artifacts.length}`);
+    console.log(`  ${payloadPath}`);
+    return;
+  }
   if (action === 'sign') {
     if (!subject) throw new Error('Missing registry payload JSON path.');
     const keyId = valueAfter('--key-id');

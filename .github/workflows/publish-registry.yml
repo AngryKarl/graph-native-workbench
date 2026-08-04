@@ -1,0 +1,102 @@
+name: Publish reference Registry
+
+on:
+  workflow_dispatch:
+    inputs:
+      expires_in_days:
+        description: Signed catalog lifetime
+        required: true
+        default: "30"
+        type: string
+      publish:
+        description: Deploy the verified bundle to GitHub Pages
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reference-registry-publish
+  cancel-in-progress: false
+
+jobs:
+  build-sign-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.17.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+
+      - name: Build reference Pack artifacts and Registry payload
+        env:
+          EXPIRES_IN_DAYS: ${{ inputs.expires_in_days }}
+        run: |
+          owner="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          repository="${GITHUB_REPOSITORY#*/}"
+          artifact_base_url="https://${owner}.github.io/${repository}/registry/"
+          pnpm graphwork pack registry build registry/reference.json \
+            --artifact-base-url "$artifact_base_url" \
+            --expires-in-days "$EXPIRES_IN_DAYS" \
+            --output-dir registry-site/registry
+
+      - name: Sign and verify Registry
+        env:
+          REGISTRY_PRIVATE_KEY: ${{ secrets.REGISTRY_ED25519_PRIVATE_KEY }}
+        run: |
+          if [ -z "$REGISTRY_PRIVATE_KEY" ]; then
+            echo "Repository secret REGISTRY_ED25519_PRIVATE_KEY is required." >&2
+            exit 1
+          fi
+          secret_dir="$(mktemp -d)"
+          trap 'rm -rf "$secret_dir"' EXIT
+          printf '%s' "$REGISTRY_PRIVATE_KEY" > "$secret_dir/private.pem"
+          openssl pkey -in "$secret_dir/private.pem" -pubout -out registry-site/registry/publisher-public.pem
+          pnpm graphwork pack registry sign registry-site/registry/registry-payload.json \
+            --key-id graphwork.reference.v1 \
+            --private-key "$secret_dir/private.pem" \
+            --output registry-site/registry/registry.json
+          pnpm graphwork pack registry verify registry-site/registry/registry.json \
+            --key graphwork.reference.v1=registry-site/registry/publisher-public.pem
+          (cd registry-site/registry && sha256sum registry.json publisher-public.pem packs/*.gpack > SHA256SUMS)
+
+      - name: Upload verified release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: reference-registry-${{ github.run_id }}
+          path: registry-site
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy:
+    if: ${{ inputs.publish }}
+    needs: build-sign-verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: reference-registry-${{ github.run_id }}
+          path: registry-site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: registry-site
+      - name: Deploy public Registry
+        id: deployment
+        uses: actions/deploy-pages@v4

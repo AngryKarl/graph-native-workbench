@@ -20,3 +20,10 @@ Industry Packs declare their own semantic version and version each execution
 graph independently. Before 1.0, a Pack should pin compatible minor versions of
 the contracts, core and Pack SDK. `.gpack` inspection and signed Registry
 verification enforce the declared Graphwork engine range before installation.
+
+## Reference Registry
+
+The reference Pack catalog is defined in `registry/reference.json` and built by
+the same Pack SDK used by third-party publishers. Follow the
+[Registry publishing guide](REGISTRY_PUBLISHING.md) for signing-key setup,
+non-publishing rehearsals, GitHub Pages deployment and key rotation.

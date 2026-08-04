@@ -6,3 +6,4 @@ export * from './conformance.js';
 export * from './package.js';
 export * from './registry.js';
 export * from './isolation.js';
+export * from './publisher.js';

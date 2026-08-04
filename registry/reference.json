@@ -1,0 +1,15 @@
+{
+  "formatVersion": 1,
+  "registry": {
+    "id": "graphwork_reference",
+    "name": "Graphwork Reference Registry"
+  },
+  "packs": [
+    {
+      "source": "../packs/research/src/index.ts"
+    },
+    {
+      "source": "../packs/architecture/src/index.ts"
+    }
+  ]
+}
