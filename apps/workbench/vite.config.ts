@@ -15,5 +15,16 @@ export default defineConfig({
   build: {
     outDir: resolve(import.meta.dirname, 'dist/client'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('@xyflow')) return 'graph-editor';
+          if (id.includes('react-markdown') || id.includes('remark-') || id.includes('unified')) return 'markdown';
+          if (id.includes('node_modules/react') || id.includes('node_modules/scheduler')) return 'react-vendor';
+          if (id.includes('lucide-react')) return 'icons';
+          return undefined;
+        },
+      },
+    },
   },
 });

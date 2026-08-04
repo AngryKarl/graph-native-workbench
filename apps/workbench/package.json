@@ -13,7 +13,9 @@
   "dependencies": {
     "@graph-native/contracts": "workspace:*",
     "@graph-native/core": "workspace:*",
+    "@graph-native/pack-sdk": "workspace:*",
     "@graph-native/pack-architecture": "workspace:*",
+    "@xyflow/react": "^12.11.2",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

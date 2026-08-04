@@ -1,56 +1,80 @@
-export interface EvidenceInput {
-  source: string;
-  locator: string;
-  claim: string;
-}
+import type {
+  GraphDefinition,
+  GraphEdge,
+  GraphEvent,
+  GraphNode,
+  IndustryPackManifest,
+  PackFixtureDefinition,
+  StateField,
+} from '@graph-native/contracts';
 
-export interface ProjectInput {
-  project_name: string;
-  project_type: string;
-  output_language: string;
-  site_context: string;
-  client_goals: string[];
-  constraints: string[];
-  evidence: EvidenceInput[];
-}
+export type {
+  GraphDefinition,
+  GraphEdge,
+  GraphEvent,
+  GraphNode,
+  IndustryPackManifest,
+  PackFixtureDefinition,
+  StateField,
+};
 
-export interface PackNode {
-  id: string;
-  kind: string;
-  label: string;
-  description: string;
+export interface GraphPosition {
+  x: number;
+  y: number;
 }
 
 export interface PackDescription {
   id: string;
   name: string;
   version: string;
-  graph: {
-    id: string;
-    nodes: PackNode[];
-    edges: Array<{ id: string; source: string; target: string }>;
-  };
-  input: ProjectInput;
+  description: string;
+  license: string;
+  manifest: IndustryPackManifest;
+  graph: GraphDefinition;
+  positions: Record<string, GraphPosition>;
+  input: Record<string, unknown>;
+  fixtures: PackFixtureDefinition[];
+  handlers: string[];
 }
 
-export interface GraphEventView {
-  runId: string;
-  seq: number;
-  timestamp: string;
-  type: string;
-  nodeId?: string;
-  detail: Record<string, unknown>;
+export interface PackCatalogItem {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  license: string;
+  installed: boolean;
+  executable: boolean;
+  graphCount: number;
+  objectTypeCount: number;
+  roleCount: number;
+  toolCount: number;
+}
+
+export interface PackArtifactPreview {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  license: string;
+  bytes: number;
+  checksum: string;
+  compatible: boolean;
+  engineRange: string;
+  permissions: Array<'handlers.execute' | 'context.write' | 'network' | 'filesystem'>;
 }
 
 export interface ContextObjectView {
   id: string;
   type: string;
+  status: string;
   data: Record<string, unknown>;
   provenance: {
     sourceIds: string[];
     producedByRunId?: string;
     producedByNodeId?: string;
     actorId: string;
+    recordedAt: string;
   };
 }
 
@@ -63,9 +87,11 @@ export interface ContextRelationView {
 
 export interface RunSnapshot {
   runId: string;
+  packId: string;
+  graphId: string;
   status: 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
   state: Record<string, unknown>;
-  events: GraphEventView[];
+  events: GraphEvent[];
   error?: string;
   context?: {
     objects: ContextObjectView[];
@@ -73,4 +99,21 @@ export interface RunSnapshot {
   };
 }
 
-export type StageId = 'input' | 'evidence' | 'analysis' | 'directions' | 'review';
+export interface WorkbenchBootstrap {
+  activePackId: string;
+  installedPackIds: string[];
+  catalog: PackCatalogItem[];
+  activePack: PackDescription;
+  runs: RunSnapshot[];
+}
+
+export interface GraphValidation {
+  valid: true;
+  graphId: string;
+  nodeCount: number;
+  edgeCount: number;
+  entryNodeIds: string[];
+}
+
+export type PrimaryView = 'editor' | 'runs' | 'context' | 'packs';
+export type InspectorTab = 'node' | 'input' | 'policy';

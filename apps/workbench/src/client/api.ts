@@ -1,4 +1,12 @@
-import type { PackDescription, ProjectInput, RunSnapshot } from './types.js';
+import type {
+  GraphDefinition,
+  GraphPosition,
+  GraphValidation,
+  PackArtifactPreview,
+  PackDescription,
+  RunSnapshot,
+  WorkbenchBootstrap,
+} from './types.js';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -10,12 +18,81 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return value;
 }
 
-export function loadPack(): Promise<PackDescription> {
-  return request('/api/pack');
+async function artifactRequest<T>(path: string, file: File, trust = false): Promise<T> {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/vnd.graphwork.gpack',
+      ...(trust ? { 'x-graphwork-trust': 'true' } : {}),
+    },
+    body: file,
+  });
+  const value = await response.json() as T & { error?: string };
+  if (!response.ok) throw new Error(value.error ?? `Request failed (${response.status}).`);
+  return value;
 }
 
-export function startRun(input: ProjectInput): Promise<RunSnapshot> {
-  return request('/api/runs', { method: 'POST', body: JSON.stringify({ input }) });
+export function loadWorkbench(): Promise<WorkbenchBootstrap> {
+  return request('/api/workbench');
+}
+
+export function loadPack(packId: string): Promise<PackDescription> {
+  return request(`/api/packs/${encodeURIComponent(packId)}`);
+}
+
+export function installPack(packId: string): Promise<WorkbenchBootstrap> {
+  return request(`/api/packs/${encodeURIComponent(packId)}/install`, { method: 'POST' });
+}
+
+export function uninstallPack(packId: string): Promise<WorkbenchBootstrap> {
+  return request(`/api/packs/${encodeURIComponent(packId)}/install`, { method: 'DELETE' });
+}
+
+export function activatePack(packId: string): Promise<WorkbenchBootstrap> {
+  return request(`/api/packs/${encodeURIComponent(packId)}/activate`, { method: 'POST' });
+}
+
+export function inspectPackArtifact(file: File): Promise<PackArtifactPreview> {
+  return artifactRequest('/api/packs/artifact/inspect', file);
+}
+
+export function installPackArtifact(file: File): Promise<WorkbenchBootstrap> {
+  return artifactRequest('/api/packs/artifact/install', file, true);
+}
+
+export function validateGraph(packId: string, graph: GraphDefinition): Promise<GraphValidation> {
+  return request('/api/graphs/validate', {
+    method: 'POST',
+    body: JSON.stringify({ packId, graph }),
+  });
+}
+
+export function saveGraphDraft(
+  packId: string,
+  graph: GraphDefinition,
+  positions: Record<string, GraphPosition>,
+): Promise<PackDescription> {
+  return request(`/api/packs/${encodeURIComponent(packId)}/graphs/${encodeURIComponent(graph.id)}/draft`, {
+    method: 'PUT',
+    body: JSON.stringify({ graph, positions }),
+  });
+}
+
+export function resetGraphDraft(packId: string, graphId: string): Promise<PackDescription> {
+  return request(`/api/packs/${encodeURIComponent(packId)}/graphs/${encodeURIComponent(graphId)}/draft`, {
+    method: 'DELETE',
+  });
+}
+
+export function startRun(
+  packId: string,
+  graphId: string,
+  input: Record<string, unknown>,
+): Promise<RunSnapshot> {
+  return request('/api/runs', {
+    method: 'POST',
+    body: JSON.stringify({ packId, graphId, input }),
+  });
 }
 
 export function decideRun(runId: string, approved: boolean): Promise<RunSnapshot> {

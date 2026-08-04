@@ -40,8 +40,21 @@ pnpm workbench
 ```
 
 然后打开 `http://127.0.0.1:4311`。界面可以编辑项目目标、场地背景、约束和带
-定位的来源证据，运行真实的 Architecture Pack，在人工评审节点批准或退回，
-并预览中文概念设计简报及其“来源—研判—方向—交付物”追溯链。
+定位的来源证据，也可以直接编辑工作流本身：
+
+1. 在 **Packs** 中安装并打开内置的 Industry Pack。
+2. 从左侧节点库拖入节点，在画布上移动、连线或删除节点。
+3. 在右侧检查器修改节点名称、处理器、状态读写范围、配置和执行策略。
+4. 在 **Input** 中载入 Pack 样例或编辑输入，然后运行经过保存和验证的真实执行图。
+5. 在人工节点批准或退回，并在底部查看事件、状态、Markdown 交付物和上下文摘要。
+6. 在 **Runs** 中回看历史运行，在 **Context** 中检查对象、关系和完整来源信息。
+7. 在 **Packs** 中选择 **Import .gpack**，检查兼容范围、权限和 SHA-256 指纹后，
+   显式信任并安装制品。
+
+图草稿、已安装 Pack、当前 Pack、运行记录和人工检查点会持久化到本地
+`.graphwork/workbench.json`。Architecture 与 Research 是内置 Pack；可信的
+`.gpack` 可以直接从 Packs 页面导入，也可以通过 CLI 安装，并保存在
+`.graphwork/packs`。
 
 ## 创建 Industry Pack
 
@@ -52,6 +65,18 @@ pnpm graphwork pack inspect packs/customer_success/src/index.ts
 pnpm graphwork pack test packs/customer_success/src/index.ts
 pnpm graphwork pack run packs/customer_success/src/index.ts --set "topic=renewal risk"
 ```
+
+把同一个 Pack 打包、安装并按 ID 运行：
+
+```bash
+pnpm graphwork pack build packs/customer_success/src/index.ts --output customer_success-0.1.0.gpack
+pnpm graphwork pack inspect customer_success-0.1.0.gpack
+pnpm graphwork pack install customer_success-0.1.0.gpack --trust
+pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
+```
+
+不同版本会并排保存，并支持激活、回滚和卸载。完整协议与安全边界见
+[`.gpack` 格式说明](docs/PACK_FORMAT.md)。
 
 生成的 Pack 可以立即运行，不需要修改内核。详细内容见
 [产品宪章](docs/PRODUCT_CHARTER.md)、[Pack 开发指南](docs/PACK_AUTHORING.md)和

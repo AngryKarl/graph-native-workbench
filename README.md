@@ -48,11 +48,24 @@ Start the local API and React interface together:
 pnpm workbench
 ```
 
-Open `http://127.0.0.1:4311`. The Workbench loads the Chinese architecture
-fixture, lets you edit project facts and located evidence, runs the real
-Architecture Pack to its human gate, and records an approval or rejection. An
-approved run produces the Markdown brief and projects its sources, findings,
-directions, decision and deliverable into the context graph.
+Open `http://127.0.0.1:4311`. The Workbench is a visual editor over the same
+versioned contracts used by the compiler and runtime:
+
+1. Install and open a bundled Industry Pack from **Packs**.
+2. Drag nodes onto the canvas, connect or delete them, and edit their handlers,
+   state access and execution policies in the inspector.
+3. Load a Pack fixture or edit graph input from the **Input** inspector.
+4. Run the saved graph, inspect its ordered event stream, and approve or reject
+   work at a human checkpoint.
+5. Open **Runs** to revisit execution history and **Context** to inspect the
+   confirmed objects, relations and provenance produced by approved work.
+6. Open **Packs**, choose **Import .gpack**, review compatibility, permissions
+   and the SHA-256 fingerprint, then explicitly trust and install the artifact.
+
+Graph drafts, installed Packs, active Pack selection, runs and checkpoints are
+stored locally in `.graphwork/workbench.json`. Architecture and Research are
+bundled; trusted `.gpack` artifacts can be imported from the Packs view or
+installed through the CLI and are stored under `.graphwork/packs`.
 
 ## Create an Industry Pack
 
@@ -68,6 +81,18 @@ pnpm graphwork pack schema industry-pack.schema.json
 The generated Pack is executable immediately. It declares its ontology, state,
 workflow, deliverables, fixtures and handlers through public contracts; it does
 not edit the kernel.
+
+Package, install and run the same Pack as a versioned artifact:
+
+```bash
+pnpm graphwork pack build packs/customer_success/src/index.ts --output customer_success-0.1.0.gpack
+pnpm graphwork pack inspect customer_success-0.1.0.gpack
+pnpm graphwork pack install customer_success-0.1.0.gpack --trust
+pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
+```
+
+Installed versions live side by side and support explicit activation, rollback
+and removal. See the [`.gpack` format and security boundary](docs/PACK_FORMAT.md).
 
 Run the first deep vertical Pack and its two zero-key golden fixtures:
 
@@ -104,11 +129,11 @@ The kernel generalizes mechanisms. Industry Packs own business semantics.
 ```text
 packages/contracts   Serializable execution, context and Pack contracts
 packages/core        Compiler, runtime and memory/SQLite context stores
-packages/pack-sdk    define/load/inspect/scaffold developer experience
+packages/pack-sdk    authoring, packaging, integrity and lifecycle SDK
 packs/research       Zero-key cross-industry reference Pack
 packs/architecture   Evidence-backed concept design Industry Pack
 apps/cli             graphwork CLI
-apps/workbench       Local API and React review Workbench
+apps/workbench       Persistent local API and React graph editor
 tests                Contract and end-to-end behavior tests
 docs                 Charter, authoring guide, ADRs and roadmap
 ```
@@ -125,15 +150,23 @@ docs                 Charter, authoring guide, ADRs and roadmap
 - SQLite persistence for runs, events and resumable checkpoints;
 - versioned context objects and relations with run/node provenance;
 - in-memory and SQLite context-store adapters;
-- `init`, `validate`, `inspect`, `test`, `run` and `resume` Pack CLI commands;
+- `init`, `validate`, `inspect`, `test`, `build`, `install`, `list`, `activate`,
+  `rollback`, `uninstall`, `run` and `resume` Pack CLI commands;
+- portable `.gpack` artifacts with engine compatibility, permission metadata,
+  SHA-256 integrity and side-by-side installed versions;
 - declared deliverables and executable Pack fixtures;
 - JSON Schema export for editor integration;
 - Windows and Linux CI with a zero-key smoke demo.
-- responsive Architecture Pack Workbench with project input, execution trace,
-  human review, deliverable preview and provenance inspection.
+- responsive graph editor with node/edge authoring, contract and policy
+  inspection, autosaved drafts, undo/redo and real runtime execution;
+- local Pack installation and switching for the bundled Architecture and
+  Research Packs;
+- persisted run history, human checkpoint resume, Markdown deliverables and
+  context graph provenance exploration.
 
 Read the [Product Charter](docs/PRODUCT_CHARTER.md),
 [Pack Authoring Guide](docs/PACK_AUTHORING.md),
+[`.gpack` Package Format](docs/PACK_FORMAT.md),
 [Architecture Pack](docs/ARCHITECTURE_PACK.md),
 [Runtime Adapter Guide](docs/RUNTIME_ADAPTERS.md),
 [Roadmap](ROADMAP.md) and [release process](docs/RELEASE_PROCESS.md).

@@ -14,13 +14,22 @@ import {
   researchPack,
 } from '@graph-native/pack-research';
 import {
+  activateInstalledPack,
+  buildPackArtifact,
+  formatArtifactInspection,
   formatFixtureResult,
   formatPackInspection,
   inspectPack,
+  inspectPackArtifact,
+  installPackArtifact,
+  listInstalledPacks,
+  loadInstalledPack,
   loadPackModule,
+  rollbackInstalledPack,
   runAllPackFixtures,
   runPackFixture,
   scaffoldPack,
+  uninstallInstalledPack,
 } from '@graph-native/pack-sdk';
 
 const args = process.argv.slice(2);
@@ -61,7 +70,7 @@ function assignments(flag: string): Record<string, unknown> {
 }
 
 function usage(): string {
-  return `Graph Native Workbench\n\nUsage:\n  graphwork demo [--pause]\n  graphwork pack validate [module-or-json]\n  graphwork pack inspect [module-or-json]\n  graphwork pack test [module] [--fixture fixture-id]\n  graphwork pack demo [module] [--fixture fixture-id]\n  graphwork pack run <module> --set topic=hello [--decision approval=true] [--database runs.sqlite]\n  graphwork pack resume <module> --run <run-id> --database runs.sqlite [--decision approval=true]\n  graphwork pack init <pack-id> [directory]\n  graphwork pack schema [output.json]\n\nRepeat --set/--decision for more fields. --input/--decisions also accept JSON or @file.json.\nThe research Pack is used when validate/inspect/test/demo receives no path.`;
+  return `Graph Native Workbench\n\nUsage:\n  graphwork demo [--pause]\n  graphwork pack init <pack-id> [directory]\n  graphwork pack validate [module-or-json]\n  graphwork pack inspect [module-or-json-or-gpack]\n  graphwork pack test [module] [--fixture fixture-id]\n  graphwork pack demo [module] [--fixture fixture-id]\n  graphwork pack build <module> [--output pack.gpack] [--engine ^0.1.0]\n  graphwork pack install <pack.gpack> --trust [--root .graphwork/packs]\n  graphwork pack list [--root .graphwork/packs]\n  graphwork pack activate <pack-id>@<version> [--root .graphwork/packs]\n  graphwork pack rollback <pack-id> [--root .graphwork/packs]\n  graphwork pack uninstall <pack-id> [--version 0.1.0] [--root .graphwork/packs]\n  graphwork pack run <module> --set topic=hello [--decision approval=true] [--database runs.sqlite]\n  graphwork pack run <pack-id> --installed --set topic=hello [--root .graphwork/packs]\n  graphwork pack resume <module-or-pack-id> --run <run-id> --database runs.sqlite [--installed]\n  graphwork pack schema [output.json]\n\nRepeat --set/--decision/--permission for more values. --input/--decisions also accept JSON or @file.json.\nExecutable .gpack artifacts require explicit --trust during installation.`;
 }
 
 function printEvent(event: GraphEvent): void {
@@ -113,6 +122,12 @@ async function resolvePack(path: string | undefined) {
   return loadPackModule(path);
 }
 
+async function resolveRunnablePack(subject: string) {
+  return args.includes('--installed')
+    ? loadInstalledPack(subject, valueAfter('--root'))
+    : loadPackModule(subject);
+}
+
 async function packCommand(): Promise<void> {
   const action = args[1];
   const subject = args[2];
@@ -124,6 +139,10 @@ async function packCommand(): Promise<void> {
     return;
   }
   if (action === 'inspect') {
+    if (subject?.toLowerCase().endsWith('.gpack')) {
+      console.log(formatArtifactInspection(inspectPackArtifact(subject)));
+      return;
+    }
     const loaded = await resolvePack(subject);
     console.log(formatPackInspection(inspectPack(loaded.pack)));
     return;
@@ -180,9 +199,76 @@ async function packCommand(): Promise<void> {
     console.log(`✓ Wrote Industry Pack JSON Schema to ${outputPath}`);
     return;
   }
+  if (action === 'build') {
+    if (!subject) throw new Error('Missing Pack module path.');
+    const permissions = valuesAfter('--permission') as Array<
+      'handlers.execute' | 'context.write' | 'network' | 'filesystem'
+    >;
+    const output = valueAfter('--output');
+    const engineRange = valueAfter('--engine');
+    const result = await buildPackArtifact({
+      source: subject,
+      ...(output ? { output } : {}),
+      ...(engineRange ? { engineRange } : {}),
+      ...(permissions.length > 0 ? { permissions } : {}),
+    });
+    console.log(`✓ Built ${result.descriptor.pack.id}@${result.descriptor.pack.version}`);
+    console.log(`  ${result.artifact}`);
+    console.log(`  SHA-256 ${result.checksum}`);
+    return;
+  }
+  if (action === 'install') {
+    if (!subject) throw new Error('Missing .gpack artifact path.');
+    const root = valueAfter('--root');
+    const installed = installPackArtifact(subject, {
+      trust: args.includes('--trust'),
+      ...(root ? { root } : {}),
+      activate: !args.includes('--no-activate'),
+    });
+    console.log(`✓ Installed ${installed.directory}`);
+    console.log(`  Active version: ${installed.version}`);
+    return;
+  }
+  if (action === 'list') {
+    const registry = listInstalledPacks(valueAfter('--root'));
+    const entries = Object.entries(registry.packs);
+    if (entries.length === 0) {
+      console.log('No third-party Packs installed.');
+      return;
+    }
+    for (const [id, record] of entries.sort(([left], [right]) => left.localeCompare(right))) {
+      const versions = Object.keys(record.versions).sort().map((version) =>
+        version === record.activeVersion ? `${version} (active)` : version,
+      );
+      console.log(`${id}: ${versions.join(', ')}`);
+    }
+    return;
+  }
+  if (action === 'activate') {
+    if (!subject) throw new Error('Expected <pack-id>@<version>.');
+    const separator = subject.lastIndexOf('@');
+    if (separator < 1) throw new Error('Expected <pack-id>@<version>.');
+    const id = subject.slice(0, separator);
+    const version = subject.slice(separator + 1);
+    activateInstalledPack(id, version, valueAfter('--root'));
+    console.log(`✓ Activated ${id}@${version}`);
+    return;
+  }
+  if (action === 'rollback') {
+    if (!subject) throw new Error('Missing Pack id.');
+    const installed = rollbackInstalledPack(subject, valueAfter('--root'));
+    console.log(`✓ Rolled back ${subject} to ${installed.version}`);
+    return;
+  }
+  if (action === 'uninstall') {
+    if (!subject) throw new Error('Missing Pack id.');
+    uninstallInstalledPack(subject, valueAfter('--version'), valueAfter('--root'));
+    console.log(`✓ Uninstalled ${subject}${valueAfter('--version') ? `@${valueAfter('--version')}` : ''}`);
+    return;
+  }
   if (action === 'run') {
     if (!subject) throw new Error('Missing Pack module path.');
-    const loaded = await loadPackModule(subject);
+    const loaded = await resolveRunnablePack(subject);
     const compiled = compilePack(loaded.pack);
     const graphId = valueAfter('--graph') ?? compiled.manifest.graphs[0]?.id;
     const graph = graphId ? compiled.graphs.get(graphId) : undefined;
@@ -221,7 +307,7 @@ async function packCommand(): Promise<void> {
     const databasePath = valueAfter('--database');
     if (!runId) throw new Error('Missing --run <run-id>.');
     if (!databasePath) throw new Error('Missing --database <runs.sqlite>.');
-    const loaded = await loadPackModule(subject);
+    const loaded = await resolveRunnablePack(subject);
     const compiled = compilePack(loaded.pack);
     const store = new SQLiteRunStore(resolve(databasePath));
     try {

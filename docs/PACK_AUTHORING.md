@@ -53,7 +53,15 @@ domain boundary has leaked.
 6. Implement deterministic handlers first, then add an Agent SDK adapter.
 7. Declare at least one deliverable and one zero-key fixture.
 8. Run `pnpm graphwork pack test <module>` and add one context-projection test.
-9. Prove the Pack without changing `packages/core`.
+9. Build and inspect the distributable artifact:
+   `pnpm graphwork pack build <module> --output dist/<id>-<version>.gpack`.
+10. Install it with explicit trust and run by Pack ID:
+    `pnpm graphwork pack install <artifact> --trust`, then
+    `pnpm graphwork pack run <id> --installed --set topic=hello`.
+11. Prove the Pack without changing `packages/core`.
+
+See [`.gpack` Package Format](PACK_FORMAT.md) for compatibility, integrity,
+permissions, side-by-side versions and rollback behavior.
 
 ## Version 0.1 constraints
 

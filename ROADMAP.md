@@ -18,7 +18,7 @@ but the boundary does not change casually.
 - [x] In-memory and SQLite context stores
 - [x] GitHub community health files and cross-platform CI
 - [x] JSON Schema export for editor completion
-- [ ] Pack compatibility/version command
+- [x] `.gpack` compatibility, version activation and rollback commands
 - [ ] Release packaging and `pnpm dlx` installation path
 
 ## 0.3 — Real Agent and tool adapters
@@ -40,8 +40,25 @@ but the boundary does not change casually.
 
 - [x] Read-only run and context graph explorer
 - [x] Human inbox and checkpoint resume experience
-- [ ] Pack installation and configuration
-- [ ] Visual authoring as a projection of the same versioned contracts
+- [x] Responsive local interface and zero-key vertical workflow
+
+## 0.6 — Visual authoring and durable workspace
+
+- [x] Visual authoring as a projection of the same versioned contracts
+- [x] Node, edge, handler, state-access and execution-policy editing
+- [x] Autosaved drafts, undo/redo, run history and checkpoint persistence
+
+## 0.7 — Portable local Pack ecosystem
+
+- [x] `.gpack` build, inspection, integrity and compatibility contract
+- [x] Side-by-side installation, activation, rollback and removal
+- [x] Workbench Pack import with explicit executable-code trust review
+- [x] Trusted local third-party Pack discovery and execution
+- [x] Bundled Pack installation, activation and configuration
+
+## 0.8 — Registry trust and execution isolation
+
+- [ ] Signed remote Pack registry and isolated execution workers
 
 ## Before 1.0
 

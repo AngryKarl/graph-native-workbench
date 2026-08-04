@@ -3,3 +3,4 @@ export * from './manifest.js';
 export * from './projector.js';
 export { researchHandlers as handlers } from './handlers.js';
 export { researchPack as pack } from './manifest.js';
+export { projectResearchRun as projector } from './projector.js';

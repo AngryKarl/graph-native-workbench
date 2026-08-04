@@ -7,6 +7,13 @@
   "exports": "./src/index.ts",
   "dependencies": {
     "@graph-native/contracts": "workspace:*",
-    "@graph-native/core": "workspace:*"
+    "@graph-native/core": "workspace:*",
+    "esbuild": "^0.25.0",
+    "fflate": "^0.8.2",
+    "semver": "^7.7.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/semver": "^7.7.0"
   }
 }

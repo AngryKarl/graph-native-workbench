@@ -20,6 +20,11 @@ versioning once public packages begin publishing.
 - Architecture Concept Design Pack with two zero-key fixtures and a typed context projector.
 - Responsive local Workbench for project input, execution inspection, human review,
   Chinese/English deliverables and provenance-chain exploration.
+- Contract-native visual graph authoring with autosaved drafts, undo/redo and
+  execution of the saved graph through the same compiler and runtime.
+- Portable `.gpack` artifacts with compatibility metadata, permission review,
+  SHA-256 integrity, side-by-side versions, activation and rollback.
+- Workbench Pack management for bundled and explicitly trusted local artifacts.
 
 ### Changed
 

@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { IndustryPackManifest } from '@graph-native/contracts';
@@ -8,6 +8,7 @@ export interface LoadedPackModule {
   readonly pack: IndustryPackManifest;
   readonly handlers: HandlerRegistry;
   readonly source: string;
+  readonly projector?: (store: unknown, run: unknown) => Promise<void>;
 }
 
 export async function loadPackModule(filePath: string): Promise<LoadedPackModule> {
@@ -17,11 +18,19 @@ export async function loadPackModule(filePath: string): Promise<LoadedPackModule
     return { pack, handlers: {}, source: absolutePath };
   }
 
-  const imported = (await import(pathToFileURL(absolutePath).href)) as Record<string, unknown>;
+  const modifiedAt = (await stat(absolutePath)).mtimeMs;
+  const imported = (await import(`${pathToFileURL(absolutePath).href}?mtime=${modifiedAt}`)) as Record<string, unknown>;
   const pack = (imported.pack ?? imported.default) as IndustryPackManifest | undefined;
   if (!pack) {
     throw new Error(`Pack module "${absolutePath}" must export "pack" or a default manifest.`);
   }
   const handlers = (imported.handlers ?? {}) as HandlerRegistry;
-  return { pack, handlers, source: absolutePath };
+  return {
+    pack,
+    handlers,
+    source: absolutePath,
+    ...(typeof imported.projector === 'function'
+      ? { projector: imported.projector as (store: unknown, run: unknown) => Promise<void> }
+      : {}),
+  };
 }

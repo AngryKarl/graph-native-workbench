@@ -71,6 +71,15 @@ function sourceTemplate(id: string, title: string): string {
     `  '${id}.produce': ({ state }) => ({ result: 'Pack ${id} processed: ' + String(state.topic) }),`,
     '});',
     '',
+    'export async function projector(store, run) {',
+    '  const recordedAt = new Date().toISOString();',
+    '  await store.appendObject({',
+    "    id: run.runId + '.artifact', type: 'artifact', version: 1, status: 'confirmed',",
+    "    data: { content: String(run.state.result ?? '') }, validFrom: recordedAt, validTo: null,",
+    `    provenance: { sourceIds: [], producedByRunId: run.runId, producedByNodeId: 'produce', actorId: '${id}.runtime', recordedAt },`,
+    '  });',
+    '}',
+    '',
   ].join('\n');
 }
 
@@ -109,6 +118,8 @@ export async function scaffoldPack(idInput: string, targetDirectory: string): Pr
     '',
     '```bash',
     `pnpm graphwork pack validate ${repositoryPath}/src/index.ts`,
+    `pnpm graphwork pack test ${repositoryPath}/src/index.ts`,
+    `pnpm graphwork pack build ${repositoryPath}/src/index.ts --output ${id}-0.1.0.gpack`,
     '```',
     '',
   ].join('\n');

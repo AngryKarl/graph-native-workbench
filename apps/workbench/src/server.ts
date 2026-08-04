@@ -1,13 +1,23 @@
 import { createReadStream } from 'node:fs';
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
+import { inspectPackArtifact, installPackArtifact } from '@graph-native/pack-sdk';
+import { bundledPackCatalog, discoverInstalledPackRuntimes } from './catalog.js';
 import { WorkbenchService } from './service.js';
 
-const port = Number(process.env.GRAPH_WORKBENCH_PORT ?? 4310);
-const service = new WorkbenchService();
 const appDirectory = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
+const workspaceDirectory = resolve(appDirectory, '..', '..');
+const port = Number(process.env.GRAPH_WORKBENCH_PORT ?? 4310);
+const dataFile = process.env.GRAPH_WORKBENCH_DATA
+  ?? resolve(workspaceDirectory, '.graphwork/workbench.json');
+const packRoot = process.env.GRAPH_WORKBENCH_PACKS
+  ?? resolve(workspaceDirectory, '.graphwork/packs');
+const discovery = await discoverInstalledPackRuntimes(packRoot);
+const service = new WorkbenchService({ dataFile });
 const clientDirectory = resolve(appDirectory, 'dist/client');
 
 const mediaTypes: Record<string, string> = {
@@ -38,15 +48,135 @@ async function body(request: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as unknown;
 }
 
+async function artifactBody(request: IncomingMessage): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > 25 * 1024 * 1024) throw new Error('Pack artifact exceeds the 25 MB limit.');
+    chunks.push(buffer);
+  }
+  if (size === 0) throw new Error('Pack artifact is empty.');
+  return Buffer.concat(chunks);
+}
+
+async function withTemporaryArtifact<T>(request: IncomingMessage, operation: (path: string) => Promise<T> | T): Promise<T> {
+  const temporary = resolve(tmpdir(), `graphwork-${randomUUID()}.gpack`);
+  await writeFile(temporary, await artifactBody(request));
+  try {
+    return await operation(temporary);
+  } finally {
+    await rm(temporary, { force: true });
+  }
+}
+
+function artifactPreview(filePath: string) {
+  const inspection = inspectPackArtifact(filePath);
+  return {
+    id: inspection.manifest.id,
+    name: inspection.manifest.name,
+    version: inspection.manifest.version,
+    description: inspection.manifest.description,
+    license: inspection.manifest.license,
+    bytes: inspection.bytes,
+    checksum: inspection.checksum,
+    compatible: inspection.compatible,
+    engineRange: inspection.descriptor.engine.graphwork,
+    permissions: inspection.descriptor.permissions,
+  };
+}
+
 async function api(request: IncomingMessage, response: ServerResponse, pathname: string): Promise<boolean> {
+  if (request.method === 'GET' && pathname === '/api/workbench') {
+    json(response, 200, service.describeWorkbench());
+    return true;
+  }
+  if (request.method === 'POST' && pathname === '/api/packs/artifact/inspect') {
+    json(response, 200, await withTemporaryArtifact(request, artifactPreview));
+    return true;
+  }
+  if (request.method === 'POST' && pathname === '/api/packs/artifact/install') {
+    if (request.headers['x-graphwork-trust'] !== 'true') {
+      throw new Error('Executable Pack installation requires explicit trust confirmation.');
+    }
+    const next = await withTemporaryArtifact(request, async (filePath) => {
+      const preview = artifactPreview(filePath);
+      if (!preview.compatible) throw new Error(`Pack requires Graphwork ${preview.engineRange}.`);
+      installPackArtifact(filePath, { root: packRoot, trust: true });
+      const refreshed = await discoverInstalledPackRuntimes(packRoot);
+      const runtime = bundledPackCatalog.get(preview.id);
+      if (!runtime || runtime.manifest.version !== preview.version) {
+        throw new Error(refreshed.errors.find((error) => error.includes(preview.id))
+          ?? `Installed Pack "${preview.id}@${preview.version}" could not be loaded.`);
+      }
+      service.install(preview.id);
+      return service.activate(preview.id);
+    });
+    json(response, 201, next);
+    return true;
+  }
   if (request.method === 'GET' && pathname === '/api/pack') {
     json(response, 200, service.describePack());
     return true;
   }
+  const pack = pathname.match(/^\/api\/packs\/([^/]+)$/);
+  if (request.method === 'GET' && pack) {
+    json(response, 200, service.describePack(decodeURIComponent(pack[1]!)));
+    return true;
+  }
+  const install = pathname.match(/^\/api\/packs\/([^/]+)\/install$/);
+  if (request.method === 'POST' && install) {
+    json(response, 200, service.install(decodeURIComponent(install[1]!)));
+    return true;
+  }
+  if (request.method === 'DELETE' && install) {
+    json(response, 200, service.uninstall(decodeURIComponent(install[1]!)));
+    return true;
+  }
+  const activate = pathname.match(/^\/api\/packs\/([^/]+)\/activate$/);
+  if (request.method === 'POST' && activate) {
+    json(response, 200, service.activate(decodeURIComponent(activate[1]!)));
+    return true;
+  }
+  const draft = pathname.match(/^\/api\/packs\/([^/]+)\/graphs\/([^/]+)\/draft$/);
+  if (request.method === 'PUT' && draft) {
+    const payload = await body(request) as {
+      graph?: Parameters<WorkbenchService['saveDraft']>[1];
+      positions?: Parameters<WorkbenchService['saveDraft']>[2];
+    };
+    if (!payload.graph || !payload.positions) throw new Error('Draft requires graph and positions.');
+    if (payload.graph.id !== decodeURIComponent(draft[2]!)) throw new Error('Graph id does not match the request path.');
+    json(response, 200, service.saveDraft(decodeURIComponent(draft[1]!), payload.graph, payload.positions));
+    return true;
+  }
+  if (request.method === 'DELETE' && draft) {
+    json(response, 200, service.resetDraft(
+      decodeURIComponent(draft[1]!),
+      decodeURIComponent(draft[2]!),
+    ));
+    return true;
+  }
+  if (request.method === 'POST' && pathname === '/api/graphs/validate') {
+    const payload = await body(request) as {
+      packId?: string;
+      graph?: Parameters<WorkbenchService['validateGraph']>[1];
+    };
+    if (!payload.packId || !payload.graph) throw new Error('Validation requires packId and graph.');
+    json(response, 200, service.validateGraph(payload.packId, payload.graph));
+    return true;
+  }
   if (request.method === 'POST' && pathname === '/api/runs') {
-    const payload = await body(request) as { input?: Record<string, unknown> };
+    const payload = await body(request) as {
+      input?: Record<string, unknown>;
+      packId?: string;
+      graphId?: string;
+    };
     if (!payload.input) throw new Error('Request must include an input object.');
-    json(response, 201, await service.start(payload.input));
+    json(response, 201, await service.start(payload.input, {
+      ...(payload.packId ? { packId: payload.packId } : {}),
+      ...(payload.graphId ? { graphId: payload.graphId } : {}),
+    }));
     return true;
   }
   const decision = pathname.match(/^\/api\/runs\/([^/]+)\/decision$/);
@@ -106,4 +236,6 @@ createServer(async (request, response) => {
   }
 }).listen(port, '127.0.0.1', () => {
   console.log(`Graph Native Workbench API: http://127.0.0.1:${port}`);
+  if (discovery.loaded > 0) console.log(`Loaded ${discovery.loaded} trusted Pack(s) from ${packRoot}`);
+  for (const error of discovery.errors) console.warn(`Skipped installed Pack: ${error}`);
 });
