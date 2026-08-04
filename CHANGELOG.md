@@ -25,6 +25,10 @@ versioning once public packages begin publishing.
 - Portable `.gpack` artifacts with compatibility metadata, permission review,
   SHA-256 integrity, side-by-side versions, activation and rollback.
 - Workbench Pack management for bundled and explicitly trusted local artifacts.
+- Ed25519-signed Pack Registry verification and HTTPS installation with
+  out-of-band publisher trust keys, mandatory expiry and signed artifact metadata.
+- Restricted child-process execution for installed third-party Pack handlers and
+  context projectors, with environment, filesystem, memory and time boundaries.
 
 ### Changed
 

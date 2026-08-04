@@ -55,13 +55,16 @@ domain boundary has leaked.
 8. Run `pnpm graphwork pack test <module>` and add one context-projection test.
 9. Build and inspect the distributable artifact:
    `pnpm graphwork pack build <module> --output dist/<id>-<version>.gpack`.
-10. Install it with explicit trust and run by Pack ID:
+10. Install it with explicit local trust, or publish it through a signed
+    Registry, then run by Pack ID:
     `pnpm graphwork pack install <artifact> --trust`, then
     `pnpm graphwork pack run <id> --installed --set topic=hello`.
 11. Prove the Pack without changing `packages/core`.
 
 See [`.gpack` Package Format](PACK_FORMAT.md) for compatibility, integrity,
-permissions, side-by-side versions and rollback behavior.
+permissions, side-by-side versions and rollback behavior. Installed third-party
+handlers and projectors run in restricted child Workers by default; see
+[Registry trust and Worker isolation](TRUST_AND_ISOLATION.md).
 
 ## Version 0.1 constraints
 

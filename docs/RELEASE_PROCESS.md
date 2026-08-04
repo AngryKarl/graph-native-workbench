@@ -18,5 +18,5 @@ documented in the changelog with a migration note.
 
 Industry Packs declare their own semantic version and version each execution
 graph independently. Before 1.0, a Pack should pin compatible minor versions of
-the contracts, core and Pack SDK. A formal compatibility command is planned in
-the 0.2 roadmap.
+the contracts, core and Pack SDK. `.gpack` inspection and signed Registry
+verification enforce the declared Graphwork engine range before installation.

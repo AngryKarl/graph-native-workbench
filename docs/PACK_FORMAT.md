@@ -66,7 +66,9 @@ pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
 Installation verifies the format, file whitelist, expanded size, semantic
 identity, engine range and every declared SHA-256 digest before writing into
 `.graphwork/packs/<id>/<version>`. Executable handlers are rejected unless the
-operator supplies `--trust`.
+operator supplies `--trust`. The local installation record also pins the
+descriptor digest so permission metadata cannot be changed after installation
+without detection.
 
 The Workbench discovers trusted active versions from `.graphwork/packs` when it
 starts. You can also open the **Packs** view, choose **Import .gpack**, review
@@ -92,10 +94,16 @@ replacement first.
 
 A checksum proves that installed bytes match the artifact; it does not prove
 who authored those bytes or that the code is safe. Until signed registry
-metadata and worker isolation land:
+metadata is configured, local artifacts still rely on explicit operator trust:
 
 - obtain Packs from a source you can audit;
 - inspect permissions and checksums before installation;
 - use a dedicated OS/container boundary for untrusted code;
 - never put secrets in a Pack manifest or artifact;
 - do not treat `--trust` as a sandbox.
+
+Signed Registry metadata can bind publisher identity to the artifact checksum,
+compatibility and permissions. Workbench and installed-Pack CLI execution use a
+restricted child Worker for third-party handlers and projectors. See
+[Registry trust and Worker isolation](TRUST_AND_ISOLATION.md) for the exact
+guarantees and remaining OS/container boundary.

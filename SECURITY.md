@@ -7,15 +7,18 @@ release receive security fixes.
 
 ## Third-party Industry Packs
 
-`.gpack` artifacts can contain executable JavaScript handlers. Installation
+`.gpack` artifacts can contain executable JavaScript handlers. Local installation
 requires `--trust`, verifies the engine range and SHA-256 integrity, and the
-Workbench rechecks installed files before importing them. These checks detect
-damage or modification; they do not sandbox code or establish author identity.
+Workbench rechecks installed files before execution. Signed Registry installation
+also verifies an Ed25519 publisher signature, expiry and the signed artifact
+identity, checksum, engine range and permissions.
 
-Only install Packs whose source and publisher you trust. Run unknown Packs in a
-separate OS account or container without credentials or access to sensitive
-files. Signed publisher metadata and isolated Pack workers are planned but are
-not part of format v1.
+Third-party handlers and context projectors execute in a restricted child
+process without inherited application secrets and with filesystem, child-process,
+memory and time limits. Node's permission model does not isolate network access.
+Only install Packs whose publisher you trust, and use a separate OS account or
+container when network denial or stronger tenant isolation is required. See the
+[trust and isolation model](docs/TRUST_AND_ISOLATION.md).
 
 ## Reporting a vulnerability
 

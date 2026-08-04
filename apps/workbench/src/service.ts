@@ -107,19 +107,25 @@ export class WorkbenchService {
 
   describeWorkbench() {
     const workspace = this.store.snapshot();
-    const catalog = [...bundledPackCatalog.values()].map(({ manifest }) => ({
-      id: manifest.id,
-      name: manifest.name,
-      version: manifest.version,
-      description: manifest.description,
-      license: manifest.license,
-      installed: workspace.installedPackIds.includes(manifest.id),
-      executable: true,
-      graphCount: manifest.graphs.length,
-      objectTypeCount: manifest.ontology.objectTypes.length,
-      roleCount: manifest.roles.length,
-      toolCount: manifest.tools.length,
-    }));
+    const catalog = [...bundledPackCatalog.values()].map((runtime) => {
+      const { manifest } = runtime;
+      return {
+        id: manifest.id,
+        name: manifest.name,
+        version: manifest.version,
+        description: manifest.description,
+        license: manifest.license,
+        installed: workspace.installedPackIds.includes(manifest.id),
+        executable: true,
+        graphCount: manifest.graphs.length,
+        objectTypeCount: manifest.ontology.objectTypes.length,
+        roleCount: manifest.roles.length,
+        toolCount: manifest.tools.length,
+        executionMode: runtime.executionMode,
+        trustSource: runtime.trustSource,
+        ...(runtime.publisherKeyId ? { publisherKeyId: runtime.publisherKeyId } : {}),
+      };
+    });
     const runs = Object.values(workspace.runs)
       .map(publicRun)
       .sort((left, right) => right.events[0]!.timestamp.localeCompare(left.events[0]!.timestamp));

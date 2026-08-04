@@ -94,6 +94,21 @@ pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
 Installed versions live side by side and support explicit activation, rollback
 and removal. See the [`.gpack` format and security boundary](docs/PACK_FORMAT.md).
 
+Organizations can publish the same artifacts through an Ed25519-signed HTTPS
+Registry. Publisher keys are configured out of band; the signed index binds the
+Pack identity, checksum, compatibility and permissions before download:
+
+```bash
+pnpm graphwork pack registry verify https://packs.example.com/registry.json \
+  --key acme.release=registry-public.pem
+pnpm graphwork pack registry install customer_success@0.1.0 \
+  --registry https://packs.example.com/registry.json \
+  --key acme.release=registry-public.pem
+```
+
+Installed third-party handlers and projectors execute in restricted child
+Workers rather than the Workbench process.
+
 Run the first deep vertical Pack and its two zero-key golden fixtures:
 
 ```bash
@@ -154,6 +169,9 @@ docs                 Charter, authoring guide, ADRs and roadmap
   `rollback`, `uninstall`, `run` and `resume` Pack CLI commands;
 - portable `.gpack` artifacts with engine compatibility, permission metadata,
   SHA-256 integrity and side-by-side installed versions;
+- Ed25519-signed HTTPS Registry metadata with expiry and out-of-band publisher
+  trust keys;
+- restricted child Workers for third-party handlers and context projectors;
 - declared deliverables and executable Pack fixtures;
 - JSON Schema export for editor integration;
 - Windows and Linux CI with a zero-key smoke demo.
@@ -167,6 +185,7 @@ docs                 Charter, authoring guide, ADRs and roadmap
 Read the [Product Charter](docs/PRODUCT_CHARTER.md),
 [Pack Authoring Guide](docs/PACK_AUTHORING.md),
 [`.gpack` Package Format](docs/PACK_FORMAT.md),
+[Registry Trust and Worker Isolation](docs/TRUST_AND_ISOLATION.md),
 [Architecture Pack](docs/ARCHITECTURE_PACK.md),
 [Runtime Adapter Guide](docs/RUNTIME_ADAPTERS.md),
 [Roadmap](ROADMAP.md) and [release process](docs/RELEASE_PROCESS.md).

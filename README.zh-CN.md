@@ -78,6 +78,21 @@ pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
 不同版本会并排保存，并支持激活、回滚和卸载。完整协议与安全边界见
 [`.gpack` 格式说明](docs/PACK_FORMAT.md)。
 
+组织也可以通过 Ed25519 签名的 HTTPS Registry 发布 Pack。发布者公钥由使用方
+独立配置，签名索引会在下载前绑定 Pack 身份、校验和、兼容范围与权限：
+
+```bash
+pnpm graphwork pack registry verify https://packs.example.com/registry.json \
+  --key acme.release=registry-public.pem
+pnpm graphwork pack registry install customer_success@0.1.0 \
+  --registry https://packs.example.com/registry.json \
+  --key acme.release=registry-public.pem
+```
+
+安装的第三方 Pack 处理器和上下文投影器会在受限制的子进程 Worker 中执行，
+不会加载进 Workbench 主进程。详细边界见
+[Registry 信任与 Worker 隔离](docs/TRUST_AND_ISOLATION.md)。
+
 生成的 Pack 可以立即运行，不需要修改内核。详细内容见
 [产品宪章](docs/PRODUCT_CHARTER.md)、[Pack 开发指南](docs/PACK_AUTHORING.md)和
 [路线图](ROADMAP.md)。

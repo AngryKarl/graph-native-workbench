@@ -58,7 +58,12 @@ but the boundary does not change casually.
 
 ## 0.8 — Registry trust and execution isolation
 
-- [ ] Signed remote Pack registry and isolated execution workers
+- [x] Ed25519-signed remote Registry metadata with expiry and trusted-key verification
+- [x] Registry-bound artifact identity, checksum, compatibility and permissions
+- [x] HTTPS Registry install and CLI publisher trust workflow
+- [x] Restricted child-process handlers and context projectors for third-party Packs
+- [x] Environment, filesystem, child-process, memory and execution-time boundaries
+- [ ] OS/container network isolation adapter
 
 ## Before 1.0
 

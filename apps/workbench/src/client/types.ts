@@ -49,6 +49,9 @@ export interface PackCatalogItem {
   objectTypeCount: number;
   roleCount: number;
   toolCount: number;
+  executionMode: 'in-process' | 'isolated-worker';
+  trustSource: 'bundled' | 'local-explicit' | 'signed-registry';
+  publisherKeyId?: string;
 }
 
 export interface PackArtifactPreview {

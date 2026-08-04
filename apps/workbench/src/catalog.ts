@@ -1,6 +1,6 @@
 import type { IndustryPackManifest } from '@graph-native/contracts';
 import type { ContextGraphStore, GraphState, HandlerRegistry } from '@graph-native/core';
-import { listInstalledPacks, loadInstalledPack } from '@graph-native/pack-sdk';
+import { listInstalledPacks, loadInstalledPackIsolated } from '@graph-native/pack-sdk';
 import {
   architectureHandlers,
   architecturePack,
@@ -19,6 +19,9 @@ export interface PackRuntimeDefinition {
     store: ContextGraphStore,
     run: { readonly runId: string; readonly state: GraphState },
   ) => Promise<void>;
+  readonly executionMode: 'in-process' | 'isolated-worker';
+  readonly trustSource: 'bundled' | 'local-explicit' | 'signed-registry';
+  readonly publisherKeyId?: string;
 }
 
 export const bundledPackCatalog = new Map<string, PackRuntimeDefinition>([
@@ -28,6 +31,8 @@ export const bundledPackCatalog = new Map<string, PackRuntimeDefinition>([
       manifest: architecturePack,
       handlers: architectureHandlers,
       projector: projectArchitectureRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
     },
   ],
   [
@@ -36,6 +41,8 @@ export const bundledPackCatalog = new Map<string, PackRuntimeDefinition>([
       manifest: researchPack,
       handlers: researchHandlers,
       projector: projectResearchRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
     },
   ],
 ]);
@@ -51,12 +58,17 @@ export async function discoverInstalledPackRuntimes(root = '.graphwork/packs'): 
   const errors: string[] = [];
   for (const id of Object.keys(registry.packs).sort()) {
     try {
-      const loaded = await loadInstalledPack(id, root);
+      const loaded = await loadInstalledPackIsolated(id, root);
       bundledPackCatalog.set(loaded.pack.id, {
         manifest: loaded.pack,
         handlers: loaded.handlers,
         ...(loaded.projector
           ? { projector: (store, run) => loaded.projector!(store, run) }
+          : {}),
+        executionMode: 'isolated-worker',
+        trustSource: loaded.installation.trustSource?.mode ?? 'local-explicit',
+        ...(loaded.installation.trustSource?.mode === 'signed-registry'
+          ? { publisherKeyId: loaded.installation.trustSource.publisherKeyId }
           : {}),
       });
       loadedCount += 1;

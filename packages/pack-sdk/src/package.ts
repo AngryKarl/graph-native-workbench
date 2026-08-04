@@ -77,9 +77,17 @@ export interface InstalledPackVersion {
   readonly version: string;
   readonly installedAt: string;
   readonly artifactChecksum: string;
+  readonly descriptorChecksum?: string;
   readonly engineRange: string;
   readonly trusted: boolean;
   readonly directory: string;
+  readonly trustSource?:
+    | { readonly mode: 'local-explicit' }
+    | {
+        readonly mode: 'signed-registry';
+        readonly publisherKeyId: string;
+        readonly registry: string;
+      };
 }
 
 export interface InstalledPackRecord {
@@ -96,15 +104,25 @@ export interface PackInstallOptions {
   readonly root?: string;
   readonly trust?: boolean;
   readonly activate?: boolean;
+  readonly trustSource?: InstalledPackVersion['trustSource'];
 }
 
 const installedPackVersionSchema = z.object({
   version: z.string().refine((value) => Boolean(valid(value))),
   installedAt: z.iso.datetime(),
   artifactChecksum: sha256Schema,
+  descriptorChecksum: sha256Schema.optional(),
   engineRange: z.string().refine((value) => Boolean(validRange(value))),
   trusted: z.boolean(),
   directory: z.string().min(1),
+  trustSource: z.discriminatedUnion('mode', [
+    z.object({ mode: z.literal('local-explicit') }).strict(),
+    z.object({
+      mode: z.literal('signed-registry'),
+      publisherKeyId: z.string().min(1),
+      registry: z.url(),
+    }).strict(),
+  ]).optional(),
 }).strict();
 
 const installedPackRecordSchema = z.object({
@@ -124,6 +142,13 @@ export interface InstalledPackModule {
   readonly descriptor: PackPackageDescriptor;
   readonly installation: InstalledPackVersion;
   readonly projector?: (store: unknown, run: unknown) => Promise<void>;
+}
+
+export interface InstalledPackFiles {
+  readonly pack: IndustryPackManifest;
+  readonly source: string;
+  readonly descriptor: PackPackageDescriptor;
+  readonly installation: InstalledPackVersion;
 }
 
 function sha256(value: Uint8Array): string {
@@ -146,7 +171,7 @@ function readRegistry(root: string): PackRegistryState {
   try {
     return packRegistryStateSchema.parse(
       JSON.parse(readFileSync(registryPath(root), 'utf8')) as unknown,
-    );
+    ) as PackRegistryState;
   } catch (error) {
     if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return defaultRegistry();
     throw error;
@@ -317,9 +342,11 @@ export function installPackArtifact(
       version,
       installedAt: new Date().toISOString(),
       artifactChecksum: inspection.checksum,
+      descriptorChecksum: sha256(files[descriptorFile]!),
       engineRange: inspection.descriptor.engine.graphwork,
       trusted: true,
       directory: destination,
+      trustSource: options.trustSource ?? { mode: 'local-explicit' },
     };
     const registry = readRegistry(root);
     const previous = registry.packs[id];
@@ -409,10 +436,10 @@ export function uninstallInstalledPack(
   }
 }
 
-export async function loadInstalledPack(
+export async function inspectInstalledPack(
   id: string,
   root = '.graphwork/packs',
-): Promise<InstalledPackModule> {
+): Promise<InstalledPackFiles> {
   const resolvedRoot = resolve(root);
   const registry = readRegistry(resolvedRoot);
   const record = registry.packs[id];
@@ -424,9 +451,16 @@ export async function loadInstalledPack(
   if (resolve(installation.directory) !== expectedDirectory) {
     throw new Error(`Pack "${id}@${record.activeVersion}" has an unsafe registry path.`);
   }
+  const descriptorBytes = await readFile(resolve(installation.directory, descriptorFile));
+  if (installation.descriptorChecksum && sha256(descriptorBytes) !== installation.descriptorChecksum) {
+    throw new Error('Installed Pack descriptor integrity check failed.');
+  }
   const descriptor = packPackageDescriptorSchema.parse(
-    JSON.parse(await readFile(resolve(installation.directory, descriptorFile), 'utf8')) as unknown,
+    JSON.parse(descriptorBytes.toString('utf8')) as unknown,
   );
+  if (descriptor.pack.id !== id || descriptor.pack.version !== record.activeVersion) {
+    throw new Error('Installed Pack descriptor identity does not match its registry record.');
+  }
   const entry = resolve(installation.directory, descriptor.pack.entry);
   const manifestPath = resolve(installation.directory, descriptor.pack.manifest);
   const [entryBytes, manifestBytes] = await Promise.all([readFile(entry), readFile(manifestPath)]);
@@ -436,9 +470,26 @@ export async function loadInstalledPack(
     }
   }
   const installedManifest = industryPackManifestSchema.parse(JSON.parse(manifestBytes.toString('utf8')) as unknown);
+  if (installedManifest.id !== id || installedManifest.version !== record.activeVersion) {
+    throw new Error('Installed Pack manifest identity does not match its registry record.');
+  }
+  return {
+    pack: installedManifest,
+    source: entry,
+    descriptor,
+    installation,
+  };
+}
+
+export async function loadInstalledPack(
+  id: string,
+  root = '.graphwork/packs',
+): Promise<InstalledPackModule> {
+  const inspected = await inspectInstalledPack(id, root);
+  const { source: entry, descriptor, installation, pack: installedManifest } = inspected;
   const imported = (await import(`${pathToFileURL(entry).href}?integrity=${installation.artifactChecksum}`)) as Record<string, unknown>;
   const pack = industryPackManifestSchema.parse(imported.pack ?? imported.default);
-  if (pack.id !== id || pack.version !== record.activeVersion) {
+  if (pack.id !== installedManifest.id || pack.version !== installedManifest.version) {
     throw new Error('Installed Pack module identity does not match its registry record.');
   }
   if (!isDeepStrictEqual(pack, installedManifest)) {

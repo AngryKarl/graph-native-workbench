@@ -22,9 +22,13 @@ import {
   inspectPack,
   inspectPackArtifact,
   installPackArtifact,
+  installPackFromSignedRegistry,
   listInstalledPacks,
-  loadInstalledPack,
+  loadInstalledPackIsolated,
   loadPackModule,
+  fetchSignedPackRegistry,
+  signPackRegistry,
+  verifySignedPackRegistry,
   rollbackInstalledPack,
   runAllPackFixtures,
   runPackFixture,
@@ -70,7 +74,7 @@ function assignments(flag: string): Record<string, unknown> {
 }
 
 function usage(): string {
-  return `Graph Native Workbench\n\nUsage:\n  graphwork demo [--pause]\n  graphwork pack init <pack-id> [directory]\n  graphwork pack validate [module-or-json]\n  graphwork pack inspect [module-or-json-or-gpack]\n  graphwork pack test [module] [--fixture fixture-id]\n  graphwork pack demo [module] [--fixture fixture-id]\n  graphwork pack build <module> [--output pack.gpack] [--engine ^0.1.0]\n  graphwork pack install <pack.gpack> --trust [--root .graphwork/packs]\n  graphwork pack list [--root .graphwork/packs]\n  graphwork pack activate <pack-id>@<version> [--root .graphwork/packs]\n  graphwork pack rollback <pack-id> [--root .graphwork/packs]\n  graphwork pack uninstall <pack-id> [--version 0.1.0] [--root .graphwork/packs]\n  graphwork pack run <module> --set topic=hello [--decision approval=true] [--database runs.sqlite]\n  graphwork pack run <pack-id> --installed --set topic=hello [--root .graphwork/packs]\n  graphwork pack resume <module-or-pack-id> --run <run-id> --database runs.sqlite [--installed]\n  graphwork pack schema [output.json]\n\nRepeat --set/--decision/--permission for more values. --input/--decisions also accept JSON or @file.json.\nExecutable .gpack artifacts require explicit --trust during installation.`;
+  return `Graph Native Workbench\n\nUsage:\n  graphwork demo [--pause]\n  graphwork pack init <pack-id> [directory]\n  graphwork pack validate [module-or-json]\n  graphwork pack inspect [module-or-json-or-gpack]\n  graphwork pack test [module] [--fixture fixture-id]\n  graphwork pack demo [module] [--fixture fixture-id]\n  graphwork pack build <module> [--output pack.gpack] [--engine ^0.1.0]\n  graphwork pack install <pack.gpack> --trust [--root .graphwork/packs]\n  graphwork pack registry sign <payload.json> --key-id publisher --private-key key.pem --output registry.json\n  graphwork pack registry verify <registry.json-or-url> --key publisher=public.pem [--allow-http]\n  graphwork pack registry install <pack-id>@<version> --registry https://... --key publisher=public.pem\n  graphwork pack list [--root .graphwork/packs]\n  graphwork pack activate <pack-id>@<version> [--root .graphwork/packs]\n  graphwork pack rollback <pack-id> [--root .graphwork/packs]\n  graphwork pack uninstall <pack-id> [--version 0.1.0] [--root .graphwork/packs]\n  graphwork pack run <module> --set topic=hello [--decision approval=true] [--database runs.sqlite]\n  graphwork pack run <pack-id> --installed --set topic=hello [--root .graphwork/packs]\n  graphwork pack resume <module-or-pack-id> --run <run-id> --database runs.sqlite [--installed]\n  graphwork pack schema [output.json]\n\nRepeat --set/--decision/--permission for more values. --input/--decisions also accept JSON or @file.json.\nExecutable local .gpack artifacts require explicit --trust. Signed registries require a configured publisher key.`;
 }
 
 function printEvent(event: GraphEvent): void {
@@ -124,13 +128,83 @@ async function resolvePack(path: string | undefined) {
 
 async function resolveRunnablePack(subject: string) {
   return args.includes('--installed')
-    ? loadInstalledPack(subject, valueAfter('--root'))
+    ? loadInstalledPackIsolated(subject, valueAfter('--root'))
     : loadPackModule(subject);
+}
+
+async function trustedRegistryKeys(): Promise<Record<string, string>> {
+  const keys: Record<string, string> = {};
+  for (const value of valuesAfter('--key')) {
+    const separator = value.indexOf('=');
+    if (separator < 1) throw new Error('--key expects <key-id>=<public-key.pem>.');
+    const id = value.slice(0, separator);
+    const path = value.slice(separator + 1);
+    keys[id] = await readFile(resolve(path), 'utf8');
+  }
+  if (Object.keys(keys).length === 0) throw new Error('At least one trusted publisher --key is required.');
+  return keys;
+}
+
+async function registryCommand(): Promise<void> {
+  const action = args[2];
+  const subject = args[3];
+  if (action === 'sign') {
+    if (!subject) throw new Error('Missing registry payload JSON path.');
+    const keyId = valueAfter('--key-id');
+    const privateKeyPath = valueAfter('--private-key');
+    const output = valueAfter('--output');
+    if (!keyId || !privateKeyPath || !output) {
+      throw new Error('Registry signing requires --key-id, --private-key and --output.');
+    }
+    const payload = JSON.parse(await readFile(resolve(subject), 'utf8')) as Parameters<typeof signPackRegistry>[0];
+    const signed = signPackRegistry(payload, keyId, await readFile(resolve(privateKeyPath), 'utf8'));
+    await writeFile(resolve(output), `${JSON.stringify(signed, null, 2)}\n`, 'utf8');
+    console.log(`✓ Signed registry ${signed.payload.registry.id} with ${signed.signature.keyId}`);
+    console.log(`  ${resolve(output)}`);
+    return;
+  }
+  if (action === 'verify') {
+    if (!subject) throw new Error('Missing registry JSON path or URL.');
+    const trustedKeys = await trustedRegistryKeys();
+    const verified = /^https?:\/\//i.test(subject)
+      ? await fetchSignedPackRegistry(subject, { trustedKeys, allowInsecureHttp: args.includes('--allow-http') })
+      : verifySignedPackRegistry(JSON.parse(await readFile(resolve(subject), 'utf8')) as unknown, { trustedKeys });
+    console.log(`✓ Verified ${verified.payload.registry.name}`);
+    console.log(`  Publisher: ${verified.publisherKeyId}`);
+    console.log(`  Packs: ${verified.payload.packs.length}`);
+    console.log(`  Expires: ${verified.payload.expiresAt}`);
+    return;
+  }
+  if (action === 'install') {
+    if (!subject) throw new Error('Expected <pack-id>@<version>.');
+    const separator = subject.lastIndexOf('@');
+    if (separator < 1) throw new Error('Expected <pack-id>@<version>.');
+    const registry = valueAfter('--registry');
+    if (!registry) throw new Error('Signed registry installation requires --registry <url>.');
+    const trustedKeys = await trustedRegistryKeys();
+    const root = valueAfter('--root');
+    const installed = await installPackFromSignedRegistry(
+      registry,
+      subject.slice(0, separator),
+      subject.slice(separator + 1),
+      {
+        trustedKeys,
+        allowInsecureHttp: args.includes('--allow-http'),
+        ...(root ? { root } : {}),
+        activate: !args.includes('--no-activate'),
+      },
+    );
+    console.log(`✓ Installed signed Pack ${subject}`);
+    console.log(`  Publisher: ${installed.trustSource?.mode === 'signed-registry' ? installed.trustSource.publisherKeyId : 'unknown'}`);
+    return;
+  }
+  throw new Error(`Unknown registry command "${action ?? ''}".\n\n${usage()}`);
 }
 
 async function packCommand(): Promise<void> {
   const action = args[1];
   const subject = args[2];
+  if (action === 'registry') return registryCommand();
   if (action === 'validate') {
     const loaded = await resolvePack(subject);
     const compiled = compilePack(loaded.pack);
