@@ -51,4 +51,21 @@ describe('Pack SDK', () => {
     expect(result.status).toBe('completed');
     expect(result.state.result).toBe('Pack customer_success processed: renewal risk');
   });
+
+  it('scaffolds a dependency-free Pack for zero-install distribution users', async () => {
+    const directory = await mkdtemp(resolve('tests', '.tmp-standalone-pack-'));
+    temporaryDirectories.push(directory);
+    const scaffold = await scaffoldPack('standalone_ops', directory, { standalone: true });
+    expect(scaffold.files).toContain('src/index.mjs');
+    const packageJson = JSON.parse(await readFile(resolve(directory, 'package.json'), 'utf8')) as Record<string, unknown>;
+    expect(packageJson.dependencies).toBeUndefined();
+
+    const loaded = await loadPackModule(resolve(directory, 'src/index.mjs'));
+    const graph = compilePack(loaded.pack).graphs.get('standalone_ops.workflow');
+    if (!graph) throw new Error('Standalone generated graph is missing.');
+    const result = await new GraphRuntime(graph, { handlers: loaded.handlers, pack: loaded.pack })
+      .run({ topic: 'zero install' });
+    expect(result.status).toBe('completed');
+    expect(result.state.result).toBe('Pack standalone_ops processed: zero install');
+  });
 });

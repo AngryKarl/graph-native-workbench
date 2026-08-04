@@ -29,6 +29,11 @@ uploads it. Rotate the key and publish a new trusted key id if private material
 is exposed in logs, artifacts or a Pack repository. See the
 [Registry publishing guide](docs/REGISTRY_PUBLISHING.md).
 
+The npm release workflow keeps publication manual, performs a full package dry
+run first, refuses version replacement and reads `NPM_TOKEN` only from GitHub
+Actions secrets. Published packages include npm provenance; never place npm
+tokens in repository files, Pack sources or workflow artifacts.
+
 ## Reporting a vulnerability
 
 Do not open a public issue for a suspected vulnerability. Use GitHub Private

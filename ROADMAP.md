@@ -19,7 +19,8 @@ but the boundary does not change casually.
 - [x] GitHub community health files and cross-platform CI
 - [x] JSON Schema export for editor completion
 - [x] `.gpack` compatibility, version activation and rollback commands
-- [ ] Release packaging and `pnpm dlx` installation path
+- [x] Reproducible `graphwork` npm tarball and cross-platform distribution smoke tests
+- [ ] Publish `graphwork` and activate the public `pnpm dlx graphwork` path
 
 ## 0.3 — Real Agent and tool adapters
 

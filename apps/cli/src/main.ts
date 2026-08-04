@@ -38,6 +38,10 @@ import {
 } from '@graph-native/pack-sdk';
 
 const args = process.argv.slice(2);
+declare const __GRAPHWORK_PACKAGED__: boolean;
+declare const __GRAPHWORK_VERSION__: string;
+const packagedDistribution = typeof __GRAPHWORK_PACKAGED__ !== 'undefined' && __GRAPHWORK_PACKAGED__;
+const graphworkVersion = typeof __GRAPHWORK_VERSION__ === 'undefined' ? 'development' : __GRAPHWORK_VERSION__;
 
 function valueAfter(flag: string): string | undefined {
   const index = args.indexOf(flag);
@@ -79,6 +83,7 @@ function usage(): string {
     'Graph Native Workbench',
     '',
     'Usage:',
+    '  graphwork workbench [--port 4311] [--no-open]',
     '  graphwork demo [--pause]',
     '  graphwork pack init <pack-id> [directory]',
     '  graphwork pack validate [module-or-json]',
@@ -147,6 +152,21 @@ async function demo(): Promise<void> {
   } else {
     throw result.error;
   }
+}
+
+async function workbench(): Promise<void> {
+  const port = Number(valueAfter('--port') ?? 4311);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error('Workbench port must be an integer between 1 and 65535.');
+  const workspace = process.cwd();
+  process.env.GRAPH_WORKBENCH_PORT = String(port);
+  process.env.GRAPH_WORKBENCH_DATA ??= resolve(workspace, '.graphwork/workbench.json');
+  process.env.GRAPH_WORKBENCH_PACKS ??= resolve(workspace, '.graphwork/packs');
+  process.env.GRAPH_WORKBENCH_TRUST ??= resolve(workspace, '.graphwork/trust.json');
+  process.env.GRAPH_WORKBENCH_OPEN = args.includes('--no-open') ? 'false' : 'true';
+  const server = packagedDistribution
+    ? new URL('./workbench-server.mjs', import.meta.url)
+    : new URL('../../workbench/src/server.ts', import.meta.url);
+  await import(server.href);
 }
 
 async function resolvePack(path: string | undefined) {
@@ -307,10 +327,11 @@ async function packCommand(): Promise<void> {
   if (action === 'init') {
     if (!subject) throw new Error('Missing pack id. Example: graphwork pack init customer-success');
     const directory = args[3] ?? resolve('packs', subject);
-    const result = await scaffoldPack(subject, directory);
+    const result = await scaffoldPack(subject, directory, { standalone: packagedDistribution });
     console.log(`✓ Created ${result.id} at ${result.directory}`);
     for (const file of result.files) console.log(`  ${file}`);
-    const modulePath = relative(process.cwd(), resolve(result.directory, 'src/index.ts')).replaceAll('\\', '/');
+    const sourceFile = result.files.find((file) => file.startsWith('src/index.'))!;
+    const modulePath = relative(process.cwd(), resolve(result.directory, sourceFile)).replaceAll('\\', '/');
     console.log(`\nNext: pnpm graphwork pack validate ${modulePath}`);
     return;
   }
@@ -460,9 +481,14 @@ async function packCommand(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const command = args[0] ?? 'demo';
+  const command = args[0] ?? (packagedDistribution ? 'workbench' : 'demo');
+  if (command === 'workbench') return workbench();
   if (command === 'demo') return demo();
   if (command === 'pack') return packCommand();
+  if (command === 'version' || command === '--version' || command === '-v') {
+    console.log(graphworkVersion);
+    return;
+  }
   if (command === 'help' || command === '--help' || command === '-h') {
     console.log(usage());
     return;

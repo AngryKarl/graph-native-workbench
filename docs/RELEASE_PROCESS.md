@@ -27,3 +27,10 @@ The reference Pack catalog is defined in `registry/reference.json` and built by
 the same Pack SDK used by third-party publishers. Follow the
 [Registry publishing guide](REGISTRY_PUBLISHING.md) for signing-key setup,
 non-publishing rehearsals, GitHub Pages deployment and key rotation.
+
+## npm distribution
+
+The public `graphwork` package is built and smoke-tested independently of the
+workspace source layout. Follow the [npm distribution guide](NPM_DISTRIBUTION.md)
+for tarball inspection, the default dry-run workflow, provenance and immutable
+version checks.

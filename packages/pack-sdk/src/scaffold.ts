@@ -8,6 +8,10 @@ export interface ScaffoldResult {
   readonly files: readonly string[];
 }
 
+export interface ScaffoldOptions {
+  readonly standalone?: boolean;
+}
+
 function titleFromId(id: string): string {
   return id
     .split(/[._-]/)
@@ -16,11 +20,10 @@ function titleFromId(id: string): string {
     .join(' ');
 }
 
-function sourceTemplate(id: string, title: string): string {
+function sourceTemplate(id: string, title: string, standalone = false): string {
   return [
-    "import { defineHandlers, definePack } from '@graph-native/pack-sdk';",
-    '',
-    'export const pack = definePack({',
+    ...(standalone ? [] : ["import { defineHandlers, definePack } from '@graph-native/pack-sdk';", '']),
+    standalone ? 'export const pack = {' : 'export const pack = definePack({',
     `  id: '${id}',`,
     "  version: '0.1.0',",
     `  name: '${title} Pack',`,
@@ -65,11 +68,11 @@ function sourceTemplate(id: string, title: string): string {
     "    edges: [{ id: 'e_start_produce', source: 'start', target: 'produce', on: 'success' }],",
     '    budget: { maxSteps: 8, maxDurationMs: 30_000, maxConcurrency: 2 },',
     '  }],',
-    '});',
+    standalone ? '};' : '});',
     '',
-    'export const handlers = defineHandlers({',
+    standalone ? 'export const handlers = {' : 'export const handlers = defineHandlers({',
     `  '${id}.produce': ({ state }) => ({ result: 'Pack ${id} processed: ' + String(state.topic) }),`,
-    '});',
+    standalone ? '};' : '});',
     '',
     'export async function projector(store, run) {',
     '  const recordedAt = new Date().toISOString();',
@@ -83,7 +86,11 @@ function sourceTemplate(id: string, title: string): string {
   ].join('\n');
 }
 
-export async function scaffoldPack(idInput: string, targetDirectory: string): Promise<ScaffoldResult> {
+export async function scaffoldPack(
+  idInput: string,
+  targetDirectory: string,
+  options: ScaffoldOptions = {},
+): Promise<ScaffoldResult> {
   const id = identifierSchema.parse(idInput);
   const directory = resolve(targetDirectory);
   await mkdir(directory, { recursive: true });
@@ -92,6 +99,8 @@ export async function scaffoldPack(idInput: string, targetDirectory: string): Pr
   }
 
   const title = titleFromId(id);
+  const sourceExtension = options.standalone ? 'mjs' : 'ts';
+  const sourcePath = `src/index.${sourceExtension}`;
   const repositoryPath = relative(process.cwd(), directory).replaceAll('\\', '/');
   const packageJson = `${JSON.stringify(
     {
@@ -100,11 +109,13 @@ export async function scaffoldPack(idInput: string, targetDirectory: string): Pr
       private: false,
       type: 'module',
       license: 'MIT',
-      exports: './src/index.ts',
-      dependencies: {
-        '@graph-native/core': 'workspace:*',
-        '@graph-native/pack-sdk': 'workspace:*',
-      },
+      exports: `./${sourcePath}`,
+      ...(options.standalone ? {} : {
+        dependencies: {
+          '@graph-native/core': 'workspace:*',
+          '@graph-native/pack-sdk': 'workspace:*',
+        },
+      }),
     },
     null,
     2,
@@ -117,19 +128,19 @@ export async function scaffoldPack(idInput: string, targetDirectory: string): Pr
     'From the repository root:',
     '',
     '```bash',
-    `pnpm graphwork pack validate ${repositoryPath}/src/index.ts`,
-    `pnpm graphwork pack test ${repositoryPath}/src/index.ts`,
-    `pnpm graphwork pack build ${repositoryPath}/src/index.ts --output ${id}-0.1.0.gpack`,
+    `pnpm graphwork pack validate ${repositoryPath}/${sourcePath}`,
+    `pnpm graphwork pack test ${repositoryPath}/${sourcePath}`,
+    `pnpm graphwork pack build ${repositoryPath}/${sourcePath} --output ${id}-0.1.0.gpack`,
     '```',
     '',
   ].join('\n');
 
   await mkdir(resolve(directory, 'src'));
-  const files = ['package.json', 'README.md', 'src/index.ts'];
+  const files = ['package.json', 'README.md', sourcePath];
   await Promise.all([
     writeFile(resolve(directory, 'package.json'), packageJson, 'utf8'),
     writeFile(resolve(directory, 'README.md'), readme, 'utf8'),
-    writeFile(resolve(directory, 'src/index.ts'), sourceTemplate(id, title), 'utf8'),
+    writeFile(resolve(directory, sourcePath), sourceTemplate(id, title, options.standalone), 'utf8'),
   ]);
   return { id, directory, files };
 }

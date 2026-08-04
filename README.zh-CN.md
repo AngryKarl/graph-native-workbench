@@ -121,4 +121,7 @@ pnpm graphwork pack run packs/research/src/index.ts --set "goal=Evaluate a workf
 pnpm graphwork pack resume packs/research/src/index.ts --run <run-id> --database runs.sqlite --decision approval=true
 ```
 
+零安装 npm 分发包的构建、完整烟测和发布门禁见
+[npm 分发指南](docs/NPM_DISTRIBUTION.md)。
+
 本项目采用 [MIT License](LICENSE)。

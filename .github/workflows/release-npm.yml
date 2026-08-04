@@ -1,0 +1,64 @@
+name: Release npm distribution
+
+on:
+  workflow_dispatch:
+    inputs:
+      npm_tag:
+        description: npm distribution tag
+        required: true
+        default: next
+        type: choice
+        options:
+          - next
+          - latest
+      publish:
+        description: Publish after the package dry run
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-distribution-release
+  cancel-in-progress: false
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.17.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm dist:check
+
+      - name: Verify npm package contents
+        working-directory: apps/distribution
+        run: npm publish --dry-run --access public
+
+      - name: Refuse version replacement
+        if: ${{ inputs.publish }}
+        run: |
+          version="$(node -p "require('./apps/distribution/package.json').version")"
+          if npm view "graphwork@${version}" version >/dev/null 2>&1; then
+            echo "graphwork@${version} already exists; published versions are immutable." >&2
+            exit 1
+          fi
+
+      - name: Publish graphwork
+        if: ${{ inputs.publish }}
+        working-directory: apps/distribution
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --provenance --tag "${{ inputs.npm_tag }}"

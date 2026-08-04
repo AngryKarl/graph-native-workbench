@@ -2,7 +2,8 @@ import { createReadStream } from 'node:fs';
 import { access, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, resolve } from 'node:path';
-import { tmpdir } from 'node:os';
+import { platform, tmpdir } from 'node:os';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { inspectPackArtifact, installPackArtifact } from '@graph-native/pack-sdk';
@@ -245,6 +246,17 @@ async function staticFile(response: ServerResponse, pathname: string): Promise<v
   }
 }
 
+function openWorkbench(url: string): void {
+  const command = platform() === 'win32' ? 'explorer.exe' : platform() === 'darwin' ? 'open' : 'xdg-open';
+  try {
+    const child = spawn(command, [url], { detached: true, stdio: 'ignore' });
+    child.once('error', () => undefined);
+    child.unref();
+  } catch {
+    // The URL remains visible in the terminal when no desktop opener is available.
+  }
+}
+
 createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', `http://${request.headers.host ?? '127.0.0.1'}`);
   try {
@@ -259,7 +271,9 @@ createServer(async (request, response) => {
     json(response, 400, { error: resolved.message });
   }
 }).listen(port, '127.0.0.1', () => {
-  console.log(`Graph Native Workbench API: http://127.0.0.1:${port}`);
+  const url = `http://127.0.0.1:${port}`;
+  console.log(`Graph Native Workbench: ${url}`);
   if (discovery.loaded > 0) console.log(`Loaded ${discovery.loaded} trusted Pack(s) from ${packRoot}`);
   for (const error of discovery.errors) console.warn(`Skipped installed Pack: ${error}`);
+  if (process.env.GRAPH_WORKBENCH_OPEN === 'true') openWorkbench(url);
 });

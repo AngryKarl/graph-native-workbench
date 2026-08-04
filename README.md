@@ -192,6 +192,7 @@ Read the [Product Charter](docs/PRODUCT_CHARTER.md),
 [`.gpack` Package Format](docs/PACK_FORMAT.md),
 [Registry Trust and Worker Isolation](docs/TRUST_AND_ISOLATION.md),
 [Registry Publishing Guide](docs/REGISTRY_PUBLISHING.md),
+[npm Distribution Guide](docs/NPM_DISTRIBUTION.md),
 [Architecture Pack](docs/ARCHITECTURE_PACK.md),
 [Runtime Adapter Guide](docs/RUNTIME_ADAPTERS.md),
 [Roadmap](ROADMAP.md) and [release process](docs/RELEASE_PROCESS.md).
