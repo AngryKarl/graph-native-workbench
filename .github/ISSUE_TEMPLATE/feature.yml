@@ -1,0 +1,31 @@
+name: Mechanism proposal
+description: Propose a domain-neutral core or adapter capability
+title: "[Proposal]: "
+labels: [proposal]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the work that cannot be completed today.
+    validations:
+      required: true
+  - type: textarea
+    id: domains
+    attributes:
+      label: Cross-domain evidence
+      description: Which two credible domains need this mechanism?
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Why not a Pack or adapter?
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Smallest proposed contract
+    validations:
+      required: true

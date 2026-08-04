@@ -1,0 +1,16 @@
+{
+  "name": "@graph-native/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "graphwork": "./src/main.ts",
+    "graph-native": "./src/main.ts"
+  },
+  "dependencies": {
+    "@graph-native/contracts": "workspace:*",
+    "@graph-native/core": "workspace:*",
+    "@graph-native/pack-research": "workspace:*",
+    "@graph-native/pack-sdk": "workspace:*"
+  }
+}

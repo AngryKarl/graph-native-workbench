@@ -1,0 +1,31 @@
+name: Industry Pack proposal
+description: Propose a new vertical workflow or ontology
+title: "[Pack]: "
+labels: [industry-pack]
+body:
+  - type: input
+    id: industry
+    attributes:
+      label: Industry or function
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Repeatable workflow
+      description: Describe the SOP, roles, inputs, quality gates and deliverable.
+    validations:
+      required: true
+  - type: textarea
+    id: ontology
+    attributes:
+      label: Core objects and relations
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Real-world validation
+      description: Who performs this work and how will usefulness be evaluated?
+    validations:
+      required: true

@@ -1,0 +1,11 @@
+{
+  "name": "@graph-native/core",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@graph-native/contracts": "workspace:*"
+  }
+}

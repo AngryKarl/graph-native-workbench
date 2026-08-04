@@ -1,0 +1,10 @@
+# Support
+
+- Use a bug report for reproducible defects in the kernel, CLI or reference Pack.
+- Use a feature proposal for new domain-neutral mechanisms.
+- Use a Pack proposal for ontology, workflow or evaluation ideas.
+- Use GitHub Discussions for setup questions once Discussions are enabled.
+- Follow SECURITY.md for vulnerabilities; never post secrets or customer data.
+
+This project is pre-alpha. Public APIs may change, but breaking changes should
+be documented and accompanied by a migration path when practical.
