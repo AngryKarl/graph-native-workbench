@@ -93,6 +93,10 @@ pnpm graphwork pack registry install customer_success@0.1.0 \
 不会加载进 Workbench 主进程。详细边界见
 [Registry 信任与 Worker 隔离](docs/TRUST_AND_ISOLATION.md)。
 
+如需在界面中浏览已验签的目录，请在 `.graphwork/trust.json` 配置 Registry 地址
+和发布者公钥路径，重启 Workbench 后打开 **Packs → Signed Registries**。具体格式见
+[Workbench Registry 配置](docs/TRUST_AND_ISOLATION.md#workbench-registry-catalog)。
+
 生成的 Pack 可以立即运行，不需要修改内核。详细内容见
 [产品宪章](docs/PRODUCT_CHARTER.md)、[Pack 开发指南](docs/PACK_AUTHORING.md)和
 [路线图](ROADMAP.md)。

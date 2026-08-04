@@ -4,6 +4,7 @@ import type {
   GraphValidation,
   PackArtifactPreview,
   PackDescription,
+  RegistrySource,
   RunSnapshot,
   WorkbenchBootstrap,
 } from './types.js';
@@ -34,6 +35,16 @@ async function artifactRequest<T>(path: string, file: File, trust = false): Prom
 
 export function loadWorkbench(): Promise<WorkbenchBootstrap> {
   return request('/api/workbench');
+}
+
+export function loadRegistries(): Promise<RegistrySource[]> {
+  return request('/api/registries');
+}
+
+export function installRegistryPack(registryId: string, packId: string, version: string): Promise<WorkbenchBootstrap> {
+  return request(`/api/registries/${encodeURIComponent(registryId)}/packs/${encodeURIComponent(packId)}/${encodeURIComponent(version)}/install`, {
+    method: 'POST',
+  });
 }
 
 export function loadPack(packId: string): Promise<PackDescription> {

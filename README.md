@@ -109,6 +109,11 @@ pnpm graphwork pack registry install customer_success@0.1.0 \
 Installed third-party handlers and projectors execute in restricted child
 Workers rather than the Workbench process.
 
+To browse verified catalogs in the Workbench, configure Registry URLs and
+publisher public-key paths in `.graphwork/trust.json`, restart the Workbench,
+then open **Packs → Signed Registries**. See the
+[trust configuration and installation flow](docs/TRUST_AND_ISOLATION.md#workbench-registry-catalog).
+
 Run the first deep vertical Pack and its two zero-key golden fixtures:
 
 ```bash

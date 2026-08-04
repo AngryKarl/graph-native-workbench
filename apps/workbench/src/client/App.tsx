@@ -5,7 +5,8 @@ import {
   Save, Undo2, Redo2, UserRoundCheck,
 } from 'lucide-react';
 import {
-  activatePack, decideRun, inspectPackArtifact, installPack, installPackArtifact, loadWorkbench, resetGraphDraft,
+  activatePack, decideRun, inspectPackArtifact, installPack, installPackArtifact, installRegistryPack,
+  loadRegistries, loadWorkbench, resetGraphDraft,
   saveGraphDraft, startRun, uninstallPack,
 } from './api.js';
 import { ContextExplorer } from './ContextExplorer.js';
@@ -17,7 +18,7 @@ import { RunConsole } from './RunConsole.js';
 import { RunHistory } from './RunHistory.js';
 import type {
   GraphDefinition, GraphNode, GraphPosition, InspectorTab, PackDescription,
-  PrimaryView, RunSnapshot, WorkbenchBootstrap,
+  PrimaryView, RegistrySource, RunSnapshot, WorkbenchBootstrap,
 } from './types.js';
 
 interface EditorSnapshot {
@@ -67,6 +68,8 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [busyPackId, setBusyPackId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
+  const [registries, setRegistries] = useState<RegistrySource[]>([]);
+  const [registriesLoading, setRegistriesLoading] = useState(false);
   const initialized = useRef(false);
   const editorRevision = useRef(0);
 
@@ -95,6 +98,21 @@ export function App() {
       initialized.current = true;
     }).catch((error: Error) => setNotice(error.message));
   }, [acceptBootstrap]);
+
+  const refreshRegistries = useCallback(async () => {
+    setRegistriesLoading(true);
+    try {
+      setRegistries(await loadRegistries());
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setRegistriesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (view === 'packs') void refreshRegistries();
+  }, [refreshRegistries, view]);
 
   const commitEditor = useCallback((graph: GraphDefinition, positions: Record<string, GraphPosition>) => {
     setEditor((current) => {
@@ -264,6 +282,21 @@ export function App() {
     }
   };
 
+  const installFromRegistry = async (registryId: string, packId: string, version: string) => {
+    const busyId = `${registryId}:${packId}@${version}`;
+    setBusyPackId(busyId);
+    try {
+      const next = await installRegistryPack(registryId, packId, version);
+      acceptBootstrap(next);
+      setView('editor');
+      setNotice(`${next.activePack.name} verified, installed and opened.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusyPackId(null);
+    }
+  };
+
   const resetDraft = async () => {
     if (!pack || !window.confirm('Reset this graph to the Pack definition? Your saved draft will be removed.')) return;
     try {
@@ -317,7 +350,7 @@ export function App() {
         ) : null}
         {view === 'runs' ? <RunHistory runs={bootstrap.runs} selectedRunId={run?.runId} onSelect={(selected) => { setRun(selected); setView('editor'); }} /> : null}
         {view === 'context' ? <ContextExplorer runs={bootstrap.runs} /> : null}
-        {view === 'packs' ? <PackManager catalog={bootstrap.catalog} activePackId={bootstrap.activePackId} installedPackIds={bootstrap.installedPackIds} busyPackId={busyPackId} onInspectArtifact={inspectPackArtifact} onImportArtifact={importPackArtifact} onInstall={(id) => void mutatePack(id, 'install')} onActivate={(id) => void mutatePack(id, 'activate')} onUninstall={(id) => void mutatePack(id, 'uninstall')} /> : null}
+        {view === 'packs' ? <PackManager catalog={bootstrap.catalog} registries={registries} registriesLoading={registriesLoading} activePackId={bootstrap.activePackId} installedPackIds={bootstrap.installedPackIds} busyPackId={busyPackId} onInspectArtifact={inspectPackArtifact} onImportArtifact={importPackArtifact} onInstallRegistry={(registryId, packId, version) => void installFromRegistry(registryId, packId, version)} onInstall={(id) => void mutatePack(id, 'install')} onActivate={(id) => void mutatePack(id, 'activate')} onUninstall={(id) => void mutatePack(id, 'uninstall')} /> : null}
       </div>
 
       {notice ? <button className="toast" onClick={() => setNotice('')}>{notice}<span>Dismiss</span></button> : null}

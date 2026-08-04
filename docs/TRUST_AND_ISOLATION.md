@@ -52,6 +52,41 @@ pnpm graphwork pack registry install support_ops@0.1.0 \
 keys must never be committed to a Pack repository or served with Registry
 metadata.
 
+### Workbench Registry catalog
+
+The Workbench reads trusted Registry sources from `.graphwork/trust.json` by
+default. Set `GRAPH_WORKBENCH_TRUST` to use a different file. Public-key paths
+are resolved relative to the trust file:
+
+```json
+{
+  "formatVersion": 1,
+  "registries": [
+    {
+      "id": "acme",
+      "name": "Acme Industry Packs",
+      "url": "https://packs.example.com/registry.json",
+      "trustedKeys": [
+        {
+          "keyId": "acme.release",
+          "publicKeyPath": "keys/acme-release.pem"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Restart `pnpm workbench`, then open **Packs → Signed Registries**. Catalog
+metadata is displayed only after signature and expiry verification. Selecting
+**Verify & install** downloads the artifact and repeats verification against the
+configured key, signed checksum, engine range and permission list before the
+Pack becomes active. Trust keys cannot be added from the browser interface.
+
+Multiple keys can be listed during publisher key rotation. Cross-origin
+artifacts remain disabled unless `allowCrossOriginArtifacts` is explicitly set.
+Plain HTTP is accepted only for loopback sources with `allowInsecureHttp: true`.
+
 ## Isolated Worker
 
 Installed third-party Pack handlers and context projectors execute in a fresh

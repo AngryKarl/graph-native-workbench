@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { inspectPackArtifact, installPackArtifact } from '@graph-native/pack-sdk';
 import { bundledPackCatalog, discoverInstalledPackRuntimes } from './catalog.js';
 import { WorkbenchService } from './service.js';
+import { WorkbenchRegistryService } from './registry-service.js';
 
 const appDirectory = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const workspaceDirectory = resolve(appDirectory, '..', '..');
@@ -16,8 +17,11 @@ const dataFile = process.env.GRAPH_WORKBENCH_DATA
   ?? resolve(workspaceDirectory, '.graphwork/workbench.json');
 const packRoot = process.env.GRAPH_WORKBENCH_PACKS
   ?? resolve(workspaceDirectory, '.graphwork/packs');
+const trustFile = process.env.GRAPH_WORKBENCH_TRUST
+  ?? resolve(workspaceDirectory, '.graphwork/trust.json');
 const discovery = await discoverInstalledPackRuntimes(packRoot);
 const service = new WorkbenchService({ dataFile });
+const registryService = await WorkbenchRegistryService.fromConfigFile(trustFile, packRoot);
 const clientDirectory = resolve(appDirectory, 'dist/client');
 
 const mediaTypes: Record<string, string> = {
@@ -90,6 +94,26 @@ function artifactPreview(filePath: string) {
 async function api(request: IncomingMessage, response: ServerResponse, pathname: string): Promise<boolean> {
   if (request.method === 'GET' && pathname === '/api/workbench') {
     json(response, 200, service.describeWorkbench());
+    return true;
+  }
+  if (request.method === 'GET' && pathname === '/api/registries') {
+    json(response, 200, await registryService.catalog());
+    return true;
+  }
+  const registryInstall = pathname.match(/^\/api\/registries\/([^/]+)\/packs\/([^/]+)\/([^/]+)\/install$/);
+  if (request.method === 'POST' && registryInstall) {
+    const registryId = decodeURIComponent(registryInstall[1]!);
+    const packId = decodeURIComponent(registryInstall[2]!);
+    const version = decodeURIComponent(registryInstall[3]!);
+    await registryService.install(registryId, packId, version);
+    const refreshed = await discoverInstalledPackRuntimes(packRoot);
+    const runtime = bundledPackCatalog.get(packId);
+    if (!runtime || runtime.manifest.version !== version) {
+      throw new Error(refreshed.errors.find((error) => error.includes(packId))
+        ?? `Installed Pack "${packId}@${version}" could not be loaded.`);
+    }
+    service.install(packId);
+    json(response, 201, service.activate(packId));
     return true;
   }
   if (request.method === 'POST' && pathname === '/api/packs/artifact/inspect') {

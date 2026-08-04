@@ -103,7 +103,8 @@ metadata is configured, local artifacts still rely on explicit operator trust:
 - do not treat `--trust` as a sandbox.
 
 Signed Registry metadata can bind publisher identity to the artifact checksum,
-compatibility and permissions. Workbench and installed-Pack CLI execution use a
+compatibility and permissions. Signed entries may also carry the Pack name,
+description and license used by verified catalogs. Workbench and installed-Pack CLI execution use a
 restricted child Worker for third-party handlers and projectors. See
 [Registry trust and Worker isolation](TRUST_AND_ISOLATION.md) for the exact
 guarantees and remaining OS/container boundary.

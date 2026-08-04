@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
 import {
-  AlertTriangle, Box, Check, Download, FileArchive, PackageCheck, Play,
-  ShieldCheck, Trash2, Upload, X,
+  AlertTriangle, Box, Check, Download, FileArchive, Globe2, KeyRound, LoaderCircle,
+  PackageCheck, Play, ShieldCheck, Trash2, Upload, X,
 } from 'lucide-react';
-import type { PackArtifactPreview, PackCatalogItem } from './types.js';
+import type { PackArtifactPreview, PackCatalogItem, RegistrySource } from './types.js';
 
 function fileSize(bytes: number): string {
   return bytes < 1024 * 1024
@@ -12,15 +12,18 @@ function fileSize(bytes: number): string {
 }
 
 export function PackManager({
-  catalog, activePackId, installedPackIds, busyPackId, onInspectArtifact,
-  onImportArtifact, onInstall, onActivate, onUninstall,
+  catalog, registries, registriesLoading, activePackId, installedPackIds, busyPackId, onInspectArtifact,
+  onImportArtifact, onInstallRegistry, onInstall, onActivate, onUninstall,
 }: {
   catalog: PackCatalogItem[];
+  registries: RegistrySource[];
+  registriesLoading: boolean;
   activePackId: string;
   installedPackIds: string[];
   busyPackId: string | null;
   onInspectArtifact: (file: File) => Promise<PackArtifactPreview>;
   onImportArtifact: (file: File) => Promise<void>;
+  onInstallRegistry: (registryId: string, packId: string, version: string) => void;
   onInstall: (packId: string) => void;
   onActivate: (packId: string) => void;
   onUninstall: (packId: string) => void;
@@ -87,6 +90,49 @@ export function PackManager({
         </section>
       ) : null}
       {error ? <div className="artifact-error" role="alert"><AlertTriangle size={14} />{error}</div> : null}
+
+      <section className="registry-library" aria-label="Signed Pack registries">
+        <div className="library-section-heading">
+          <div><Globe2 size={16} /><span><strong>Signed Registries</strong><small>Verified publisher catalogs configured for this workspace</small></span></div>
+          {registriesLoading ? <span className="registry-loading"><LoaderCircle className="spin" size={13} />Refreshing</span> : null}
+        </div>
+        {registriesLoading && registries.length === 0 ? (
+          <div className="registry-empty"><LoaderCircle className="spin" size={20} /><strong>Verifying registries</strong><p>Checking publisher signatures and catalog expiry.</p></div>
+        ) : null}
+        {!registriesLoading && registries.length === 0 ? (
+          <div className="registry-empty"><KeyRound size={20} /><strong>No trusted Registry configured</strong><p>Add publisher public keys to <code>.graphwork/trust.json</code> to browse signed Packs.</p></div>
+        ) : null}
+        {registries.map((registry) => (
+          <div className={`registry-card ${registry.status}`} key={registry.id}>
+            <header>
+              <span className="registry-mark"><ShieldCheck size={17} /></span>
+              <span><strong>{registry.name}</strong><small>{registry.url}</small></span>
+              {registry.status === 'verified'
+                ? <em><Check size={11} />Verified · {registry.publisherKeyId}</em>
+                : <em className="registry-failed"><AlertTriangle size={11} />Verification failed</em>}
+            </header>
+            {registry.status === 'error' ? <p className="registry-error">{registry.error}</p> : (
+              <>
+                <div className="registry-meta"><span>Publisher <strong>{registry.publisherKeyId}</strong></span><span>Valid until <strong>{new Date(registry.expiresAt).toLocaleString()}</strong></span><span>{registry.packs.length} Pack{registry.packs.length === 1 ? '' : 's'}</span></div>
+                {registry.packs.length === 0 ? <p className="registry-no-packs">This verified Registry does not publish any Packs yet.</p> : null}
+                <div className="registry-pack-list">{registry.packs.map((pack) => {
+                  const busyId = `${registry.id}:${pack.id}@${pack.version}`;
+                  return (
+                    <article className="registry-pack" key={`${pack.id}@${pack.version}`}>
+                      <div className="registry-pack-icon"><PackageCheck size={19} /></div>
+                      <div><span className="registry-pack-title"><strong>{pack.name}</strong><code>{pack.id}@{pack.version}</code>{pack.active ? <em>Active</em> : pack.installed ? <em>Installed</em> : null}</span><p>{pack.description}</p><small>Graphwork {pack.engineRange} · {pack.permissions.length ? pack.permissions.join(', ') : 'No permissions'}{pack.license ? ` · ${pack.license}` : ''}</small></div>
+                      <button className="button primary" disabled={pack.active || busyPackId !== null} onClick={() => onInstallRegistry(registry.id, pack.id, pack.version)}>
+                        {busyPackId === busyId ? <LoaderCircle className="spin" size={14} /> : pack.installed ? <Check size={14} /> : <Download size={14} />}
+                        {pack.active ? 'In workspace' : pack.installed ? 'Verify & open' : 'Verify & install'}
+                      </button>
+                    </article>
+                  );
+                })}</div>
+              </>
+            )}
+          </div>
+        ))}
+      </section>
 
       <div className="registry-source"><Box size={15} />Local registry · isolated third-party execution</div>
       <div className="pack-list">

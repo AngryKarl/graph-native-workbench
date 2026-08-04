@@ -67,6 +67,36 @@ export interface PackArtifactPreview {
   permissions: Array<'handlers.execute' | 'context.write' | 'network' | 'filesystem'>;
 }
 
+export interface RegistryPackItem {
+  id: string;
+  name: string;
+  description: string;
+  license?: string;
+  version: string;
+  engineRange: string;
+  permissions: string[];
+  installed: boolean;
+  active: boolean;
+}
+
+export type RegistrySource = {
+  id: string;
+  name: string;
+  url: string;
+  status: 'verified';
+  publisherKeyId: string;
+  generatedAt: string;
+  expiresAt: string;
+  packs: RegistryPackItem[];
+} | {
+  id: string;
+  name: string;
+  url: string;
+  status: 'error';
+  error: string;
+  packs: [];
+};
+
 export interface ContextObjectView {
   id: string;
   type: string;

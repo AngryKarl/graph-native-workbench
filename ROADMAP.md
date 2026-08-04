@@ -65,6 +65,14 @@ but the boundary does not change casually.
 - [x] Environment, filesystem, child-process, memory and execution-time boundaries
 - [ ] OS/container network isolation adapter
 
+## 0.9 — Registry experience and distribution
+
+- [x] Workbench catalog for configured signed Registries
+- [x] Verified publisher, expiry, compatibility and permission presentation
+- [x] One-action Registry installation with server-side re-verification
+- [x] Out-of-band local trust configuration and publisher key rotation
+- [ ] Public reference Registry and automated Pack publishing workflow
+
 ## Before 1.0
 
 - Stable compatibility policy and migrations

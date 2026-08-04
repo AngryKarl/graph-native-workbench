@@ -27,6 +27,9 @@ export const signedPackRegistryPayloadSchema = z.object({
   expiresAt: z.iso.datetime(),
   packs: z.array(z.object({
     id: identifierSchema,
+    name: z.string().min(1).optional(),
+    description: z.string().min(1).optional(),
+    license: z.string().min(1).optional(),
     version: z.string().refine((value) => Boolean(valid(value)), 'Expected a semantic version.'),
     artifact: z.string().min(1),
     artifactChecksum: sha256Schema,
@@ -247,6 +250,9 @@ export function registryPayloadFromArtifacts(input: {
       const inspection = inspectPackArtifact(path);
       return {
         id: inspection.manifest.id,
+        name: inspection.manifest.name,
+        description: inspection.manifest.description,
+        license: inspection.manifest.license,
         version: inspection.manifest.version,
         artifact: url,
         artifactChecksum: inspection.checksum,
