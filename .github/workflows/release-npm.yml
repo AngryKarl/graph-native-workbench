@@ -19,7 +19,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: npm-distribution-release
@@ -61,4 +60,4 @@ jobs:
         working-directory: apps/distribution
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public --provenance --tag "${{ inputs.npm_tag }}"
+        run: npm publish --access public --tag "${{ inputs.npm_tag }}"
