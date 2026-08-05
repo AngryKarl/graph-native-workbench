@@ -30,12 +30,19 @@ export interface StoredRunSession {
   };
 }
 
+export interface StoredModelProvider {
+  readonly providerId: string;
+  readonly model: string;
+  readonly baseUrl?: string;
+}
+
 export interface WorkbenchWorkspaceState {
   readonly version: 1;
   readonly installedPackIds: readonly string[];
   readonly activePackId: string;
   readonly drafts: Readonly<Record<string, StoredGraphDraft>>;
   readonly runs: Readonly<Record<string, StoredRunSession>>;
+  readonly modelProvider?: StoredModelProvider;
 }
 
 function initialState(): WorkbenchWorkspaceState {

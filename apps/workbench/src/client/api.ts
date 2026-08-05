@@ -2,6 +2,8 @@ import type {
   GraphDefinition,
   GraphPosition,
   GraphValidation,
+  ModelConnectionResult,
+  ModelProviderSelection,
   PackArtifactPreview,
   PackDescription,
   RegistrySource,
@@ -35,6 +37,17 @@ async function artifactRequest<T>(path: string, file: File, trust = false): Prom
 
 export function loadWorkbench(): Promise<WorkbenchBootstrap> {
   return request('/api/workbench');
+}
+
+export function configureModelProvider(selection: ModelProviderSelection): Promise<WorkbenchBootstrap> {
+  return request('/api/model-provider', {
+    method: 'PUT',
+    body: JSON.stringify(selection),
+  });
+}
+
+export function testModelProvider(): Promise<ModelConnectionResult> {
+  return request('/api/model-provider/test', { method: 'POST' });
 }
 
 export function loadRegistries(): Promise<RegistrySource[]> {

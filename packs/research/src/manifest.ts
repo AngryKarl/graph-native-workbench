@@ -5,7 +5,7 @@ export const researchPack: IndustryPackManifest = {
   version: '0.1.0',
   name: 'Cross-industry Research Pack',
   description:
-    'A deterministic reference Pack that turns a research goal into parallel evidence gathering, synthesis, quality review, human approval, and a publishable deliverable.',
+    'A zero-key reference Pack that can optionally use a selected model for synthesis while preserving evidence, quality review, human approval, and a publishable deliverable.',
   license: 'MIT',
   ontology: {
     objectTypes: [
@@ -45,6 +45,20 @@ export const researchPack: IndustryPackManifest = {
           rationale: { type: 'string', required: false, description: 'Why the decision was made.' },
         },
       },
+      {
+        id: 'model_call',
+        label: 'Model call',
+        description: 'The provider, model and usage metadata for a governed Agent execution.',
+        fields: {
+          provider_id: { type: 'string', required: true, description: 'Selected provider identifier.' },
+          protocol: { type: 'string', required: true, description: 'Provider protocol used by the call.' },
+          model: { type: 'string', required: true, description: 'Resolved model identifier.' },
+          input_tokens: { type: 'number', required: false, description: 'Reported input token count.' },
+          output_tokens: { type: 'number', required: false, description: 'Reported output token count.' },
+          latency_ms: { type: 'number', required: false, description: 'Observed request latency.' },
+          request_id: { type: 'string', required: false, description: 'Provider request identifier.' },
+        },
+      },
     ],
     relationTypes: [
       {
@@ -66,6 +80,13 @@ export const researchPack: IndustryPackManifest = {
         label: 'Governs',
         description: 'A decision governs whether a deliverable can be published.',
         sourceTypes: ['decision'],
+        targetTypes: ['deliverable'],
+      },
+      {
+        id: 'contributed_to',
+        label: 'Contributed to',
+        description: 'A governed model call contributed to a reviewed deliverable.',
+        sourceTypes: ['model_call'],
         targetTypes: ['deliverable'],
       },
     ],
@@ -229,7 +250,10 @@ export const researchPack: IndustryPackManifest = {
           handler: 'research.synthesize',
           reads: ['brief', 'market_evidence', 'technology_evidence'],
           writes: ['synthesis'],
-          config: { roleId: 'researcher' },
+          config: {
+            roleId: 'researcher',
+            modelInstructions: 'Write a concise synthesis grounded only in the supplied market_evidence and technology_evidence. Preserve every source locator and return a JSON object with a single synthesis string.',
+          },
         },
         {
           id: 'quality_check',

@@ -31,6 +31,9 @@ versioning once public packages begin publishing.
   context projectors, with environment, filesystem, memory and time boundaries.
 - Zero-install `graphwork` npm distribution with the bundled Workbench, CLI,
   reference Packs and isolated Worker.
+- Multi-provider Agent execution for OpenAI-compatible, Anthropic Messages and
+  Gemini GenerateContent APIs, with Workbench configuration, normalized usage
+  events and server-only credential handling.
 
 ### Changed
 

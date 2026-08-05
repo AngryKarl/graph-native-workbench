@@ -7,3 +7,4 @@ coverage/
 .graphwork/
 *.gpack
 release/
+tests/.tmp-runs-*/

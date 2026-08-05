@@ -64,6 +64,12 @@ pnpm workbench
 7. 在 **Packs** 中选择 **Import .gpack**，检查兼容范围、权限和 SHA-256 指纹后，
    显式信任并安装制品。
 
+打开 **Models** 可以继续使用内置的零密钥运行时，也可以连接 OpenAI、
+Anthropic Claude、Google Gemini、DeepSeek、阿里云通义千问、Moonshot Kimi、
+xAI Grok、Mistral AI、Groq、OpenRouter、Ollama 或自定义 OpenAI-compatible
+端点。模型 ID 与兼容端点地址可以编辑。API 密钥只从服务端环境变量读取，
+不会传回浏览器，也不会写入工作区文件。
+
 图草稿、已安装 Pack、当前 Pack、运行记录和人工检查点会持久化到本地
 `.graphwork/workbench.json`。Architecture 与 Research 是内置 Pack；可信的
 `.gpack` 可以直接从 Packs 页面导入，也可以通过 CLI 安装，并保存在

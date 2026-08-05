@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Bot, Box, Braces, Check, CircleDot, GitFork, GitMerge,
+  Bot, Box, Braces, Check, CircleDot, Cpu, GitFork, GitMerge,
   History, LayoutDashboard, LoaderCircle, Network, PackageOpen, Play, RotateCcw,
   Save, Undo2, Redo2, UserRoundCheck,
 } from 'lucide-react';
 import {
-  activatePack, decideRun, inspectPackArtifact, installPack, installPackArtifact, installRegistryPack,
+  activatePack, configureModelProvider, decideRun, inspectPackArtifact, installPack, installPackArtifact, installRegistryPack,
   loadRegistries, loadWorkbench, resetGraphDraft,
-  saveGraphDraft, startRun, uninstallPack,
+  saveGraphDraft, startRun, testModelProvider, uninstallPack,
 } from './api.js';
 import { ContextExplorer } from './ContextExplorer.js';
 import { FlowCanvas } from './FlowCanvas.js';
 import { createAutomaticLayout, nextNodeId, nodeKindLabel } from './graph-model.js';
 import { Inspector } from './Inspector.js';
 import { PackManager } from './PackManager.js';
+import { ProviderManager } from './ProviderManager.js';
 import { RunConsole } from './RunConsole.js';
 import { RunHistory } from './RunHistory.js';
 import type {
@@ -41,6 +42,7 @@ const navItems: Array<{ view: PrimaryView; label: string; icon: typeof LayoutDas
   { view: 'editor', label: 'Editor', icon: LayoutDashboard },
   { view: 'runs', label: 'Runs', icon: History },
   { view: 'context', label: 'Context', icon: Network },
+  { view: 'models', label: 'Models', icon: Cpu },
   { view: 'packs', label: 'Packs', icon: PackageOpen },
 ];
 
@@ -70,6 +72,7 @@ export function App() {
   const [notice, setNotice] = useState('');
   const [registries, setRegistries] = useState<RegistrySource[]>([]);
   const [registriesLoading, setRegistriesLoading] = useState(false);
+  const [modelsBusy, setModelsBusy] = useState(false);
   const initialized = useRef(false);
   const editorRevision = useRef(0);
 
@@ -109,6 +112,28 @@ export function App() {
       setRegistriesLoading(false);
     }
   }, []);
+
+  const saveModelProvider = async (selection: Parameters<typeof configureModelProvider>[0]) => {
+    setModelsBusy(true);
+    try {
+      const next = await configureModelProvider(selection);
+      setBootstrap(next);
+      setNotice(selection.providerId === 'deterministic'
+        ? 'Using the built-in zero-key runtime.'
+        : `Using ${selection.providerId} for model-enabled Agent nodes.`);
+    } finally {
+      setModelsBusy(false);
+    }
+  };
+
+  const checkModelProvider = async () => {
+    setModelsBusy(true);
+    try {
+      return await testModelProvider();
+    } finally {
+      setModelsBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (view === 'packs') void refreshRegistries();
@@ -350,6 +375,7 @@ export function App() {
         ) : null}
         {view === 'runs' ? <RunHistory runs={bootstrap.runs} selectedRunId={run?.runId} onSelect={(selected) => { setRun(selected); setView('editor'); }} /> : null}
         {view === 'context' ? <ContextExplorer runs={bootstrap.runs} /> : null}
+        {view === 'models' ? <ProviderManager state={bootstrap.models} busy={modelsBusy} onSave={saveModelProvider} onTest={checkModelProvider} /> : null}
         {view === 'packs' ? <PackManager catalog={bootstrap.catalog} registries={registries} registriesLoading={registriesLoading} activePackId={bootstrap.activePackId} installedPackIds={bootstrap.installedPackIds} busyPackId={busyPackId} onInspectArtifact={inspectPackArtifact} onImportArtifact={importPackArtifact} onInstallRegistry={(registryId, packId, version) => void installFromRegistry(registryId, packId, version)} onInstall={(id) => void mutatePack(id, 'install')} onActivate={(id) => void mutatePack(id, 'activate')} onUninstall={(id) => void mutatePack(id, 'uninstall')} /> : null}
       </div>
 

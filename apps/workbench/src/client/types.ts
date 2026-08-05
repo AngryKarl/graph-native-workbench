@@ -138,6 +138,39 @@ export interface WorkbenchBootstrap {
   catalog: PackCatalogItem[];
   activePack: PackDescription;
   runs: RunSnapshot[];
+  models: ModelProviderState;
+}
+
+export interface ModelProviderSelection {
+  providerId: string;
+  model: string;
+  baseUrl?: string;
+}
+
+export interface ModelProviderItem {
+  id: string;
+  label: string;
+  protocol: string;
+  baseUrl: string;
+  apiKeyEnv?: string;
+  configured: boolean;
+  selected: boolean;
+  local: boolean;
+  modelHint?: string;
+}
+
+export interface ModelProviderState {
+  mode: 'deterministic' | 'model';
+  selection: ModelProviderSelection;
+  providers: ModelProviderItem[];
+}
+
+export interface ModelConnectionResult {
+  ok: true;
+  providerId: string;
+  model: string;
+  latencyMs: number;
+  response: string;
 }
 
 export interface GraphValidation {
@@ -148,5 +181,5 @@ export interface GraphValidation {
   entryNodeIds: string[];
 }
 
-export type PrimaryView = 'editor' | 'runs' | 'context' | 'packs';
+export type PrimaryView = 'editor' | 'runs' | 'context' | 'models' | 'packs';
 export type InspectorTab = 'node' | 'input' | 'policy';

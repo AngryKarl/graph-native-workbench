@@ -76,6 +76,14 @@ versioned contracts used by the compiler and runtime:
 6. Open **Packs**, choose **Import .gpack**, review compatibility, permissions
    and the SHA-256 fingerprint, then explicitly trust and install the artifact.
 
+Open **Models** to keep the built-in zero-key runtime or connect OpenAI,
+Anthropic Claude, Google Gemini, DeepSeek, Alibaba Qwen, Moonshot Kimi,
+xAI Grok, Mistral AI, Groq, OpenRouter, Ollama or a custom OpenAI-compatible
+endpoint.
+Model identifiers and compatible base URLs remain editable. API keys are read
+only from server environment variables; they are never sent to the browser or
+stored in the workspace.
+
 Graph drafts, installed Packs, active Pack selection, runs and checkpoints are
 stored locally in `.graphwork/workbench.json`. Architecture and Research are
 bundled; trusted `.gpack` artifacts can be imported from the Packs view or

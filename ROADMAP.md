@@ -25,10 +25,11 @@ but the boundary does not change casually.
 ## 0.3 — Real Agent and tool adapters
 
 - [x] Runtime-neutral Agent adapter interface
-- [ ] First Pi/OpenAI-compatible adapters outside Pack contracts
+- [x] Multi-provider Agent runtime for OpenAI-compatible, Anthropic Messages and Gemini GenerateContent
 - [x] Tool permission enforcement and secret boundaries
 - [x] Durable SQLite run/event/checkpoint repository
 - [x] Retry, timeout and failure-policy contracts
+- [ ] Governed model-directed tool loop
 
 ## 0.4 — First deep vertical
 

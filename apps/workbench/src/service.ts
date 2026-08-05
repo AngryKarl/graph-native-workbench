@@ -12,8 +12,10 @@ import {
   type GraphState,
 } from '@graph-native/core';
 import { bundledPackCatalog, requirePackRuntime } from './catalog.js';
+import { WorkbenchModelService } from './model-service.js';
 import {
   WorkbenchWorkspaceStore,
+  type StoredModelProvider,
   type StoredGraphDraft,
   type StoredRunSession,
 } from './workspace-store.js';
@@ -64,9 +66,15 @@ function publicRun(session: StoredRunSession): WorkbenchRunSnapshot {
 
 export class WorkbenchService {
   private readonly store: WorkbenchWorkspaceStore;
+  private readonly models: WorkbenchModelService;
 
-  constructor(options: { readonly dataFile?: string } = {}) {
+  constructor(options: {
+    readonly dataFile?: string;
+    readonly modelEnvironment?: NodeJS.ProcessEnv;
+    readonly modelFetch?: typeof fetch;
+  } = {}) {
     this.store = new WorkbenchWorkspaceStore(options.dataFile);
+    this.models = new WorkbenchModelService(options.modelEnvironment, options.modelFetch);
     const workspace = this.store.snapshot();
     const installedPackIds = workspace.installedPackIds.filter((id) => bundledPackCatalog.has(id));
     const fallback = bundledPackCatalog.keys().next().value as string | undefined;
@@ -135,7 +143,18 @@ export class WorkbenchService {
       catalog,
       activePack: this.describePack(workspace.activePackId),
       runs,
+      models: this.models.describe(workspace.modelProvider),
     };
+  }
+
+  configureModelProvider(selection: StoredModelProvider) {
+    const validated = this.models.validate(selection);
+    this.store.update((state) => ({ ...state, modelProvider: validated }));
+    return this.describeWorkbench();
+  }
+
+  testModelProvider() {
+    return this.models.test(this.store.snapshot().modelProvider);
   }
 
   install(packId: string) {
@@ -233,6 +252,7 @@ export class WorkbenchService {
     const workflow = compilePack(manifest).graphs.get(graph.id)!;
     const result = await new GraphRuntime(workflow, {
       handlers: runtime.handlers,
+      agents: this.models.agents(workspace.modelProvider, graph),
       pack: manifest,
     }).run(input);
     const session = await this.toSession(packId, graph, result, []);
@@ -254,6 +274,7 @@ export class WorkbenchService {
     const workflow = compilePack(manifest).graphs.get(existing.graph.id)!;
     const result = await new GraphRuntime(workflow, {
       handlers: runtime.handlers,
+      agents: this.models.agents(this.store.snapshot().modelProvider, existing.graph),
       pack: manifest,
     }).resume(existing.checkpoint, { decisions: { approval: approved } });
     const session = await this.toSession(existing.packId, existing.graph, result, existing.events);
@@ -277,13 +298,14 @@ export class WorkbenchService {
     previousEvents: readonly GraphEvent[],
   ): Promise<StoredRunSession> {
     const runtime = requirePackRuntime(packId);
+    const events = [...previousEvents, ...result.events];
     let context: WorkbenchContextSnapshot | undefined;
     const hasDeliverable = runtime.manifest.deliverables.some(
       (deliverable) => result.state[deliverable.stateField] !== undefined,
     );
     if (result.status === 'completed' && hasDeliverable && runtime.projector) {
       const store = new InMemoryContextGraphStore(runtime.manifest);
-      await runtime.projector(store, result);
+      await runtime.projector(store, { ...result, events });
       context = {
         objects: await store.listObjects(),
         relations: await store.listRelations(),
@@ -295,7 +317,7 @@ export class WorkbenchService {
       graph,
       status: result.status,
       state: result.state,
-      events: [...previousEvents, ...result.events],
+      events,
       ...(result.status === 'failed' ? { error: result.error.message } : {}),
       ...('checkpoint' in result ? { checkpoint: result.checkpoint } : {}),
       ...(context ? { context } : {}),

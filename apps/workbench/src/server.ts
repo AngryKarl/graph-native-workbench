@@ -97,6 +97,28 @@ async function api(request: IncomingMessage, response: ServerResponse, pathname:
     json(response, 200, service.describeWorkbench());
     return true;
   }
+  if (request.method === 'PUT' && pathname === '/api/model-provider') {
+    const payload = await body(request) as {
+      providerId?: unknown;
+      model?: unknown;
+      baseUrl?: unknown;
+    };
+    if (typeof payload.providerId !== 'string' || typeof payload.model !== 'string') {
+      throw new Error('Model provider configuration requires providerId and model.');
+    }
+    json(response, 200, service.configureModelProvider({
+      providerId: payload.providerId,
+      model: payload.model,
+      ...(typeof payload.baseUrl === 'string' && payload.baseUrl.trim()
+        ? { baseUrl: payload.baseUrl }
+        : {}),
+    }));
+    return true;
+  }
+  if (request.method === 'POST' && pathname === '/api/model-provider/test') {
+    json(response, 200, await service.testModelProvider());
+    return true;
+  }
   if (request.method === 'GET' && pathname === '/api/registries') {
     json(response, 200, await registryService.catalog());
     return true;

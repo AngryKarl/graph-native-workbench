@@ -57,6 +57,61 @@ describe('Workbench service', () => {
     expect(completed.context?.objects.some((object) => object.type === 'deliverable')).toBe(true);
   });
 
+  it('runs a model-enabled Agent through a selected compatible provider and projects its usage', async () => {
+    const secret = 'server-only-secret';
+    const request: typeof fetch = async (_input, init) => {
+      expect(init?.headers).toMatchObject({ authorization: `Bearer ${secret}` });
+      return new Response(JSON.stringify({
+        id: 'model-request-1',
+        model: 'test-model-resolved',
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: JSON.stringify({ synthesis: 'Model-backed synthesis with preserved evidence.' }),
+          },
+        }],
+        usage: { prompt_tokens: 20, completion_tokens: 8, total_tokens: 28 },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    const service = new WorkbenchService({
+      modelEnvironment: { GRAPHWORK_MODEL_API_KEY: secret },
+      modelFetch: request,
+    });
+    service.install('research');
+    const workspace = service.activate('research');
+    service.configureModelProvider({
+      providerId: 'custom',
+      model: 'test-model',
+      baseUrl: 'http://127.0.0.1:9876/v1',
+    });
+
+    const paused = await service.start(workspace.activePack.input);
+    expect(paused.status).toBe('paused');
+    expect(paused.state.synthesis).toBe('Model-backed synthesis with preserved evidence.');
+    expect(paused.events.find((event) => event.type === 'node.completed' && event.nodeId === 'synthesize'))
+      .toMatchObject({ detail: { usage: { providerId: 'custom', totalTokens: 28 } } });
+    expect(JSON.stringify(paused)).not.toContain(secret);
+
+    const completed = await service.decide(paused.runId, true);
+    expect(completed.context?.objects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'model_call',
+        data: expect.objectContaining({ provider_id: 'custom', model: 'test-model-resolved' }),
+      }),
+    ]));
+    expect(completed.context?.relations.some((relation) => relation.type === 'contributed_to')).toBe(true);
+  });
+
+  it('exposes provider readiness without returning environment secret values', () => {
+    const service = new WorkbenchService({
+      modelEnvironment: { OPENAI_API_KEY: 'private-provider-key' },
+    });
+    const models = service.describeWorkbench().models;
+    expect(models.selection.providerId).toBe('deterministic');
+    expect(models.providers.find((provider) => provider.id === 'openai')?.configured).toBe(true);
+    expect(JSON.stringify(models)).not.toContain('private-provider-key');
+  });
+
   it('validates, saves and executes an edited graph definition', async () => {
     const service = new WorkbenchService();
     const pack = service.describePack();

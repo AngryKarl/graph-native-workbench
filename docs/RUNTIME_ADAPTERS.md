@@ -18,6 +18,32 @@ It returns a state patch and optional model, token and cost metadata. The runtim
 validates the patch against the node's declared `writes` before applying it.
 Deterministic node handlers remain available for tests and non-model work.
 
+## Model providers
+
+The Workbench keeps deterministic execution as the default and can bind Agent
+nodes to one of three wire protocols without changing Pack contracts:
+
+| Protocol | Included presets |
+| --- | --- |
+| OpenAI-compatible chat completions | OpenAI, DeepSeek, Alibaba Qwen, Moonshot Kimi, xAI Grok, Mistral AI, Groq, OpenRouter, Ollama and custom endpoints |
+| Anthropic Messages | Anthropic Claude |
+| Gemini GenerateContent | Google Gemini |
+
+Open **Models** to select a provider, model identifier and base URL. Cloud
+credentials are read from the Workbench server environment (`OPENAI_API_KEY`,
+`ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`,
+`DASHSCOPE_API_KEY`, `MOONSHOT_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`,
+`GROQ_API_KEY` or `OPENROUTER_API_KEY`). They are not returned to the browser or
+persisted in `.graphwork/workbench.json`. Custom compatible endpoints may use
+`GRAPHWORK_MODEL_API_KEY`; Ollama and other local endpoints can run without a
+credential.
+
+A Pack opts into model execution by adding `config.modelInstructions` to an
+Agent node. The provider returns a JSON state patch, which remains constrained
+by the node's declared `writes`. Provider, protocol, model, token counts,
+latency and request ID are normalized into the ordered runtime event stream so
+context projectors can preserve model-call provenance alongside deliverables.
+
 ## Tool governance
 
 A tool call succeeds only when all of these conditions hold:

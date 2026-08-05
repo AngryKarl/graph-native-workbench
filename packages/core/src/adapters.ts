@@ -17,10 +17,15 @@ export type NodeHandler = (context: HandlerContext) => GraphState | Promise<Grap
 export type HandlerRegistry = Readonly<Record<string, NodeHandler>>;
 
 export interface AgentUsage {
+  readonly providerId?: string;
+  readonly protocol?: string;
   readonly model?: string;
   readonly inputTokens?: number;
   readonly outputTokens?: number;
+  readonly totalTokens?: number;
   readonly costUsd?: number;
+  readonly requestId?: string;
+  readonly latencyMs?: number;
 }
 
 export interface AgentResult {

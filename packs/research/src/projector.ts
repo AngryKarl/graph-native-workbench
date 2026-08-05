@@ -1,9 +1,10 @@
-import type { ContextObject, ContextRelation } from '@graph-native/contracts';
+import type { ContextObject, ContextRelation, GraphEvent } from '@graph-native/contracts';
 import type { ContextGraphStore, GraphState } from '@graph-native/core';
 
 interface CompletedResearchRun {
   readonly runId: string;
   readonly state: GraphState;
+  readonly events?: readonly GraphEvent[];
 }
 
 function asString(value: unknown): string {
@@ -12,6 +13,21 @@ function asString(value: unknown): string {
 
 function asEvidence(value: unknown): Array<{ claim: string; source: string }> {
   return Array.isArray(value) ? (value as Array<{ claim: string; source: string }>) : [];
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function modelUsageEvents(events: readonly GraphEvent[] = []) {
+  return events.flatMap((event) => {
+    if (event.type !== 'node.completed' || !event.nodeId) return [];
+    const usage = asRecord(event.detail.usage);
+    if (!usage || typeof usage.providerId !== 'string' || typeof usage.model !== 'string') return [];
+    return [{ event, usage }];
+  });
 }
 
 export async function projectResearchRun(
@@ -67,6 +83,28 @@ export async function projectResearchRun(
       provenance: common('publish'),
     },
   ];
+
+  const calls = modelUsageEvents(run.events);
+  calls.forEach(({ event, usage }) => {
+    objects.push({
+      id: `${base}.model.${event.nodeId}.${event.seq}`,
+      type: 'model_call',
+      version: 1,
+      status: 'confirmed',
+      data: {
+        provider_id: usage.providerId,
+        protocol: typeof usage.protocol === 'string' ? usage.protocol : 'unknown',
+        model: usage.model,
+        ...(typeof usage.inputTokens === 'number' ? { input_tokens: usage.inputTokens } : {}),
+        ...(typeof usage.outputTokens === 'number' ? { output_tokens: usage.outputTokens } : {}),
+        ...(typeof usage.latencyMs === 'number' ? { latency_ms: usage.latencyMs } : {}),
+        ...(typeof usage.requestId === 'string' ? { request_id: usage.requestId } : {}),
+      },
+      validFrom: recordedAt,
+      validTo: null,
+      provenance: { ...common(event.nodeId!), actorId: `provider.${usage.providerId}` },
+    });
+  });
 
   const evidenceStreams = [
     { name: 'market', nodeId: 'market_research', items: asEvidence(run.state.market_evidence) },
@@ -126,6 +164,17 @@ export async function projectResearchRun(
       validTo: null,
       provenance: { ...common('approval'), actorId: 'role.reviewer' },
     },
+    ...calls.map(({ event }) => ({
+      id: `${base}.relation.model.${event.seq}.deliverable`,
+      type: 'contributed_to',
+      sourceId: `${base}.model.${event.nodeId}.${event.seq}`,
+      targetId: deliverableId,
+      version: 1,
+      attributes: {},
+      validFrom: recordedAt,
+      validTo: null,
+      provenance: common(event.nodeId ?? 'synthesize'),
+    })),
   ];
   for (const relation of relations) await store.appendRelation(relation);
 }

@@ -1,4 +1,4 @@
-import type { IndustryPackManifest } from '@graph-native/contracts';
+import type { GraphEvent, IndustryPackManifest } from '@graph-native/contracts';
 import type { ContextGraphStore, GraphState, HandlerRegistry } from '@graph-native/core';
 import { listInstalledPacks, loadInstalledPackIsolated } from '@graph-native/pack-sdk';
 import {
@@ -17,7 +17,11 @@ export interface PackRuntimeDefinition {
   readonly handlers: HandlerRegistry;
   readonly projector?: (
     store: ContextGraphStore,
-    run: { readonly runId: string; readonly state: GraphState },
+    run: {
+      readonly runId: string;
+      readonly state: GraphState;
+      readonly events?: readonly GraphEvent[];
+    },
   ) => Promise<void>;
   readonly executionMode: 'in-process' | 'isolated-worker';
   readonly trustSource: 'bundled' | 'local-explicit' | 'signed-registry';

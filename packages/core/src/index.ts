@@ -1,4 +1,5 @@
 export * from './adapters.js';
+export * from './model-providers.js';
 export * from './compiler.js';
 export * from './context-store.js';
 export * from './runtime.js';
