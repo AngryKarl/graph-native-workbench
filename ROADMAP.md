@@ -20,7 +20,7 @@ but the boundary does not change casually.
 - [x] JSON Schema export for editor completion
 - [x] `.gpack` compatibility, version activation and rollback commands
 - [x] Reproducible `graphwork` npm tarball and cross-platform distribution smoke tests
-- [ ] Publish `graphwork` and activate the public `pnpm dlx graphwork` path
+- [x] Publish `graphwork` and activate the public `pnpm dlx graphwork` path
 
 ## 0.3 — Real Agent and tool adapters
 

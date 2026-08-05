@@ -29,6 +29,8 @@ versioning once public packages begin publishing.
   out-of-band publisher trust keys, mandatory expiry and signed artifact metadata.
 - Restricted child-process execution for installed third-party Pack handlers and
   context projectors, with environment, filesystem, memory and time boundaries.
+- Zero-install `graphwork` npm distribution with the bundled Workbench, CLI,
+  reference Packs and isolated Worker.
 
 ### Changed
 

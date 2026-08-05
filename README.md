@@ -26,6 +26,20 @@ flowchart LR
 Requires Node.js 24+ and pnpm. No account, database or model key is required.
 
 ```bash
+pnpm dlx graphwork
+```
+
+This starts the local Workbench, opens it in your browser and stores the
+workspace under `.graphwork` in the current directory. Run the complete
+zero-key workflow in the terminal instead:
+
+```bash
+pnpm dlx graphwork demo
+```
+
+For development from source:
+
+```bash
 pnpm install
 pnpm demo
 ```
@@ -37,7 +51,7 @@ into 7 typed context objects connected by 9 provenance-linked relations.
 Pause at the human gate instead:
 
 ```bash
-pnpm demo:pause
+pnpm dlx graphwork demo --pause
 ```
 
 ## Use the Workbench

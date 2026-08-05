@@ -20,6 +20,19 @@ SOP、角色、工具、知识、质量标准和交付物封装成可安装的 I
 需要 Node.js 24+ 和 pnpm，不需要账号、数据库或模型密钥：
 
 ```bash
+pnpm dlx graphwork
+```
+
+该命令会启动本地 Workbench、自动打开浏览器，并把工作区保存在当前目录的
+`.graphwork` 下。如果希望直接在终端体验完整的零密钥工作流：
+
+```bash
+pnpm dlx graphwork demo
+```
+
+从源码参与开发：
+
+```bash
 pnpm install
 pnpm demo
 ```
@@ -30,7 +43,7 @@ Demo 会并行运行两条证据分支，在 Join 节点汇合，通过质量检
 测试人工暂停：
 
 ```bash
-pnpm demo:pause
+pnpm dlx graphwork demo --pause
 ```
 
 ## 使用 Workbench 界面

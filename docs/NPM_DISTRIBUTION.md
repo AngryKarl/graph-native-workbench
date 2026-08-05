@@ -24,7 +24,7 @@ pnpm dlx /absolute/path/to/release/npm/graphwork-0.1.0.tgz --version
 pnpm dlx /absolute/path/to/release/npm/graphwork-0.1.0.tgz demo
 ```
 
-After publication, the intended user entrypoints are:
+The public user entrypoints are:
 
 ```bash
 pnpm dlx graphwork
@@ -46,8 +46,11 @@ that version before every release.
 [`release-npm.yml`](../.github/workflows/release-npm.yml) is manually triggered
 and defaults to a non-publishing dry run. It repeats type checking, tests and
 distribution smoke checks before npm inspects the package. Actual publication
-requires both `publish=true` and the repository secret `NPM_TOKEN`, uses npm
-provenance, and refuses to replace an existing version.
+requires both `publish=true` and the repository secret `NPM_TOKEN`, and refuses
+to replace an existing version. While the source repository is private,
+releases use token authentication without npm provenance because npm only
+accepts GitHub Actions provenance from public source repositories. Restore
+`id-token: write` and `--provenance` when the repository becomes public.
 
 Run the dry rehearsal:
 
@@ -57,3 +60,6 @@ gh workflow run release-npm.yml -f npm_tag=next -f publish=false
 
 Publishing is an external release action. Confirm the package version, npm tag,
 README and public repository timing before running with `publish=true`.
+
+`graphwork@0.1.0` was published on 2026-08-05 and is available through both the
+`latest` and `next` tags.
