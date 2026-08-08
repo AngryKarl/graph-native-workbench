@@ -198,13 +198,35 @@ function decodeArtifact(artifact: string): {
     throw new Error(`Pack artifact exceeds the ${maxArtifactBytes / 1024 / 1024} MB limit.`);
   }
   let files: Record<string, Uint8Array>;
+  const allowed = new Set([descriptorFile, manifestFile, entryFile]);
+  const seen = new Set<string>();
+  let declaredExpandedBytes = 0;
   try {
-    files = unzipSync(raw);
-  } catch {
+    files = unzipSync(raw, {
+      filter: (file) => {
+        if (!allowed.has(file.name)) {
+          throw new Error('Pack contains an unexpected file. Only declared v1 files are allowed.');
+        }
+        if (seen.has(file.name)) throw new Error(`Pack contains duplicate file "${file.name}".`);
+        seen.add(file.name);
+        if (file.compression !== 0 && file.compression !== 8) {
+          throw new Error(`Pack file "${file.name}" uses an unsupported compression method.`);
+        }
+        declaredExpandedBytes += file.originalSize;
+        if (declaredExpandedBytes > maxExpandedBytes) {
+          throw new Error('Expanded Pack exceeds the 50 MB safety limit.');
+        }
+        return true;
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof Error
+      && (error.message.startsWith('Pack ') || error.message.startsWith('Expanded Pack '))
+    ) throw error;
     throw new Error(`"${artifact}" is not a readable .gpack artifact.`);
   }
   const names = Object.keys(files);
-  const allowed = new Set([descriptorFile, manifestFile, entryFile]);
   if (names.some((name) => !allowed.has(name))) {
     throw new Error('Pack contains an unexpected file. Only declared v1 files are allowed.');
   }

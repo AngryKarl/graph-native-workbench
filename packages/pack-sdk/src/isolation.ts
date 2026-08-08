@@ -15,6 +15,11 @@ export interface IsolatedPackPolicy {
   readonly allowNetwork?: boolean;
   readonly environment?: Readonly<Record<string, string>>;
   readonly maxExecutionMs?: number;
+  /**
+   * Runs executable Pack code as the current OS user. This is only for reviewed
+   * development fixtures; Node's permission model is not a malicious-code sandbox.
+   */
+  readonly unsafeProcessIsolation?: boolean;
   readonly container?: {
     readonly runtime?: 'docker' | 'podman';
     readonly image?: string;
@@ -28,6 +33,7 @@ export interface IsolatedPackPolicy {
 export interface IsolatedInstalledPack extends InstalledPackFiles {
   readonly handlers: HandlerRegistry;
   readonly isolated: true;
+  readonly isolationMode: 'container' | 'unsafe-process';
   readonly projector?: (
     store: ContextGraphStore,
     run: { readonly runId: string; readonly state: GraphState },
@@ -49,6 +55,7 @@ function permissionArguments(entry: string, policy: IsolatedPackPolicy): string[
   for (const path of policy.filesystemRead ?? []) args.push(`--allow-fs-read=${resolve(path)}`);
   for (const path of policy.filesystemWrite ?? []) args.push(`--allow-fs-write=${resolve(path)}`);
   if (policy.allowChildProcess) args.push('--allow-child-process');
+  if (policy.allowNetwork && process.allowedNodeEnvironmentFlags.has('--allow-net')) args.push('--allow-net');
   return args;
 }
 
@@ -188,6 +195,12 @@ function runWorker(
 ): Promise<unknown> {
   if (signal?.aborted) return Promise.reject(new Error('Isolated Pack worker was cancelled.'));
   if (policy.container) return runContainerWorker(entry, request, policy, signal);
+  if (!policy.unsafeProcessIsolation) {
+    return Promise.reject(new Error(
+      'Third-party Pack execution requires container isolation. ' +
+      'Use unsafeProcessIsolation only for reviewed development fixtures.',
+    ));
+  }
   const maximum = executionLimit(policy);
   return new Promise((resolvePromise, reject) => {
     let settled = false;
@@ -265,10 +278,13 @@ function assertPolicy(inspected: InstalledPackFiles, policy: IsolatedPackPolicy)
 export async function loadInstalledPackIsolated(
   id: string,
   root = '.graphwork/packs',
-  policy: IsolatedPackPolicy = {},
+  policy: IsolatedPackPolicy = { container: {} },
 ): Promise<IsolatedInstalledPack> {
+  const effectivePolicy = policy.container || policy.unsafeProcessIsolation
+    ? policy
+    : { ...policy, container: {} };
   const inspected = await inspectInstalledPack(id, root);
-  assertPolicy(inspected, policy);
+  assertPolicy(inspected, effectivePolicy);
   const handlerIds = new Set(
     inspected.pack.graphs.flatMap((graph) => graph.nodes.map((node) => node.handler).filter(Boolean)),
   );
@@ -281,18 +297,19 @@ export async function loadInstalledPackIsolated(
     operation: 'handler',
     handlerId,
     context: { runId: context.runId, node: context.node, state: context.state },
-  }, policy, context.signal) as Promise<GraphState>]));
+  }, effectivePolicy, context.signal) as Promise<GraphState>]));
   const hasProjector = inspected.descriptor.permissions.includes('context.write');
   return {
     ...inspected,
     handlers,
     isolated: true,
+    isolationMode: effectivePolicy.container ? 'container' : 'unsafe-process',
     ...(hasProjector ? {
       projector: async (
         store: ContextGraphStore,
         run: { readonly runId: string; readonly state: GraphState },
       ) => {
-        const projection = await runWorker(inspected.source, { operation: 'projector', run }, policy) as {
+        const projection = await runWorker(inspected.source, { operation: 'projector', run }, effectivePolicy) as {
           readonly objects: readonly ContextObject[];
           readonly relations: readonly ContextRelation[];
         };

@@ -9,6 +9,7 @@ import {
   installPackArtifact,
   listInstalledPacks,
   loadInstalledPack,
+  loadInstalledPackIsolated,
   rollbackInstalledPack,
   scaffoldPack,
   uninstallInstalledPack,
@@ -129,13 +130,44 @@ describe('Pack lifecycle', () => {
     })).toThrow(/current engine is 0.2.1/);
   });
 
+  it('rejects an oversized expanded artifact before decompression', async () => {
+    const paths = await fixture();
+    const artifact = resolve(paths.directory, 'oversized.gpack');
+    await buildPackArtifact({ source: paths.source, output: artifact });
+    const bytes = await readFile(artifact);
+    const centralHeader = 0x02014b50;
+    let offset = 0;
+    let patched = false;
+    while (offset <= bytes.length - 46) {
+      if (bytes.readUInt32LE(offset) !== centralHeader) {
+        offset += 1;
+        continue;
+      }
+      const nameLength = bytes.readUInt16LE(offset + 28);
+      const extraLength = bytes.readUInt16LE(offset + 30);
+      const commentLength = bytes.readUInt16LE(offset + 32);
+      const name = bytes.subarray(offset + 46, offset + 46 + nameLength).toString('utf8');
+      if (name === 'manifest.json') {
+        bytes.writeUInt32LE(51 * 1024 * 1024, offset + 24);
+        patched = true;
+        break;
+      }
+      offset += 46 + nameLength + extraLength + commentLength;
+    }
+    expect(patched).toBe(true);
+    await writeFile(artifact, bytes);
+    expect(() => inspectPackArtifact(artifact)).toThrow(/Expanded Pack exceeds the 50 MB safety limit/);
+  });
+
   it('discovers a trusted installed Pack in the graphical Workbench', async () => {
     const paths = await fixture();
     const artifact = resolve(paths.directory, 'support-ops.gpack');
     await buildPackArtifact({ source: paths.source, output: artifact });
     installPackArtifact(artifact, { root: paths.registry, trust: true });
 
-    const discovery = await discoverInstalledPackRuntimes(paths.registry);
+    const secureDefault = await loadInstalledPackIsolated('support_ops', paths.registry);
+    expect(secureDefault.isolationMode).toBe('container');
+    const discovery = await discoverInstalledPackRuntimes(paths.registry, { unsafeProcessIsolation: true });
     expect(discovery).toEqual({ loaded: 1, errors: [] });
     const service = new WorkbenchService({ dataFile: resolve(paths.directory, 'workbench.json') });
     expect(service.describeWorkbench().catalog.some((pack) => pack.id === 'support_ops')).toBe(true);

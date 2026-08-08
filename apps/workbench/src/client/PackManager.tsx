@@ -146,7 +146,7 @@ export function PackManager({
               <div className="pack-copy">
                 <div><h2>{pack.name}</h2><span>v{pack.version}</span>{active ? <em><Check size={12} />Active</em> : null}</div>
                 <p>{pack.description}</p>
-                <dl><div><dt>Graphs</dt><dd>{pack.graphCount}</dd></div><div><dt>Object types</dt><dd>{pack.objectTypeCount}</dd></div><div><dt>Roles</dt><dd>{pack.roleCount}</dd></div><div><dt>Tools</dt><dd>{pack.toolCount}</dd></div><div><dt>Execution</dt><dd>{pack.executionMode === 'isolated-worker' ? 'Isolated worker' : 'Bundled'}</dd></div><div><dt>Trust</dt><dd>{pack.publisherKeyId ?? (pack.trustSource === 'bundled' ? 'Bundled' : 'Explicit local')}</dd></div><div><dt>License</dt><dd>{pack.license}</dd></div></dl>
+                <dl><div><dt>Graphs</dt><dd>{pack.graphCount}</dd></div><div><dt>Object types</dt><dd>{pack.objectTypeCount}</dd></div><div><dt>Roles</dt><dd>{pack.roleCount}</dd></div><div><dt>Tools</dt><dd>{pack.toolCount}</dd></div><div><dt>Execution</dt><dd>{pack.executionMode === 'isolated-container' ? 'Isolated container' : pack.executionMode === 'unsafe-process' ? 'Unsafe local process' : 'Bundled'}</dd></div><div><dt>Trust</dt><dd>{pack.publisherKeyId ?? (pack.trustSource === 'bundled' ? 'Bundled' : 'Explicit local')}</dd></div><div><dt>License</dt><dd>{pack.license}</dd></div></dl>
               </div>
               <div className="pack-actions">
                 {!installed ? <button className="button primary" disabled={busy} onClick={() => onInstall(pack.id)}><Download size={15} />Install Pack</button> : null}
@@ -158,7 +158,7 @@ export function PackManager({
           );
         })}
       </div>
-      <div className="registry-note"><strong>Executable Pack boundary</strong><p>Imported artifacts are checked for compatibility and SHA-256 integrity. Third-party handlers run in a memory- and time-bounded child process with a minimal environment and restricted filesystem access. Network isolation still requires an OS or container boundary.</p></div>
+      <div className="registry-note"><strong>Executable Pack boundary</strong><p>Imported artifacts are checked for compatibility and SHA-256 integrity. Third-party handlers run in a read-only, non-root container with bounded resources and network access denied by default.</p></div>
     </main>
   );
 }

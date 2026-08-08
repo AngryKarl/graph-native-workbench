@@ -89,31 +89,27 @@ Plain HTTP is accepted only for loopback sources with `allowInsecureHttp: true`.
 
 ## Isolated Worker
 
-Installed third-party Pack handlers and context projectors execute in a fresh
-child process. Bundled reference Packs continue to execute in process because
-they are part of the reviewed distribution.
+Installed third-party Pack handlers and context projectors execute in a fresh,
+network-denied container by default. Bundled reference Packs continue to execute
+in process because they are part of the reviewed distribution.
 
-The default Worker boundary provides:
+The default container boundary provides:
 
 - no inherited parent environment or application secrets;
-- Node’s permission model with read access limited to the Worker and installed
-  Pack directories;
+- read-only mounts limited to the Worker and installed Pack directories;
 - no filesystem writes, child processes, native add-ons or Worker threads;
 - a 128 MB V8 old-space limit;
 - a 30-second execution ceiling, with cancellation terminating the process;
 - IPC-only state patches and recorded context projection operations;
 - a fresh process for each handler or projector invocation.
 
-Packs declaring filesystem access require explicit read/write roots. The local
-child-process boundary cannot deny network access because Node’s permission
-model does not cover networking.
-
-For a deny-by-default network boundary, run an installed Pack through the
-container adapter:
+Packs declaring filesystem access require a purpose-built container policy and
+are rejected by the default adapter. Load an installed Pack with the default
+deny-by-default network boundary:
 
 ```ts
 const loaded = await loadInstalledPackIsolated('customer_success', packRoot, {
-  container: { runtime: 'docker', network: 'none' },
+  container: { runtime: 'docker', network: 'none' }, // also the default policy
 });
 ```
 
@@ -123,10 +119,10 @@ privileges, bounded memory/CPU/PIDs and a small no-exec temporary filesystem.
 Only the Worker and Pack artifact are mounted read-only. Explicit environment
 values are passed by name so their contents do not appear on the command line.
 
-The CLI exposes the same mode for installed Pack workers:
+The CLI uses the same mode for installed Pack workers:
 
 ```bash
-graphwork worker start customer_success --installed --container \
+graphwork worker start customer_success --installed \
   --database "$GRAPHWORK_POSTGRES_URL"
 ```
 
@@ -134,6 +130,10 @@ Use `--container-network <network> --allow-network` only after reviewing a Pack
 that requires network access. Host filesystem roots and Pack-spawned child
 processes are rejected in container mode; required files should be packaged in
 the signed artifact.
+
+`--unsafe-process-isolation` runs Pack code as the current OS user and exists only
+for reviewed development fixtures. Node's permission model is not a security
+sandbox for malicious code, and Node 24 cannot deny network access in this mode.
 
 These boundaries reduce blast radius; they do not make unknown code safe. Signed
 metadata establishes publisher identity and artifact integrity, not publisher

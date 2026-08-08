@@ -236,9 +236,26 @@ describe('model provider protocols', () => {
     await expect(failure).rejects.not.toThrow(/test-secret/);
   });
 
+  it('aborts oversized model-provider responses', async () => {
+    const baseUrl = await fakeProvider((_request, response) => {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      for (let index = 0; index < 33; index += 1) response.write(Buffer.alloc(64 * 1024));
+      response.end();
+    });
+    await expect(client('openai-compatible', baseUrl).generate({
+      model: 'test',
+      prompt: 'hello',
+    })).rejects.toMatchObject({ code: 'invalid_response' });
+  });
+
   it('does not send API keys to non-local plaintext endpoints', () => {
     expect(() => client('openai-compatible', 'http://provider.example/v1')).toThrow(
       expect.objectContaining({ code: 'invalid_configuration' }),
     );
+  });
+
+  it('rejects credentials embedded in provider URLs', () => {
+    expect(() => client('openai-compatible', 'https://user:password@provider.example/v1'))
+      .toThrow(expect.objectContaining({ code: 'invalid_configuration' }));
   });
 });
