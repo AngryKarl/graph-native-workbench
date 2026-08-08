@@ -8,6 +8,7 @@ import { GraphRuntime, InMemoryContextGraphStore, compilePack } from '@graph-nat
 import {
   buildPackArtifact,
   createContainerIsolationCommand,
+  fetchSignedPackRegistry,
   inspectPackArtifact,
   inspectInstalledPack,
   installPackArtifact,
@@ -84,6 +85,22 @@ async function registryServer(document: unknown, artifact: string): Promise<stri
 }
 
 describe('signed Pack registry', () => {
+  it('aborts a chunked Registry response at the byte limit', async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      for (let index = 0; index < 17; index += 1) response.write(Buffer.alloc(64 * 1024));
+      response.end();
+    });
+    servers.push(server);
+    await new Promise<void>((resolveListen) => server.listen(0, '127.0.0.1', resolveListen));
+    const bound = server.address();
+    if (!bound || typeof bound === 'string') throw new Error('Oversized Registry server did not bind.');
+    await expect(fetchSignedPackRegistry(`http://127.0.0.1:${bound.port}/registry.json`, {
+      trustedKeys: {},
+      allowInsecureHttp: true,
+    })).rejects.toThrow(/1048576 byte limit/);
+  });
+
   it('verifies publisher identity, expiry and tamper evidence', async () => {
     const fixture = await packFixture('signed_ops');
     const { privateKey, publicKey } = generateKeyPairSync('ed25519');
@@ -169,7 +186,8 @@ describe('isolated Pack workers', () => {
     installPackArtifact(fixture.artifact, { root: fixture.root, trust: true });
     process.env.GRAPHWORK_ISOLATION_SECRET = 'parent-secret';
 
-    const loaded = await loadInstalledPackIsolated('isolated_ops', fixture.root);
+    const loaded = await loadInstalledPackIsolated('isolated_ops', fixture.root, { unsafeProcessIsolation: true });
+    expect(loaded.isolationMode).toBe('unsafe-process');
     const graph = compilePack(loaded.pack).graphs.get('isolated_ops.workflow');
     if (!graph) throw new Error('Isolated test graph is missing.');
     const completed = await new GraphRuntime(graph, { handlers: loaded.handlers, pack: loaded.pack })
@@ -187,7 +205,10 @@ describe('isolated Pack workers', () => {
     expect(denied.status === 'failed' ? denied.error.message : '').toMatch(/permission|access/i);
     expect(existsSync(resolve(dirnameFromArtifact(fixture.root), 'escape.txt'))).toBe(false);
 
-    const timeBound = await loadInstalledPackIsolated('isolated_ops', fixture.root, { maxExecutionMs: 500 });
+    const timeBound = await loadInstalledPackIsolated('isolated_ops', fixture.root, {
+      unsafeProcessIsolation: true,
+      maxExecutionMs: 500,
+    });
     const timedOut = await new GraphRuntime(graph, { handlers: timeBound.handlers, pack: timeBound.pack })
       .run({ topic: 'loop' });
     expect(timedOut.status).toBe('failed');

@@ -107,6 +107,8 @@ export class ModelProviderError extends Error {
   }
 }
 
+const maxProviderResponseBytes = 2 * 1024 * 1024;
+
 function endpoint(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
 }
@@ -134,8 +136,36 @@ function safeProviderMessage(provider: ModelProviderConfig, message: string): st
   return provider.apiKey ? message.split(provider.apiKey).join('[redacted]') : message;
 }
 
+async function responseText(response: Response, provider: ModelProviderConfig): Promise<string> {
+  const declared = Number(response.headers.get('content-length') ?? 0);
+  if (declared > maxProviderResponseBytes) {
+    await response.body?.cancel('Model provider response exceeded 2 MB.');
+    throw new ModelProviderError(`${provider.label} response exceeds 2 MB.`, 'invalid_response', provider.id);
+  }
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let raw = '';
+  let bytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > maxProviderResponseBytes) {
+        await reader.cancel('Model provider response exceeded 2 MB.');
+        throw new ModelProviderError(`${provider.label} response exceeds 2 MB.`, 'invalid_response', provider.id);
+      }
+      raw += decoder.decode(value, { stream: true });
+    }
+    return raw + decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 async function readJson(response: Response, provider: ModelProviderConfig): Promise<unknown> {
-  const raw = await response.text();
+  const raw = await responseText(response, provider);
   let value: unknown;
   try {
     value = raw ? JSON.parse(raw) : {};
@@ -268,6 +298,9 @@ export class ModelProviderClient {
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       throw new ModelProviderError(`${config.label} base URL must use HTTP or HTTPS.`, 'invalid_configuration', config.id);
     }
+    if (parsed.username || parsed.password) {
+      throw new ModelProviderError(`${config.label} base URL must not contain credentials.`, 'invalid_configuration', config.id);
+    }
     const localHost = ['localhost', '127.0.0.1', '::1'].includes(parsed.hostname);
     if (config.apiKey && parsed.protocol !== 'https:' && !localHost) {
       throw new ModelProviderError(
@@ -344,6 +377,7 @@ export class ModelProviderClient {
     }
     const response = await this.request(endpoint(this.config.baseUrl, 'chat/completions'), {
       method: 'POST',
+      redirect: 'error',
       headers: {
         'content-type': 'application/json',
         ...(this.config.apiKey ? { authorization: `Bearer ${this.config.apiKey}` } : {}),
@@ -424,6 +458,7 @@ export class ModelProviderClient {
     }
     const response = await this.request(endpoint(this.config.baseUrl, 'messages'), {
       method: 'POST',
+      redirect: 'error',
       headers: {
         'content-type': 'application/json',
         'anthropic-version': '2023-06-01',
@@ -512,6 +547,7 @@ export class ModelProviderClient {
     }
     const response = await this.request(endpoint(this.config.baseUrl, `models/${model}:generateContent`), {
       method: 'POST',
+      redirect: 'error',
       headers: {
         'content-type': 'application/json',
         ...(this.config.apiKey ? { 'x-goog-api-key': this.config.apiKey } : {}),

@@ -79,7 +79,9 @@ try {
     throw new Error('Standalone Pack did not execute through the packaged CLI.');
   }
   await run(['pack', 'install', artifact, '--trust'], workspace);
-  const isolated = await run(['pack', 'run', 'distribution_smoke', '--installed', '--set', 'topic=isolated'], workspace);
+  const isolated = await run([
+    'pack', 'run', 'distribution_smoke', '--installed', '--unsafe-process-isolation', '--set', 'topic=isolated',
+  ], workspace);
   if (!isolated.stdout.includes('Pack distribution_smoke processed: isolated')) {
     throw new Error('Installed Pack did not execute through the packaged isolated Worker.');
   }

@@ -38,6 +38,7 @@ export function ProviderManager({ state, busy, onSave, onTest }: ProviderManager
     [selection.providerId, state.providers],
   );
   const dirty = JSON.stringify(selection) !== JSON.stringify(state.selection);
+  const baseUrlEditable = provider.id === 'custom' || !provider.apiKeyEnv;
 
   const select = (providerId: string) => {
     const next = state.providers.find((item) => item.id === providerId)!;
@@ -128,9 +129,12 @@ export function ProviderManager({ state, busy, onSave, onTest }: ProviderManager
                 <input
                   value={selection.baseUrl ?? provider.baseUrl}
                   placeholder="https://provider.example/v1"
+                  disabled={!baseUrlEditable}
                   onChange={(event) => setSelection((current) => ({ ...current, baseUrl: event.target.value }))}
                 />
-                <small>Use the preset endpoint or point Graphwork at a compatible gateway.</small>
+                <small>{baseUrlEditable
+                  ? 'Custom and keyless providers may use a reviewed compatible endpoint.'
+                  : 'Credentialed provider endpoints are locked so API keys cannot be redirected.'}</small>
               </label>
               <div className="credential-boundary">
                 <KeyRound size={16} />

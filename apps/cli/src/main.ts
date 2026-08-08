@@ -157,6 +157,7 @@ function usage(): string {
     '  graphwork pack schema [output.json]',
     '',
     'Repeat --set/--decision/--permission for more values. --input/--decisions also accept JSON or @file.json.',
+    'Installed Pack execution uses a network-denied container by default. --unsafe-process-isolation is only for reviewed development fixtures.',
     'Executable local .gpack artifacts require explicit --trust. Signed registries require a configured publisher key.',
   ].join('\n');
 }
@@ -279,7 +280,13 @@ async function resolveRunnablePack(subject: string) {
 }
 
 function isolationPolicy(): IsolatedPackPolicy {
-  if (!args.includes('--container')) return {};
+  if (args.includes('--unsafe-process-isolation')) {
+    if (args.includes('--container')) throw new Error('--unsafe-process-isolation cannot be combined with --container.');
+    return {
+      unsafeProcessIsolation: true,
+      allowNetwork: args.includes('--allow-network'),
+    };
+  }
   const runtime = valueAfter('--container-runtime') ?? 'docker';
   if (runtime !== 'docker' && runtime !== 'podman') throw new Error('--container-runtime must be docker or podman.');
   return {

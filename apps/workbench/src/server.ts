@@ -11,6 +11,13 @@ import { defaultToolPolicy, parseToolPolicy, type ToolPolicy } from '@graph-nati
 import { bundledPackCatalog, discoverInstalledPackRuntimes } from './catalog.js';
 import { WorkbenchService } from './service.js';
 import { WorkbenchRegistryService } from './registry-service.js';
+import {
+  applyWorkbenchSecurityHeaders,
+  createWorkbenchHttpSecurity,
+  enforceWorkbenchRequestSecurity,
+  HttpSecurityError,
+  requireContentType,
+} from './http-security.js';
 
 const appDirectory = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const workspaceDirectory = resolve(appDirectory, '..', '..');
@@ -24,6 +31,7 @@ const trustFile = process.env.GRAPH_WORKBENCH_TRUST
   ?? resolve(workspaceDirectory, '.graphwork/trust.json');
 const policyFile = process.env.GRAPH_WORKBENCH_POLICY
   ?? resolve(workspaceDirectory, '.graphwork/policy.json');
+const httpSecurity = createWorkbenchHttpSecurity(host, process.env.GRAPH_WORKBENCH_AUTH_TOKEN);
 const discovery = await discoverInstalledPackRuntimes(packRoot);
 const service = new WorkbenchService({ dataFile, toolPolicy: await loadToolPolicy(policyFile) });
 const registryService = await WorkbenchRegistryService.fromConfigFile(trustFile, packRoot);
@@ -56,6 +64,7 @@ function json(response: ServerResponse, status: number, value: unknown): void {
 }
 
 async function body(request: IncomingMessage): Promise<unknown> {
+  requireContentType(request, ['application/json']);
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of request) {
@@ -68,6 +77,7 @@ async function body(request: IncomingMessage): Promise<unknown> {
 }
 
 async function artifactBody(request: IncomingMessage): Promise<Buffer> {
+  requireContentType(request, ['application/vnd.graphwork.gpack', 'application/octet-stream']);
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of request) {
@@ -311,9 +321,11 @@ function openWorkbench(url: string): void {
   }
 }
 
-createServer(async (request, response) => {
-  const url = new URL(request.url ?? '/', `http://${request.headers.host ?? '127.0.0.1'}`);
+const server = createServer(async (request, response) => {
+  applyWorkbenchSecurityHeaders(response);
   try {
+    const url = new URL(request.url ?? '/', 'http://localhost');
+    enforceWorkbenchRequestSecurity(request, url.pathname, httpSecurity);
     if (await api(request, response, url.pathname)) return;
     if (url.pathname.startsWith('/api/')) {
       json(response, 404, { error: 'API route not found.' });
@@ -322,9 +334,16 @@ createServer(async (request, response) => {
     await staticFile(response, url.pathname);
   } catch (error) {
     const resolved = error instanceof Error ? error : new Error(String(error));
-    json(response, 400, { error: resolved.message });
+    if (resolved instanceof HttpSecurityError && resolved.challenge) {
+      response.setHeader('www-authenticate', 'Basic realm="Graphwork", charset="UTF-8"');
+    }
+    json(response, resolved instanceof HttpSecurityError ? resolved.status : 400, { error: resolved.message });
   }
-}).listen(port, host, () => {
+});
+server.headersTimeout = 15_000;
+server.requestTimeout = 30_000;
+server.maxHeadersCount = 100;
+server.listen(port, host, () => {
   const url = `http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`;
   console.log(`Graph Native Workbench: ${url}`);
   if (discovery.loaded > 0) console.log(`Loaded ${discovery.loaded} trusted Pack(s) from ${packRoot}`);
