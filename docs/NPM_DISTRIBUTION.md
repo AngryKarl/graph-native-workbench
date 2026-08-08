@@ -62,5 +62,6 @@ gh workflow run release-npm.yml -f npm_tag=next -f publish=false
 Publishing is an external release action. Confirm the package version, npm tag,
 README and public repository timing before running with `publish=true`.
 
-`graphwork@0.1.0` was published on 2026-08-05 and is available through both the
-`latest` and `next` tags.
+`graphwork@0.1.0` was published on 2026-08-05 and remains on the `latest` tag.
+`graphwork@0.2.0-rc.1` was published with provenance on 2026-08-08 under the
+`next` tag.

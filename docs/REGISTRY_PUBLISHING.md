@@ -94,6 +94,15 @@ For this repository the resulting endpoint will be:
 https://angrykarl.github.io/graph-native-workbench/registry/registry.json
 ```
 
+The endpoint was activated on 2026-08-08. Verify the live catalog against the
+repository trust key with:
+
+```bash
+pnpm graphwork pack registry verify \
+  https://angrykarl.github.io/graph-native-workbench/registry/registry.json \
+  --key graphwork.reference.v1=registry/reference-public.pem
+```
+
 Do not advertise that endpoint while the repository or Pages site is private.
 Catalogs have a mandatory expiry, so schedule or manually run a verified
 refresh before the current document expires. Never rebuild and republish an

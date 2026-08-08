@@ -154,6 +154,10 @@ Organizations can publish the same artifacts through an Ed25519-signed HTTPS
 Registry. Publisher keys are configured out of band; the signed index binds the
 Pack identity, checksum, compatibility and permissions before download:
 
+The public [Graphwork Reference Registry](https://angrykarl.github.io/graph-native-workbench/registry/registry.json)
+contains the three bundled examples. Its source-controlled publisher key and
+fingerprint are documented in the [Registry publishing guide](docs/REGISTRY_PUBLISHING.md).
+
 ```bash
 pnpm graphwork pack registry verify https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem

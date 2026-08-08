@@ -20,11 +20,11 @@ stable 1.0 release.
 
 ## Public launch
 
-- [ ] Publish the `0.2.0-rc.1` npm release under the `next` tag
-- [ ] Make the GitHub repository public and enable Discussions and private
+- [x] Publish the `0.2.0-rc.1` npm release under the `next` tag
+- [x] Make the GitHub repository public and enable Discussions and private
   vulnerability reporting
-- [ ] Activate and verify the signed Reference Registry on GitHub Pages
-- [ ] Publish the first maintained `good first issue` set
+- [x] Activate and verify the signed Reference Registry on GitHub Pages
+- [x] Publish the first maintained `good first issue` set
 - [ ] Collect onboarding feedback from external Pack authors
 
 ## Before stable 1.0

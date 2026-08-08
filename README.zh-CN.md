@@ -136,6 +136,10 @@ pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
 组织也可以通过 Ed25519 签名的 HTTPS Registry 发布 Pack。发布者公钥由使用方
 独立配置，签名索引会在下载前绑定 Pack 身份、校验和、兼容范围与权限：
 
+公开的 [Graphwork Reference Registry](https://angrykarl.github.io/graph-native-workbench/registry/registry.json)
+已经提供三个示例 Pack。仓库中的发布者公钥和指纹见
+[Registry 发布指南](docs/REGISTRY_PUBLISHING.md)。
+
 ```bash
 pnpm graphwork pack registry verify https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
