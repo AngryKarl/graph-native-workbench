@@ -44,7 +44,7 @@ jobs:
 
       - name: Verify npm package contents
         working-directory: apps/distribution
-        run: npm publish --dry-run --access public
+        run: npm publish --dry-run --access public --tag "${{ inputs.npm_tag }}"
 
       - name: Refuse version replacement
         if: ${{ inputs.publish }}
