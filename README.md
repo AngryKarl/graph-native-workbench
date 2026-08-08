@@ -3,7 +3,7 @@
 **Turn an SOP into an executable, inspectable work graph — then preserve its
 evidence, decisions and deliverables as organizational context.**
 
-[中文说明](README.zh-CN.md) · `0.2.0-rc.1` public-alpha candidate · MIT licensed
+[中文说明](README.zh-CN.md) · `0.2.0` public alpha · MIT licensed
 
 Graph Native Workbench is an open-source foundation for complex industry work.
 It connects an **execution graph** (agents, functions, tools, humans and quality
@@ -69,6 +69,12 @@ inbox, deliverable console and context explorer:
 | Architecture Concept Design | A source-linked concept brief with reviewed design directions | Proves a deep vertical can keep evidence, constraints and decisions traceable |
 | Cross-industry Research | An approved evidence synthesis | Keeps the first run zero-key and easy to inspect |
 
+### One run, end to end
+
+| Human checkpoint | Approved deliverable | Reusable context |
+| --- | --- | --- |
+| ![Revenue-owner approval](docs/assets/customer-success-approval.png) | ![Renewal success plan](docs/assets/customer-success-output.png) | ![Confirmed objects and relations](docs/assets/customer-success-context.png) |
+
 Run the customer-success case from source:
 
 ```bash
@@ -111,9 +117,9 @@ only from server environment variables; they are never sent to the browser or
 stored in the workspace.
 
 Graph drafts, installed Packs, active Pack selection, runs and checkpoints are
-stored locally in `.graphwork/workbench.json`. Architecture and Research are
-bundled; trusted `.gpack` artifacts can be imported from the Packs view or
-installed through the CLI and are stored under `.graphwork/packs`.
+stored locally in `.graphwork/workbench.json`. Architecture, Customer Success
+and Research are bundled; trusted `.gpack` artifacts can be imported from the
+Packs view or installed through the CLI and are stored under `.graphwork/packs`.
 
 Optional declarative tool policy lives at `.graphwork/policy.json`. Completed
 or paused runs can be exported from the run console as portable, integrity-
@@ -258,8 +264,8 @@ run the complete [release-readiness gate](docs/RELEASE_READINESS.md) locally.
 - Windows and Linux CI with a zero-key smoke demo.
 - responsive graph editor with node/edge authoring, contract and policy
   inspection, autosaved drafts, undo/redo and real runtime execution;
-- local Pack installation and switching for the bundled Architecture and
-  Research Packs;
+- local Pack installation and switching for the bundled Architecture,
+  Customer Success and Research Packs;
 - persisted run history, human checkpoint resume, Markdown deliverables and
   context graph provenance exploration.
 

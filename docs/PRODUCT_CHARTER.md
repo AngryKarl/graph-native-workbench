@@ -47,3 +47,5 @@ experience without modifying the kernel.
    synthesis, independent verification, approval and publication.
 2. Architecture: the first deep vertical Pack for requirements, evidence,
    design decisions, review and deliverable production.
+3. Customer Success Renewal: an enterprise operating workflow for attributable
+   account evidence, renewal-risk decisions, owned interventions and approval.

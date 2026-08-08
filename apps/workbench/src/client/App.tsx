@@ -308,7 +308,7 @@ export function App() {
           : await uninstallPack(packId);
       acceptBootstrap(next);
       if (action !== 'uninstall') setView('editor');
-      setNotice(action === 'install' ? 'Pack installed.' : action === 'activate' ? 'Pack opened.' : 'Pack uninstalled.');
+      setNotice(action === 'install' ? `${next.activePack.name} installed and opened.` : action === 'activate' ? 'Pack opened.' : 'Pack uninstalled.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
     } finally {

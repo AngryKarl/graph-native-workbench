@@ -35,7 +35,8 @@ release, a maintainer must:
 4. configure the Registry Ed25519 signing secret and GitHub Pages;
 5. run both release workflows in dry-run mode, review their artifacts, then
    explicitly authorize npm and Registry publication;
-6. verify the public `pnpm dlx graphwork` and Registry URLs from a clean machine.
+6. verify the public untagged stable release (or explicitly tagged prerelease)
+   and Registry URLs from a clean machine.
 
 These are intentionally separate from code completion because they create
 irreversible public artifacts and require repository-owner credentials.

@@ -21,8 +21,8 @@ actual Workbench HTTP API and static client. `dist:pack` creates
 Test the tarball through the same temporary installation path used by `dlx`:
 
 ```bash
-pnpm dlx /absolute/path/to/release/npm/graphwork-0.2.0-rc.1.tgz --version
-pnpm dlx /absolute/path/to/release/npm/graphwork-0.2.0-rc.1.tgz demo
+pnpm dlx /absolute/path/to/release/npm/graphwork-0.2.0.tgz --version
+pnpm dlx /absolute/path/to/release/npm/graphwork-0.2.0.tgz demo
 ```
 
 The public user entrypoints are:
@@ -32,6 +32,9 @@ pnpm dlx graphwork
 pnpm dlx graphwork demo
 pnpm dlx graphwork pack init customer_success
 ```
+
+Stable public-alpha releases use the `latest` tag. Prerelease builds use
+`next`, so the default commands always select the maintained public release.
 
 The first command starts the Workbench on `127.0.0.1:4311`, opens the browser
 and persists the workspace in `.graphwork` under the caller's current
@@ -62,6 +65,7 @@ gh workflow run release-npm.yml -f npm_tag=next -f publish=false
 Publishing is an external release action. Confirm the package version, npm tag,
 README and public repository timing before running with `publish=true`.
 
-`graphwork@0.1.0` was published on 2026-08-05 and remains on the `latest` tag.
+`graphwork@0.1.0` was the initial `latest` release on 2026-08-05.
 `graphwork@0.2.0-rc.1` was published with provenance on 2026-08-08 under the
-`next` tag.
+`next` tag. `graphwork@0.2.0` is the first stable public-alpha release under
+`latest`.

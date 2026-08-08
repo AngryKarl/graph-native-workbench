@@ -25,7 +25,8 @@ test('runs, approves and preserves the default Industry Pack in a fresh Workbenc
   await page.locator('.app-nav button[title="Packs"]').click();
   const customerSuccessCard = page.getByRole('article').filter({ hasText: 'Customer Success Renewal Pack' });
   await customerSuccessCard.getByRole('button', { name: 'Install Pack' }).click();
-  await page.getByRole('combobox').first().selectOption({ label: 'Customer Success Renewal Pack · v0.1.0' });
+  await expect(page.getByRole('combobox').first()).toHaveValue('customer_success');
+  await expect(page.getByText('Customer Success Renewal Pack installed and opened.')).toBeVisible();
   await expect(page.getByText('Evidence-based renewal workflow')).toBeVisible();
   await page.getByRole('button', { name: 'Run graph' }).click();
   await expect(page.getByText('Human decision required')).toBeVisible();
