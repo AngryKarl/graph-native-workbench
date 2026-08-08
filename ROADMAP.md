@@ -1,8 +1,7 @@
 # Roadmap
 
-Graphwork is preparing its first public alpha. The roadmap separates what is
-available in the release candidate from the evidence still required before a
-stable 1.0 release.
+Graphwork's first public alpha is available. The roadmap separates what ships
+today from the evidence still required before a stable 1.0 release.
 
 ## Public-alpha release candidate
 
@@ -21,6 +20,7 @@ stable 1.0 release.
 ## Public launch
 
 - [x] Publish the `0.2.0-rc.1` npm release under the `next` tag
+- [x] Promote the verified public alpha as `0.2.0` under the `latest` tag
 - [x] Make the GitHub repository public and enable Discussions and private
   vulnerability reporting
 - [x] Activate and verify the signed Reference Registry on GitHub Pages

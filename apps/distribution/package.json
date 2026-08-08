@@ -1,6 +1,6 @@
 {
   "name": "graphwork",
-  "version": "0.2.0-rc.1",
+  "version": "0.2.0",
   "description": "Graph-native workbench and Industry Pack toolkit for executable organizational workflows.",
   "type": "module",
   "license": "MIT",

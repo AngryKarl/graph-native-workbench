@@ -2,7 +2,7 @@
 
 **把企业 SOP 变成可执行、可检查的工作图，再把证据、决策和交付物沉淀为组织上下文。**
 
-[English](README.md) · `0.2.0-rc.1` 公开 Alpha 候选版 · MIT
+[English](README.md) · `0.2.0` 公开 Alpha · MIT
 
 Graph Native Workbench 是一个面向复杂行业工作的开源 Graph-native
 Workbench。它把 Agent 执行图与组织上下文图连接起来，使企业能够把自己的
@@ -60,6 +60,12 @@ pnpm dlx graphwork demo --pause
 | Customer Success Renewal | 经审批的续约风险评估与责任明确的成功计划 | 常见企业 SOP 无需修改内核即可得到完整工作台 |
 | Architecture Concept Design | 证据可追溯、经过评审的概念设计简报 | 深度垂直行业的约束、证据和决策能够保持关联 |
 | Cross-industry Research | 经审批的证据综合报告 | 零密钥完成第一次运行并检查全过程 |
+
+### 一次运行的完整结果
+
+| 人工审批 | 经确认的交付物 | 可复用的组织上下文 |
+| --- | --- | --- |
+| ![收入负责人审批](docs/assets/customer-success-approval.png) | ![续约成功计划](docs/assets/customer-success-output.png) | ![已确认的对象与关系](docs/assets/customer-success-context.png) |
 
 从源码运行客户成功案例：
 

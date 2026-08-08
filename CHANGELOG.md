@@ -3,6 +3,21 @@
 All notable changes will be documented here. The project follows semantic
 versioning once public packages begin publishing.
 
+## 0.2.0 - 2026-08-08
+
+### Changed
+
+- Promoted the release candidate to the first stable public-alpha npm release.
+- Bundled Pack installation now opens the installed Pack immediately.
+- Added a compact approval-to-context visual journey to the English and Chinese
+  README files and aligned all public Pack descriptions.
+
+### Fixed
+
+- Pointed the default quickstart at the maintained `latest` npm release instead
+  of leaving public-alpha users on the earlier `0.1.0` package.
+- Kept mobile notifications above the bottom navigation.
+
 ## 0.2.0-rc.1 - 2026-08-08
 
 ### Added

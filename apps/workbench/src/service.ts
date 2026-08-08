@@ -208,6 +208,7 @@ export class WorkbenchService {
     this.store.update((state) => ({
       ...state,
       installedPackIds: [...new Set([...state.installedPackIds, packId])],
+      activePackId: packId,
     }));
     return this.describeWorkbench();
   }

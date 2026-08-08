@@ -63,12 +63,10 @@ describe('Workbench service', () => {
     const service = new WorkbenchService();
     const installed = service.install('research');
     expect(installed.installedPackIds).toContain('research');
+    expect(installed.activePackId).toBe('research');
+    expect(installed.activePack.graph.id).toBe('research.workflow');
 
-    const activated = service.activate('research');
-    expect(activated.activePackId).toBe('research');
-    expect(activated.activePack.graph.id).toBe('research.workflow');
-
-    const paused = await service.start(activated.activePack.input);
+    const paused = await service.start(installed.activePack.input);
     expect(paused).toMatchObject({ packId: 'research', graphId: 'research.workflow', status: 'paused' });
     const completed = await service.decide(paused.runId, true);
     expect(completed.state.deliverable).toContain('# Approved research deliverable');
