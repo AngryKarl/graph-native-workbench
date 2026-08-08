@@ -20,6 +20,7 @@ const requiredFiles = [
   'docs/THREAT_MODEL.md',
   'docs/WHY_TWO_GRAPHS.md',
   'docs/CUSTOMER_SUCCESS_CASE.md',
+  'registry/reference-public.pem',
 ];
 await Promise.all(requiredFiles.map((file) => access(resolve(root, file))));
 
@@ -92,7 +93,7 @@ for (const file of markdown) {
 }
 
 console.log(`Release-readiness metadata passed for ${distribution.name}@${distribution.version}.`);
-console.log(`  ${requiredFiles.length} public project and operations documents`);
+console.log(`  ${requiredFiles.length} required public project and operations files`);
 console.log(`  ${manifests.length} version- and license-aligned package manifests`);
 console.log(`  ${referenceSources.length} reference Registry Packs`);
 console.log(`  ${markdown.length} Markdown files with valid local links`);

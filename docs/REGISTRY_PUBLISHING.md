@@ -46,6 +46,18 @@ The reference workflow signs with key id `graphwork.reference.v1`. Changing
 that id is a trust migration and requires consumers to configure the new public
 key before the old catalog expires.
 
+The current reference publisher key is committed at
+[`registry/reference-public.pem`](../registry/reference-public.pem). Its SPKI
+SHA-256 fingerprint is:
+
+```text
+668bf759e6d1c90e6a1e6104b4ec7149df2e693fc79c43ddce8a56992e893385
+```
+
+Consumers should verify this value through the source repository before adding
+the key to `.graphwork/trust.json`. The Registry deployment publishes the same
+public key beside the signed catalog so automated checks can detect a mismatch.
+
 ## GitHub Pages workflow
 
 [`publish-registry.yml`](../.github/workflows/publish-registry.yml) runs the
