@@ -20,9 +20,10 @@ import { valid, validRange } from 'semver';
 import { z } from 'zod';
 import { evaluateEngineCompatibility, type EngineCompatibilityReport } from './compatibility.js';
 import { loadPackModule } from './load.js';
+import packSdkManifest from '../package.json' with { type: 'json' };
 
 export const PACK_FORMAT_VERSION = 1 as const;
-export const GRAPHWORK_ENGINE_VERSION = '0.1.0';
+export const GRAPHWORK_ENGINE_VERSION = packSdkManifest.version;
 const descriptorFile = 'graphwork.pack.json';
 const manifestFile = 'manifest.json';
 const entryFile = 'dist/index.mjs';
@@ -242,7 +243,7 @@ export async function buildPackArtifact(options: PackBuildOptions): Promise<Pack
   const descriptor = packPackageDescriptorSchema.parse({
     formatVersion: PACK_FORMAT_VERSION,
     pack: { id: manifest.id, version: manifest.version, manifest: manifestFile, entry: entryFile },
-    engine: { graphwork: options.engineRange ?? '^0.1.0' },
+    engine: { graphwork: options.engineRange ?? `^${GRAPHWORK_ENGINE_VERSION}` },
     permissions,
     integrity: {
       algorithm: 'sha256',

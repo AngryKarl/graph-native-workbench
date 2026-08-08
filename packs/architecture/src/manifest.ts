@@ -2,7 +2,7 @@ import type { IndustryPackManifest } from '@graph-native/contracts';
 
 export const architecturePack: IndustryPackManifest = {
   id: 'architecture',
-  version: '0.1.0',
+  version: '0.2.0',
   name: 'Architecture Concept Design Pack',
   description:
     'An evidence-backed workflow that turns project requirements, site context, constraints, and source material into reviewed concept directions and a traceable design brief.',

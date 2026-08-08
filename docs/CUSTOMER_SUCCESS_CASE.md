@@ -37,9 +37,9 @@ The zero-key workflow:
 
 ```bash
 pnpm graphwork pack build packs/customer-success/src/index.ts \
-  --output customer_success-0.1.0.gpack
-pnpm graphwork pack inspect customer_success-0.1.0.gpack
-pnpm graphwork pack install customer_success-0.1.0.gpack --trust
+  --output customer_success-0.2.0.gpack
+pnpm graphwork pack inspect customer_success-0.2.0.gpack
+pnpm graphwork pack install customer_success-0.2.0.gpack --trust
 pnpm graphwork workbench
 ```
 

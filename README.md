@@ -147,9 +147,9 @@ not edit the kernel.
 Package, install and run the same Pack as a versioned artifact:
 
 ```bash
-pnpm graphwork pack build packs/customer_success/src/index.ts --output customer_success-0.1.0.gpack
-pnpm graphwork pack inspect customer_success-0.1.0.gpack
-pnpm graphwork pack install customer_success-0.1.0.gpack --trust
+pnpm graphwork pack build packs/customer_success/src/index.ts --output customer_success-0.2.0.gpack
+pnpm graphwork pack inspect customer_success-0.2.0.gpack
+pnpm graphwork pack install customer_success-0.2.0.gpack --trust
 pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
 ```
 
@@ -167,7 +167,7 @@ fingerprint are documented in the [Registry publishing guide](docs/REGISTRY_PUBL
 ```bash
 pnpm graphwork pack registry verify https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
-pnpm graphwork pack registry install customer_success@0.1.0 \
+pnpm graphwork pack registry install customer_success@0.2.0 \
   --registry https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
 ```

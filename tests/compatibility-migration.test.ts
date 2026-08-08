@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
-import { evaluateEngineCompatibility } from '@graph-native/pack-sdk';
+import { evaluateEngineCompatibility, GRAPHWORK_ENGINE_VERSION } from '@graph-native/pack-sdk';
 import {
   migrateWorkbenchWorkspace,
   WorkbenchWorkspaceStore,
@@ -28,6 +28,10 @@ function legacyWorkspace() {
 }
 
 describe('compatibility and workspace migration', () => {
+  it('uses the Pack SDK package version as the engine compatibility authority', () => {
+    expect(GRAPHWORK_ENGINE_VERSION).toBe('0.2.0');
+  });
+
   it('returns actionable engine compatibility reasons from one authority', () => {
     expect(evaluateEngineCompatibility('^0.1.0', '0.1.0')).toMatchObject({
       compatible: true,

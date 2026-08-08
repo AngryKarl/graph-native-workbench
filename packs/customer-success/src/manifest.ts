@@ -2,7 +2,7 @@ import type { IndustryPackManifest } from '@graph-native/contracts';
 
 export const customerSuccessPack: IndustryPackManifest = {
   id: 'customer_success',
-  version: '0.1.0',
+  version: '0.2.0',
   name: 'Customer Success Renewal Pack',
   description:
     'Turn product-health signals, stakeholder evidence and commercial context into a governed renewal-risk assessment and approved success plan.',

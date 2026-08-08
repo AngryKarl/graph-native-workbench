@@ -35,7 +35,7 @@ pnpm dlx graphwork pack init customer_success
 pnpm dlx graphwork pack validate packs/customer_success/src/index.mjs
 pnpm dlx graphwork pack test packs/customer_success/src/index.mjs
 pnpm dlx graphwork pack build packs/customer_success/src/index.mjs \
-  --output customer_success-0.1.0.gpack
+  --output customer_success-0.2.0.gpack
 ```
 
 Run `pnpm dlx graphwork help` for the complete Pack lifecycle and signed
