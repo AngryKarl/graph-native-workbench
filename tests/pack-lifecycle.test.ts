@@ -126,7 +126,7 @@ describe('Pack lifecycle', () => {
     expect(() => installPackArtifact(artifact, {
       root: paths.registry,
       trust: true,
-    })).toThrow(/current engine is 0.2.0/);
+    })).toThrow(/current engine is 0.2.1/);
   });
 
   it('discovers a trusted installed Pack in the graphical Workbench', async () => {

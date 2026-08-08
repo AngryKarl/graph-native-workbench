@@ -2,7 +2,7 @@
 
 **把企业 SOP 变成可执行、可检查的工作图，再把证据、决策和交付物沉淀为组织上下文。**
 
-[English](README.md) · `0.2.0` 公开 Alpha · MIT
+[English](README.md) · `0.2.1` 公开 Alpha · MIT
 
 Graph Native Workbench 是一个面向复杂行业工作的开源 Graph-native
 Workbench。它把 Agent 执行图与组织上下文图连接起来，使企业能够把自己的

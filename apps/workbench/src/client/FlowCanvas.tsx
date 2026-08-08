@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, type DragEvent } from 'react';
+import { memo, useEffect, useMemo, useRef, type DragEvent } from 'react';
 import {
   addEdge,
   Background,
@@ -9,6 +9,7 @@ import {
   MiniMap,
   Position,
   ReactFlow,
+  useNodesState,
   type Connection,
   type Edge,
   type Node,
@@ -63,16 +64,31 @@ export function FlowCanvas({ graph, positions, run, selectedNodeId, onSelectNode
 }) {
   const instance = useRef<ReactFlowInstance<Node<WorkflowNodeData>, Edge> | null>(null);
   const nodeTypes = useMemo(() => ({ workflow: WorkflowNode }), []);
-  const nodes = useMemo<Node<WorkflowNodeData>[]>(() => graph.nodes.map((definition) => ({
+  const presentedNodes = useMemo<Node<WorkflowNodeData>[]>(() => graph.nodes.map((definition) => ({
     id: definition.id,
     type: 'workflow',
     position: positions[definition.id] ?? { x: 0, y: 0 },
+    selected: selectedNodeId === definition.id,
     data: {
       definition,
       status: nodeRunStatus(run, definition.id),
       selected: selectedNodeId === definition.id,
     },
   })), [graph.nodes, positions, run, selectedNodeId]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(presentedNodes);
+  useEffect(() => {
+    setNodes((currentNodes) => {
+      const currentById = new Map(currentNodes.map((node) => [node.id, node]));
+      return presentedNodes.map((node) => {
+        const current = currentById.get(node.id);
+        return {
+          ...node,
+          ...(current?.measured ? { measured: current.measured } : {}),
+          ...(current?.dragging ? { position: current.position, dragging: true } : {}),
+        };
+      });
+    });
+  }, [presentedNodes, setNodes]);
 
   const edges = useMemo<Edge[]>(() => graph.edges.map((edge) => ({
     id: edge.id,
@@ -139,6 +155,7 @@ export function FlowCanvas({ graph, positions, run, selectedNodeId, onSelectNode
         onInit={(value) => { instance.current = value; }}
         onNodeClick={selectNode}
         onPaneClick={() => onSelectNode(null)}
+        onNodesChange={onNodesChange}
         onNodeDragStop={(_event, node) => onChange(graph, { ...positions, [node.id]: node.position })}
         onNodesDelete={deleteNodes}
         onEdgesDelete={deleteEdges}
