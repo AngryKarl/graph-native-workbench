@@ -100,8 +100,9 @@ pnpm workbench
 打开 **Models** 可以继续使用内置的零密钥运行时，也可以连接 OpenAI、
 Anthropic Claude、Google Gemini、DeepSeek、阿里云通义千问、Moonshot Kimi、
 xAI Grok、Mistral AI、Groq、OpenRouter、Ollama 或自定义 OpenAI-compatible
-端点。模型 ID 与兼容端点地址可以编辑。API 密钥只从服务端环境变量读取，
-不会传回浏览器，也不会写入工作区文件。
+端点。模型 ID 可以编辑；带密钥的预设供应商会锁定官方地址，只有自定义或无密钥
+供应商可以使用经过审核的兼容端点。API 密钥只从服务端环境变量读取，不会传回
+浏览器，也不会写入工作区文件。
 
 模型驱动的 Agent 可以在有界循环中调用 Pack 声明的工具。所有调用继续经过
 节点范围、角色权限、风险授权和密钥隔离检查，并作为有序事件显示在运行控制台。
@@ -154,8 +155,8 @@ pnpm graphwork pack registry install customer_success@0.2.0 \
   --key acme.release=registry-public.pem
 ```
 
-安装的第三方 Pack 处理器和上下文投影器会在受限制的子进程 Worker 中执行，
-不会加载进 Workbench 主进程。详细边界见
+安装的第三方 Pack 处理器和上下文投影器默认会在只读、非 root、断网的容器 Worker
+中执行，不会加载进 Workbench 主进程。详细边界见
 [Registry 信任与 Worker 隔离](docs/TRUST_AND_ISOLATION.md)。
 
 如需在界面中浏览已验签的目录，请在 `.graphwork/trust.json` 配置 Registry 地址

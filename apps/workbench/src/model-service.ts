@@ -98,6 +98,9 @@ export class WorkbenchModelService {
     if (!model) throw new Error(`${preset.label} requires a model name.`);
     const baseUrl = (selection.baseUrl ?? preset.baseUrl).trim();
     if (!baseUrl) throw new Error(`${preset.label} requires a base URL.`);
+    if (preset.apiKeyEnv && preset.id !== 'custom' && baseUrl !== preset.baseUrl) {
+      throw new Error(`${preset.label} credentials may only be sent to the built-in endpoint ${preset.baseUrl}.`);
+    }
     new ModelProviderClient({
       id: preset.id,
       label: preset.label,
@@ -144,7 +147,8 @@ export class WorkbenchModelService {
   }
 
   private client(selection: StoredModelProvider): ModelProviderClient {
-    const preset = findPreset(selection.providerId);
+    const validated = this.validate(selection);
+    const preset = findPreset(validated.providerId);
     const apiKey = preset.apiKeyEnv ? this.environment[preset.apiKeyEnv]?.trim() : undefined;
     if (preset.apiKeyEnv && !preset.apiKeyOptional && !apiKey) {
       throw new Error(`${preset.label} is not configured. Set ${preset.apiKeyEnv} and restart the Workbench.`);
@@ -153,7 +157,7 @@ export class WorkbenchModelService {
       id: preset.id,
       label: preset.label,
       protocol: preset.protocol,
-      baseUrl: selection.baseUrl ?? preset.baseUrl,
+      baseUrl: validated.baseUrl ?? preset.baseUrl,
       ...(apiKey ? { apiKey } : {}),
     }, this.request);
   }

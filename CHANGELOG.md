@@ -3,6 +3,19 @@
 All notable changes will be documented here. The project follows semantic
 versioning once public packages begin publishing.
 
+## Unreleased
+
+### Security
+
+- Reject oversized Pack archives before decompression and bound streamed
+  Registry and model-provider responses.
+- Require authentication for non-loopback Workbench listeners, reject
+  cross-origin state changes and enforce request media types.
+- Prevent credentialed provider presets from sending secrets to overridden
+  endpoints.
+- Run installed third-party Packs in network-denied, read-only containers by
+  default; unsafe process isolation now requires an explicit development flag.
+
 ## 0.2.1 - 2026-08-08
 
 ### Fixed

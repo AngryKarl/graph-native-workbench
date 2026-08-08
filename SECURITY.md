@@ -13,10 +13,10 @@ Workbench rechecks installed files before execution. Signed Registry installatio
 also verifies an Ed25519 publisher signature, expiry and the signed artifact
 identity, checksum, engine range and permissions.
 
-Third-party handlers and context projectors execute in a restricted child
-process without inherited application secrets and with filesystem, child-process,
-memory and time limits. For network denial, the Docker/Podman adapter adds a
-read-only, non-root, capability-dropped container with `network=none` by default.
+Third-party handlers and context projectors execute in a read-only, non-root,
+capability-dropped Docker/Podman container with `network=none` and bounded
+resources by default. The local process escape hatch is explicitly unsafe and
+reserved for reviewed development fixtures.
 Only install Packs whose publisher you trust; isolation reduces impact but does
 not prove code safe. See the
 [trust and isolation model](docs/TRUST_AND_ISOLATION.md) and the project

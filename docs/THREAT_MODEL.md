@@ -25,8 +25,8 @@ It complements the concrete Registry and Worker controls in
    signature, expiry, artifact identity, checksum, compatibility and permission
    metadata all verify.
 5. **Third-party code to host** — installed handlers and projectors run in a
-   restricted child process; stronger network and tenant isolation requires the
-   deployment boundary described below.
+   network-denied, read-only container by default; tenant isolation still
+   requires the deployment boundary described below.
 
 ## Threats and controls
 
@@ -39,17 +39,17 @@ It complements the concrete Registry and Worker controls in
 | Installed Pack files are changed locally | Descriptor and file digests are rechecked before execution | A host administrator can alter both code and trust state |
 | Approval is replayed for different input | Approval id binds run, node, role, tool and canonical input digest | Approval does not prove reviewer identity in local mode |
 | Event or deliverable evidence is altered after export | Canonical audit-bundle SHA-256 verification | The bundle is not externally timestamped or signed |
-| Worker escapes through network access | Network permission is explicit and visible | Node permissions do not isolate network; use the 0.13 OS/container adapter |
-| Local HTTP API is reached by another process or browser origin | Loopback binding and JSON-only API behavior | Authentication and multi-tenant isolation are not yet provided |
+| Worker escapes through network access | Third-party Packs default to a non-root, read-only container with `network=none` | A deliberately network-enabled or unsafe process policy expands the boundary |
+| Local HTTP API is reached by another process or browser origin | Loopback Host validation, same-origin checks, strict media types; authentication is mandatory off loopback | A same-user local process can still reach an unauthenticated loopback server |
 | Resource exhaustion | Graph budgets, node timeouts, Worker memory/time limits | In-process bundled adapters share the server process |
 
 ## Deployment assumptions
 
-The default Workbench is a single-user local application bound to loopback. It
-is not a multi-tenant service and must not be exposed directly to an untrusted
-network. Production deployments must add authentication, TLS, an external
-secret manager, database access controls, process identity and OS/container
-isolation appropriate to their environment.
+The default Workbench is a single-user local application bound to loopback.
+Non-loopback listeners require a long authentication token, but the application
+is not a multi-tenant service. Network deployments must add TLS, an external
+secret manager, database access controls and process identity appropriate to
+their environment.
 
 ## Security invariants
 

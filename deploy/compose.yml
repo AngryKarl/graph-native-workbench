@@ -25,6 +25,7 @@ services:
       GRAPH_WORKBENCH_PACKS: /data/packs
       GRAPH_WORKBENCH_TRUST: /data/trust.json
       GRAPH_WORKBENCH_POLICY: /data/policy.json
+      GRAPH_WORKBENCH_AUTH_TOKEN: ${GRAPHWORK_AUTH_TOKEN:?set GRAPHWORK_AUTH_TOKEN in deploy/.env}
     volumes:
       - workbench-data:/data
     ports:

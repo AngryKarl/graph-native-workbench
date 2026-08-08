@@ -1,6 +1,10 @@
 import type { GraphEvent, IndustryPackManifest } from '@graph-native/contracts';
 import type { ContextGraphStore, GraphState, HandlerRegistry, ToolAdapterRegistry } from '@graph-native/core';
-import { listInstalledPacks, loadInstalledPackIsolated } from '@graph-native/pack-sdk';
+import {
+  listInstalledPacks,
+  loadInstalledPackIsolated,
+  type IsolatedPackPolicy,
+} from '@graph-native/pack-sdk';
 import {
   architectureHandlers,
   architecturePack,
@@ -30,7 +34,7 @@ export interface PackRuntimeDefinition {
       readonly events?: readonly GraphEvent[];
     },
   ) => Promise<void>;
-  readonly executionMode: 'in-process' | 'isolated-worker';
+  readonly executionMode: 'in-process' | 'isolated-container' | 'unsafe-process';
   readonly trustSource: 'bundled' | 'local-explicit' | 'signed-registry';
   readonly publisherKeyId?: string;
 }
@@ -74,20 +78,23 @@ export interface PackDiscoveryResult {
   readonly errors: readonly string[];
 }
 
-export async function discoverInstalledPackRuntimes(root = '.graphwork/packs'): Promise<PackDiscoveryResult> {
+export async function discoverInstalledPackRuntimes(
+  root = '.graphwork/packs',
+  policy: IsolatedPackPolicy = { container: {} },
+): Promise<PackDiscoveryResult> {
   const registry = listInstalledPacks(root);
   let loadedCount = 0;
   const errors: string[] = [];
   for (const id of Object.keys(registry.packs).sort()) {
     try {
-      const loaded = await loadInstalledPackIsolated(id, root);
+      const loaded = await loadInstalledPackIsolated(id, root, policy);
       bundledPackCatalog.set(loaded.pack.id, {
         manifest: loaded.pack,
         handlers: loaded.handlers,
         ...(loaded.projector
           ? { projector: (store, run) => loaded.projector!(store, run) }
           : {}),
-        executionMode: 'isolated-worker',
+        executionMode: loaded.isolationMode === 'container' ? 'isolated-container' : 'unsafe-process',
         trustSource: loaded.installation.trustSource?.mode ?? 'local-explicit',
         ...(loaded.installation.trustSource?.mode === 'signed-registry'
           ? { publisherKeyId: loaded.installation.trustSource.publisherKeyId }

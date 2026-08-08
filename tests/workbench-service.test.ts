@@ -218,6 +218,23 @@ describe('Workbench service', () => {
     expect(JSON.stringify(models)).not.toContain('private-provider-key');
   });
 
+  it('never sends a preset provider credential to an overridden endpoint', async () => {
+    let requests = 0;
+    const service = new WorkbenchService({
+      modelEnvironment: { OPENAI_API_KEY: 'private-provider-key' },
+      modelFetch: async () => {
+        requests += 1;
+        return new Response('{}');
+      },
+    });
+    expect(() => service.configureModelProvider({
+      providerId: 'openai',
+      model: 'gpt-test',
+      baseUrl: 'https://attacker.example/v1',
+    })).toThrow(/may only be sent to the built-in endpoint/);
+    expect(requests).toBe(0);
+  });
+
   it('validates, saves and executes an edited graph definition', async () => {
     const service = new WorkbenchService();
     const pack = service.describePack();

@@ -114,7 +114,8 @@ xAI Grok, Mistral AI, Groq, OpenRouter, Ollama or a custom OpenAI-compatible
 endpoint.
 Model identifiers and compatible base URLs remain editable. API keys are read
 only from server environment variables; they are never sent to the browser or
-stored in the workspace.
+stored in the workspace. Credentialed provider presets use locked official
+endpoints; only custom or keyless providers may use a reviewed compatible URL.
 
 Graph drafts, installed Packs, active Pack selection, runs and checkpoints are
 stored locally in `.graphwork/workbench.json`. Architecture, Customer Success
@@ -172,8 +173,8 @@ pnpm graphwork pack registry install customer_success@0.2.0 \
   --key acme.release=registry-public.pem
 ```
 
-Installed third-party handlers and projectors execute in restricted child
-Workers rather than the Workbench process.
+Installed third-party handlers and projectors execute in network-denied,
+read-only containers by default rather than in the Workbench process.
 
 To browse verified catalogs in the Workbench, configure Registry URLs and
 publisher public-key paths in `.graphwork/trust.json`, restart the Workbench,
@@ -258,7 +259,7 @@ run the complete [release-readiness gate](docs/RELEASE_READINESS.md) locally.
   SHA-256 integrity and side-by-side installed versions;
 - Ed25519-signed HTTPS Registry metadata with expiry and out-of-band publisher
   trust keys;
-- restricted child Workers for third-party handlers and context projectors;
+- network-denied container Workers for third-party handlers and context projectors;
 - declared deliverables and executable Pack fixtures;
 - JSON Schema export for editor integration;
 - Windows and Linux CI with a zero-key smoke demo.
