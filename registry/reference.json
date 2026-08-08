@@ -10,6 +10,9 @@
     },
     {
       "source": "../packs/architecture/src/index.ts"
+    },
+    {
+      "source": "../packs/customer-success/src/index.ts"
     }
   ]
 }

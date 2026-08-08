@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { verifyRunAuditBundle } from '@graph-native/core';
+import { researchPack } from '@graph-native/pack-research';
+import { bundledPackCatalog } from '../apps/workbench/src/catalog.js';
 import { WorkbenchService } from '../apps/workbench/src/service.js';
 
 describe('Workbench service', () => {
@@ -41,6 +44,21 @@ describe('Workbench service', () => {
     expect(rejected.context).toBeUndefined();
   });
 
+  it('exports a portable integrity-checked audit bundle for a Workbench run', async () => {
+    const service = new WorkbenchService();
+    const paused = await service.start(service.describePack().input);
+    const completed = await service.decide(paused.runId, true);
+    const audit = service.exportAudit(completed.runId);
+
+    expect(verifyRunAuditBundle(audit)).toEqual(audit);
+    expect(audit.run).toMatchObject({
+      runId: completed.runId,
+      packId: 'architecture',
+      status: 'completed',
+    });
+    expect(audit.context?.objects.some((item) => item.type === 'deliverable')).toBe(true);
+  });
+
   it('installs and runs another bundled Pack through the same workbench contract', async () => {
     const service = new WorkbenchService();
     const installed = service.install('research');
@@ -59,10 +77,31 @@ describe('Workbench service', () => {
 
   it('runs a model-enabled Agent through a selected compatible provider and projects its usage', async () => {
     const secret = 'server-only-secret';
+    let modelRound = 0;
     const request: typeof fetch = async (_input, init) => {
+      modelRound += 1;
       expect(init?.headers).toMatchObject({ authorization: `Bearer ${secret}` });
+      const payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      if (modelRound === 1) {
+        expect(payload.tools).toHaveLength(2);
+        return new Response(JSON.stringify({
+          id: 'model-request-1',
+          model: 'test-model-resolved',
+          choices: [{ message: { content: null, tool_calls: [{
+            id: 'read-1',
+            type: 'function',
+            function: {
+              name: 'graphwork_tool_2',
+              arguments: '{"locator":"reference://technology/runtime-test"}',
+            },
+          }] } }],
+          usage: { prompt_tokens: 8, completion_tokens: 2, total_tokens: 10 },
+        }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      const messages = payload.messages as Array<Record<string, unknown>>;
+      expect(messages.at(-1)).toMatchObject({ role: 'tool', tool_call_id: 'read-1' });
       return new Response(JSON.stringify({
-        id: 'model-request-1',
+        id: 'model-request-2',
         model: 'test-model-resolved',
         choices: [{
           message: {
@@ -89,7 +128,10 @@ describe('Workbench service', () => {
     expect(paused.status).toBe('paused');
     expect(paused.state.synthesis).toBe('Model-backed synthesis with preserved evidence.');
     expect(paused.events.find((event) => event.type === 'node.completed' && event.nodeId === 'synthesize'))
-      .toMatchObject({ detail: { usage: { providerId: 'custom', totalTokens: 28 } } });
+      .toMatchObject({ detail: { usage: { providerId: 'custom', totalTokens: 38 } } });
+    expect(paused.events.map((event) => event.type)).toEqual(
+      expect.arrayContaining(['tool.requested', 'tool.started', 'tool.completed']),
+    );
     expect(JSON.stringify(paused)).not.toContain(secret);
 
     const completed = await service.decide(paused.runId, true);
@@ -100,6 +142,72 @@ describe('Workbench service', () => {
       }),
     ]));
     expect(completed.context?.relations.some((relation) => relation.type === 'contributed_to')).toBe(true);
+  });
+
+  it('presents a model-requested external tool for approval and resumes the same exchange', async () => {
+    const original = bundledPackCatalog.get('research');
+    if (!original) throw new Error('Research runtime is missing.');
+    bundledPackCatalog.set('research', {
+      ...original,
+      manifest: {
+        ...researchPack,
+        tools: researchPack.tools.map((tool) =>
+          tool.id === 'document_read' ? { ...tool, risk: 'external' as const } : tool),
+      },
+    });
+    let providerRequests = 0;
+    const request: typeof fetch = async (_input, init) => {
+      providerRequests += 1;
+      const payload = JSON.parse(String(init?.body)) as { messages?: Array<{ role?: string }> };
+      const hasToolResult = payload.messages?.some((message) => message.role === 'tool');
+      return new Response(JSON.stringify(hasToolResult ? {
+        id: 'governed-final',
+        choices: [{ message: { content: '{"synthesis":"Approved external evidence."}' } }],
+        usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+      } : {
+        id: 'governed-tool-request',
+        choices: [{ message: { content: null, tool_calls: [{
+          id: 'governed-read-1',
+          type: 'function',
+          function: {
+            name: 'graphwork_tool_2',
+            arguments: '{"locator":"reference://technology/runtime-test"}',
+          },
+        }] } }],
+        usage: { prompt_tokens: 8, completion_tokens: 2, total_tokens: 10 },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+
+    try {
+      const service = new WorkbenchService({ modelFetch: request });
+      service.install('research');
+      const workspace = service.activate('research');
+      service.configureModelProvider({
+        providerId: 'custom',
+        model: 'governed-model',
+        baseUrl: 'http://127.0.0.1:9876/v1',
+      });
+
+      const toolPaused = await service.start(workspace.activePack.input);
+      expect(toolPaused).toMatchObject({
+        status: 'paused',
+        pendingApproval: { kind: 'tool', toolId: 'document_read', risk: 'external' },
+      });
+      expect(providerRequests).toBe(1);
+
+      const humanPaused = await service.decide(toolPaused.runId, true);
+      expect(humanPaused).toMatchObject({
+        status: 'paused',
+        pendingApproval: { kind: 'human', nodeId: 'approval' },
+        state: { synthesis: 'Approved external evidence.' },
+      });
+      expect(providerRequests).toBe(2);
+
+      const completed = await service.decide(toolPaused.runId, true);
+      expect(completed.status).toBe('completed');
+    } finally {
+      bundledPackCatalog.set('research', original);
+    }
   });
 
   it('exposes provider readiness without returning environment secret values', () => {

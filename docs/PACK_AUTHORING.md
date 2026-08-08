@@ -74,10 +74,10 @@ Registry operators can use the reusable release definition and CI flow in the
 - Execution graphs are directed acyclic graphs.
 - `join` waits for every statically declared incoming source.
 - A human decision is supplied by node ID and written to its declared field.
-- Context stores include in-memory and local SQLite adapters; PostgreSQL and
-  distributed adapters come later.
+- Context stores include in-memory, local SQLite and shared PostgreSQL adapters.
 - Nodes may declare bounded `execution.timeoutMs` and
   `execution.retry.maxAttempts/backoffMs` policies.
 - An external abort signal cancels the run and preserves a resumable checkpoint.
-- Dynamic subgraphs, compensation and distributed workers are future mechanisms
-  and must not be simulated through Pack-specific kernel changes.
+- Dynamic subgraphs and compensation are future mechanisms and must not be
+  simulated through Pack-specific kernel changes. Distributed workers consume
+  the same versioned Pack and graph contracts as local execution.

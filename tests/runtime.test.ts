@@ -43,6 +43,21 @@ describe('graph runtime', () => {
     expect(resumed.state.deliverable).toBeUndefined();
   });
 
+  it('does not count time spent paused against the active duration budget', async () => {
+    const engine = runtime();
+    const paused = await engine.run({ goal: 'Resume after a long human review.' });
+    expect(paused.status).toBe('paused');
+    if (paused.status !== 'paused') throw new Error('Expected a checkpoint.');
+
+    const resumed = await engine.resume(
+      { ...paused.checkpoint, startedAt: '2000-01-01T00:00:00.000Z' },
+      { decisions: { approval: true } },
+    );
+
+    expect(resumed.status).toBe('completed');
+    expect(resumed.state.deliverable).toContain('Approved research deliverable');
+  });
+
   it('enforces declared node write permissions', async () => {
     const graph = compilePack(researchPack).graphs.get('research.workflow')!;
     const engine = new GraphRuntime(graph, {

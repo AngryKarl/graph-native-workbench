@@ -1,4 +1,10 @@
-import type { AgentAdapter, AgentContext, AgentUsage } from './adapters.js';
+import {
+  AgentSuspensionError,
+  ToolApprovalRequiredError,
+  type AgentAdapter,
+  type AgentContext,
+  type AgentUsage,
+} from './adapters.js';
 import type { GraphState } from './state.js';
 
 export type ModelProtocol =
@@ -40,16 +46,43 @@ export interface ModelProviderConfig {
   readonly apiKey?: string;
 }
 
+export interface ModelToolDefinition {
+  readonly id: string;
+  readonly description: string;
+  readonly inputSchema?: Readonly<Record<string, unknown>>;
+}
+
+export interface ModelToolCall {
+  readonly id: string;
+  readonly toolId: string;
+  readonly input: unknown;
+}
+
+export interface ModelToolResult {
+  readonly callId: string;
+  readonly toolId: string;
+  readonly output: unknown;
+}
+
+export interface ModelToolExchange {
+  readonly text: string;
+  readonly calls: readonly ModelToolCall[];
+  readonly results: readonly ModelToolResult[];
+}
+
 export interface ModelGenerateRequest {
   readonly model: string;
   readonly prompt: string;
   readonly system?: string;
   readonly maxOutputTokens?: number;
+  readonly tools?: readonly ModelToolDefinition[];
+  readonly exchanges?: readonly ModelToolExchange[];
   readonly signal?: AbortSignal;
 }
 
 export interface ModelGenerateResult {
   readonly text: string;
+  readonly toolCalls: readonly ModelToolCall[];
   readonly usage: AgentUsage;
 }
 
@@ -133,9 +166,88 @@ async function readJson(response: Response, provider: ModelProviderConfig): Prom
   return value;
 }
 
-function requireText(value: unknown, provider: ModelProviderConfig): string {
-  const text = nonEmpty(value);
-  if (!text) throw new ModelProviderError(`${provider.label} returned no text output.`, 'invalid_response', provider.id);
+function recordValue(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function providerToolName(index: number): string {
+  return `graphwork_tool_${index + 1}`;
+}
+
+function toolByProviderName(
+  input: ModelGenerateRequest,
+  name: string,
+  provider: ModelProviderConfig,
+): ModelToolDefinition {
+  const index = /^graphwork_tool_(\d+)$/.exec(name)?.[1];
+  const tool = index ? input.tools?.[Number(index) - 1] : undefined;
+  if (!tool) {
+    throw new ModelProviderError(
+      `${provider.label} requested an unknown tool "${name}".`,
+      'invalid_response',
+      provider.id,
+    );
+  }
+  return tool;
+}
+
+function providerNameForTool(
+  input: ModelGenerateRequest,
+  toolId: string,
+  provider: ModelProviderConfig,
+): string {
+  const index = input.tools?.findIndex((tool) => tool.id === toolId) ?? -1;
+  if (index < 0) {
+    throw new ModelProviderError(
+      `Tool "${toolId}" is not available to ${provider.label}.`,
+      'invalid_configuration',
+      provider.id,
+    );
+  }
+  return providerToolName(index);
+}
+
+function toolInput(value: unknown, provider: ModelProviderConfig): unknown {
+  if (typeof value !== 'string') return value ?? {};
+  if (!value.trim()) return {};
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    throw new ModelProviderError(
+      `${provider.label} returned invalid JSON tool arguments.`,
+      'invalid_response',
+      provider.id,
+    );
+  }
+}
+
+function toolParameters(tool: ModelToolDefinition): Readonly<Record<string, unknown>> {
+  return tool.inputSchema ?? { type: 'object' };
+}
+
+function toolOutput(value: unknown, providerId: string): string {
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value) ?? 'null';
+  } catch {
+    throw new ModelProviderError(
+      'Tool output must be JSON serializable before it can be returned to a model.',
+      'invalid_response',
+      providerId,
+    );
+  }
+}
+
+function requireOutput(
+  text: string,
+  calls: readonly ModelToolCall[],
+  provider: ModelProviderConfig,
+): string {
+  if (!text && calls.length === 0) {
+    throw new ModelProviderError(`${provider.label} returned no text or tool request.`, 'invalid_response', provider.id);
+  }
   return text;
 }
 
@@ -179,6 +291,7 @@ export class ModelProviderClient {
           : await this.openAiCompatible(input);
       return {
         text: result.text,
+        toolCalls: result.toolCalls,
         usage: {
           providerId: this.config.id,
           protocol: this.config.protocol,
@@ -204,6 +317,31 @@ export class ModelProviderClient {
   }
 
   private async openAiCompatible(input: ModelGenerateRequest) {
+    const messages: Array<Record<string, unknown>> = [
+      ...(input.system ? [{ role: 'system', content: input.system }] : []),
+      { role: 'user', content: input.prompt },
+    ];
+    for (const exchange of input.exchanges ?? []) {
+      messages.push({
+        role: 'assistant',
+        content: exchange.text || null,
+        tool_calls: exchange.calls.map((call) => ({
+          id: call.id,
+          type: 'function',
+          function: {
+            name: providerNameForTool(input, call.toolId, this.config),
+            arguments: JSON.stringify(call.input ?? {}),
+          },
+        })),
+      });
+      for (const result of exchange.results) {
+        messages.push({
+          role: 'tool',
+          tool_call_id: result.callId,
+          content: toolOutput(result.output, this.config.id),
+        });
+      }
+    }
     const response = await this.request(endpoint(this.config.baseUrl, 'chat/completions'), {
       method: 'POST',
       headers: {
@@ -212,25 +350,46 @@ export class ModelProviderClient {
       },
       body: JSON.stringify({
         model: input.model,
-        messages: [
-          ...(input.system ? [{ role: 'system', content: input.system }] : []),
-          { role: 'user', content: input.prompt },
-        ],
+        messages,
         stream: false,
+        ...(input.tools?.length ? {
+          tools: input.tools.map((tool, index) => ({
+            type: 'function',
+            function: {
+              name: providerToolName(index),
+              description: tool.description,
+              parameters: toolParameters(tool),
+            },
+          })),
+          tool_choice: 'auto',
+        } : {}),
         ...(input.maxOutputTokens ? { max_tokens: input.maxOutputTokens } : {}),
       }),
       ...(input.signal ? { signal: input.signal } : {}),
     });
     const value = await readJson(response, this.config) as Record<string, unknown>;
     const choices = Array.isArray(value.choices) ? value.choices : [];
-    const message = choices[0] && typeof choices[0] === 'object'
-      ? (choices[0] as Record<string, unknown>).message
-      : undefined;
+    const message = recordValue(choices[0])?.message;
+    const messageRecord = recordValue(message);
+    const rawCalls = Array.isArray(messageRecord?.tool_calls) ? messageRecord.tool_calls : [];
+    const toolCalls = rawCalls.map((value) => {
+      const call = recordValue(value);
+      const fn = recordValue(call?.function);
+      const id = nonEmpty(call?.id);
+      const name = nonEmpty(fn?.name);
+      if (!id || !name) {
+        throw new ModelProviderError(`${this.config.label} returned an invalid tool request.`, 'invalid_response', this.config.id);
+      }
+      const tool = toolByProviderName(input, name, this.config);
+      return { id, toolId: tool.id, input: toolInput(fn?.arguments, this.config) };
+    });
+    const text = nonEmpty(messageRecord?.content) ?? '';
     const usage = value.usage && typeof value.usage === 'object'
       ? value.usage as Record<string, unknown>
       : {};
     return {
-      text: requireText(message && typeof message === 'object' ? (message as Record<string, unknown>).content : undefined, this.config),
+      text: requireOutput(text, toolCalls, this.config),
+      toolCalls,
       model: nonEmpty(value.model),
       requestId: nonEmpty(value.id),
       inputTokens: numberValue(usage.prompt_tokens),
@@ -240,6 +399,29 @@ export class ModelProviderClient {
   }
 
   private async anthropic(input: ModelGenerateRequest) {
+    const messages: Array<Record<string, unknown>> = [{ role: 'user', content: input.prompt }];
+    for (const exchange of input.exchanges ?? []) {
+      messages.push({
+        role: 'assistant',
+        content: [
+          ...(exchange.text ? [{ type: 'text', text: exchange.text }] : []),
+          ...exchange.calls.map((call) => ({
+            type: 'tool_use',
+            id: call.id,
+            name: providerNameForTool(input, call.toolId, this.config),
+            input: call.input ?? {},
+          })),
+        ],
+      });
+      messages.push({
+        role: 'user',
+        content: exchange.results.map((result) => ({
+          type: 'tool_result',
+          tool_use_id: result.callId,
+          content: toolOutput(result.output, this.config.id),
+        })),
+      });
+    }
     const response = await this.request(endpoint(this.config.baseUrl, 'messages'), {
       method: 'POST',
       headers: {
@@ -251,24 +433,45 @@ export class ModelProviderClient {
         model: input.model,
         max_tokens: input.maxOutputTokens ?? 2_048,
         ...(input.system ? { system: input.system } : {}),
-        messages: [{ role: 'user', content: input.prompt }],
+        messages,
+        ...(input.tools?.length ? {
+          tools: input.tools.map((tool, index) => ({
+            name: providerToolName(index),
+            description: tool.description,
+            input_schema: toolParameters(tool),
+          })),
+        } : {}),
       }),
       ...(input.signal ? { signal: input.signal } : {}),
     });
     const value = await readJson(response, this.config) as Record<string, unknown>;
     const content = Array.isArray(value.content) ? value.content : [];
-    const text = content
-      .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object'))
+    const blocks = content
+      .map(recordValue)
+      .filter((item): item is Record<string, unknown> => Boolean(item));
+    const text = blocks
       .filter((item) => item.type === 'text')
       .map((item) => nonEmpty(item.text) ?? '')
       .join('\n');
+    const toolCalls = blocks
+      .filter((item) => item.type === 'tool_use')
+      .map((item) => {
+        const id = nonEmpty(item.id);
+        const name = nonEmpty(item.name);
+        if (!id || !name) {
+          throw new ModelProviderError(`${this.config.label} returned an invalid tool request.`, 'invalid_response', this.config.id);
+        }
+        const tool = toolByProviderName(input, name, this.config);
+        return { id, toolId: tool.id, input: item.input ?? {} };
+      });
     const usage = value.usage && typeof value.usage === 'object'
       ? value.usage as Record<string, unknown>
       : {};
     const inputTokens = numberValue(usage.input_tokens);
     const outputTokens = numberValue(usage.output_tokens);
     return {
-      text: requireText(text, this.config),
+      text: requireOutput(text, toolCalls, this.config),
+      toolCalls,
       model: nonEmpty(value.model),
       requestId: nonEmpty(value.id),
       inputTokens,
@@ -281,6 +484,32 @@ export class ModelProviderClient {
 
   private async gemini(input: ModelGenerateRequest) {
     const model = encodeURIComponent(input.model.trim());
+    const contents: Array<Record<string, unknown>> = [
+      { role: 'user', parts: [{ text: input.prompt }] },
+    ];
+    for (const exchange of input.exchanges ?? []) {
+      contents.push({
+        role: 'model',
+        parts: [
+          ...(exchange.text ? [{ text: exchange.text }] : []),
+          ...exchange.calls.map((call) => ({
+            functionCall: {
+              name: providerNameForTool(input, call.toolId, this.config),
+              args: call.input ?? {},
+            },
+          })),
+        ],
+      });
+      contents.push({
+        role: 'user',
+        parts: exchange.results.map((result) => ({
+          functionResponse: {
+            name: providerNameForTool(input, result.toolId, this.config),
+            response: { output: toolOutput(result.output, this.config.id) },
+          },
+        })),
+      });
+    }
     const response = await this.request(endpoint(this.config.baseUrl, `models/${model}:generateContent`), {
       method: 'POST',
       headers: {
@@ -289,7 +518,16 @@ export class ModelProviderClient {
       },
       body: JSON.stringify({
         ...(input.system ? { systemInstruction: { parts: [{ text: input.system }] } } : {}),
-        contents: [{ role: 'user', parts: [{ text: input.prompt }] }],
+        contents,
+        ...(input.tools?.length ? {
+          tools: [{
+            functionDeclarations: input.tools.map((tool, index) => ({
+              name: providerToolName(index),
+              description: tool.description,
+              parameters: toolParameters(tool),
+            })),
+          }],
+        } : {}),
         generationConfig: {
           responseMimeType: 'application/json',
           ...(input.maxOutputTokens ? { maxOutputTokens: input.maxOutputTokens } : {}),
@@ -306,14 +544,30 @@ export class ModelProviderClient {
       ? (content as Record<string, unknown>).parts as unknown[]
       : [];
     const text = parts
-      .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object'))
+      .map(recordValue)
+      .filter((item): item is Record<string, unknown> => Boolean(item))
       .map((item) => nonEmpty(item.text) ?? '')
       .join('\n');
+    const toolCalls = parts
+      .map(recordValue)
+      .filter((item): item is Record<string, unknown> => Boolean(item))
+      .flatMap((item, index) => {
+        const call = recordValue(item.functionCall);
+        if (!call) return [];
+        const name = nonEmpty(call.name);
+        if (!name) {
+          throw new ModelProviderError(`${this.config.label} returned an invalid tool request.`, 'invalid_response', this.config.id);
+        }
+        const tool = toolByProviderName(input, name, this.config);
+        const responseId = nonEmpty(value.responseId) ?? 'response';
+        return [{ id: `${responseId}:${index + 1}`, toolId: tool.id, input: call.args ?? {} }];
+      });
     const usage = value.usageMetadata && typeof value.usageMetadata === 'object'
       ? value.usageMetadata as Record<string, unknown>
       : {};
     return {
-      text: requireText(text, this.config),
+      text: requireOutput(text, toolCalls, this.config),
+      toolCalls,
       model: nonEmpty(value.modelVersion),
       requestId: nonEmpty(value.responseId),
       inputTokens: numberValue(usage.promptTokenCount),
@@ -347,12 +601,86 @@ function stateInput(context: AgentContext): Record<string, unknown> {
   return Object.fromEntries(context.node.reads.map((field) => [field, context.state[field]]));
 }
 
+function addUsage(left: number | undefined, right: number | undefined): number | undefined {
+  return left === undefined && right === undefined ? undefined : (left ?? 0) + (right ?? 0);
+}
+
+function mergeUsage(current: AgentUsage | undefined, next: AgentUsage): AgentUsage {
+  const {
+    inputTokens: _inputTokens,
+    outputTokens: _outputTokens,
+    totalTokens: _totalTokens,
+    costUsd: _costUsd,
+    latencyMs: _latencyMs,
+    ...identity
+  } = next;
+  const inputTokens = addUsage(current?.inputTokens, next.inputTokens);
+  const outputTokens = addUsage(current?.outputTokens, next.outputTokens);
+  const totalTokens = addUsage(current?.totalTokens, next.totalTokens);
+  const costUsd = addUsage(current?.costUsd, next.costUsd);
+  const latencyMs = addUsage(current?.latencyMs, next.latencyMs);
+  return {
+    ...identity,
+    ...(inputTokens !== undefined ? { inputTokens } : {}),
+    ...(outputTokens !== undefined ? { outputTokens } : {}),
+    ...(totalTokens !== undefined ? { totalTokens } : {}),
+    ...(costUsd !== undefined ? { costUsd } : {}),
+    ...(latencyMs !== undefined ? { latencyMs } : {}),
+  };
+}
+
+interface JsonModelAgentSuspension {
+  readonly formatVersion: 1;
+  readonly round: number;
+  readonly exchanges: readonly ModelToolExchange[];
+  readonly usage?: AgentUsage;
+  readonly current: {
+    readonly text: string;
+    readonly calls: readonly ModelToolCall[];
+    readonly results: readonly ModelToolResult[];
+  };
+}
+
+function resumeModelAgent(value: unknown, providerId: string): JsonModelAgentSuspension | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new ModelProviderError('Stored Agent suspension is invalid.', 'invalid_response', providerId);
+  }
+  const state = value as Partial<JsonModelAgentSuspension>;
+  if (
+    state.formatVersion !== 1
+    || !Number.isInteger(state.round)
+    || !Array.isArray(state.exchanges)
+    || !state.current
+    || !Array.isArray(state.current.calls)
+    || !Array.isArray(state.current.results)
+  ) {
+    throw new ModelProviderError('Stored Agent suspension is incompatible.', 'invalid_response', providerId);
+  }
+  if (state.current.results.length > state.current.calls.length) {
+    throw new ModelProviderError('Stored Agent suspension has more results than tool calls.', 'invalid_response', providerId);
+  }
+  for (let index = 0; index < state.current.results.length; index += 1) {
+    const call = state.current.calls[index];
+    const result = state.current.results[index];
+    if (!call || !result || result.callId !== call.id || result.toolId !== call.toolId) {
+      throw new ModelProviderError('Stored Agent suspension tool results do not match their calls.', 'invalid_response', providerId);
+    }
+  }
+  return state as JsonModelAgentSuspension;
+}
+
 export function createJsonModelAgent(
   client: ModelProviderClient,
-  options: { readonly model: string; readonly maxOutputTokens?: number },
+  options: {
+    readonly model: string;
+    readonly maxOutputTokens?: number;
+    readonly maxToolRounds?: number;
+  },
 ): AgentAdapter {
   return {
     run: async (context) => {
+      const maxToolRounds = Math.max(0, Math.min(8, options.maxToolRounds ?? 4));
       const instructions = nonEmpty(context.node.config.modelInstructions);
       const forbidden = context.role?.forbiddenActions.length
         ? `\nForbidden actions:\n${context.role.forbiddenActions.map((item) => `- ${item}`).join('\n')}`
@@ -362,20 +690,88 @@ export function createJsonModelAgent(
         context.role ? `Role: ${context.role.label}. Mission: ${context.role.mission}` : '',
         forbidden,
         instructions ? `Pack instructions: ${instructions}` : '',
+        context.tools.length
+          ? 'Use only the supplied tools when they are needed. After tool results are returned, continue until you can produce the final state patch.'
+          : '',
         `Return only one JSON object containing exactly these writable fields: ${context.node.writes.join(', ')}.`,
         'Do not include Markdown fences or commentary outside the JSON object.',
       ].filter(Boolean).join('\n');
-      const result = await client.generate({
-        model: options.model,
-        system,
-        prompt: JSON.stringify({
-          node: { id: context.node.id, description: context.node.description },
-          input: stateInput(context),
-        }, null, 2),
-        ...(options.maxOutputTokens ? { maxOutputTokens: options.maxOutputTokens } : {}),
-        signal: context.signal,
-      });
-      return { patch: parseJsonPatch(result.text, client.config.id), usage: result.usage };
+      const tools = context.tools.map((tool) => ({
+        id: tool.id,
+        description: `${tool.label}: ${tool.description} Risk: ${tool.risk}.`,
+      }));
+      const resumed = resumeModelAgent(context.resumeState, client.config.id);
+      const exchanges: ModelToolExchange[] = [...(resumed?.exchanges ?? [])];
+      let usage: AgentUsage | undefined = resumed?.usage;
+      let pending = resumed?.current;
+      for (let round = resumed?.round ?? 0; round <= maxToolRounds; round += 1) {
+        let text: string;
+        let calls: readonly ModelToolCall[];
+        let results: ModelToolResult[];
+        if (pending) {
+          ({ text, calls } = pending);
+          results = [...pending.results];
+          pending = undefined;
+        } else {
+          const result = await client.generate({
+            model: options.model,
+            system,
+            prompt: JSON.stringify({
+              node: { id: context.node.id, description: context.node.description },
+              input: stateInput(context),
+            }, null, 2),
+            ...(options.maxOutputTokens ? { maxOutputTokens: options.maxOutputTokens } : {}),
+            ...(tools.length ? { tools } : {}),
+            ...(exchanges.length ? { exchanges } : {}),
+            signal: context.signal,
+          });
+          usage = mergeUsage(usage, result.usage);
+          text = result.text;
+          calls = result.toolCalls;
+          results = [];
+        }
+        if (calls.length === 0) {
+          return {
+            patch: parseJsonPatch(text, client.config.id),
+            ...(usage ? { usage } : {}),
+          };
+        }
+        if (round === maxToolRounds) {
+          throw new ModelProviderError(
+            `Model exceeded the ${maxToolRounds}-round tool-call limit.`,
+            'invalid_response',
+            client.config.id,
+          );
+        }
+        const callIds = new Set<string>();
+        for (const call of calls) {
+          if (callIds.has(call.id)) {
+            throw new ModelProviderError('Model returned duplicate tool-call IDs.', 'invalid_response', client.config.id);
+          }
+          callIds.add(call.id);
+        }
+        for (const call of calls.slice(results.length)) {
+          let output: unknown;
+          try {
+            output = await context.invokeTool(call.toolId, call.input);
+          } catch (error) {
+            if (error instanceof ToolApprovalRequiredError) {
+              throw new AgentSuspensionError({
+                formatVersion: 1,
+                round,
+                exchanges,
+                ...(usage ? { usage } : {}),
+                current: { text, calls, results },
+              } satisfies JsonModelAgentSuspension, error);
+            }
+            throw error;
+          }
+          toolOutput(output, client.config.id);
+          results.push({ callId: call.id, toolId: call.toolId, output });
+        }
+        exchanges.push({ text, calls, results });
+      }
+      throw new ModelProviderError('Model tool loop ended unexpectedly.', 'invalid_response', client.config.id);
     },
   };
 }

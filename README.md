@@ -3,13 +3,15 @@
 **Turn an SOP into an executable, inspectable work graph — then preserve its
 evidence, decisions and deliverables as organizational context.**
 
-[中文说明](README.zh-CN.md) · Pre-alpha · MIT licensed
+[中文说明](README.zh-CN.md) · `0.2.0-rc.1` public-alpha candidate · MIT licensed
 
 Graph Native Workbench is an open-source foundation for complex industry work.
 It connects an **execution graph** (agents, functions, tools, humans and quality
 gates) to a durable **context graph** (sources, evidence, artifacts, versions
 and decisions). Teams ship their own domain behavior as installable Industry
 Packs without forking the kernel.
+
+![Customer Success Renewal Pack running in the Workbench](docs/assets/customer-success-output.png)
 
 ```mermaid
 flowchart LR
@@ -54,6 +56,30 @@ Pause at the human gate instead:
 pnpm dlx graphwork demo --pause
 ```
 
+## Three installable examples
+
+From **Packs**, a workflow installs into the same editor, runtime, approval
+inbox, deliverable console and context explorer:
+
+![Research, Architecture and Customer Success reference Packs](docs/assets/reference-packs.png)
+
+| Industry Pack | What it produces | Why it matters |
+| --- | --- | --- |
+| Customer Success Renewal | An approved renewal-risk assessment and owned success plan | Shows a common enterprise SOP becoming a complete workbench without kernel changes |
+| Architecture Concept Design | A source-linked concept brief with reviewed design directions | Proves a deep vertical can keep evidence, constraints and decisions traceable |
+| Cross-industry Research | An approved evidence synthesis | Keeps the first run zero-key and easy to inspect |
+
+Run the customer-success case from source:
+
+```bash
+pnpm graphwork pack demo packs/customer-success/src/index.ts --fixture enterprise_renewal
+```
+
+It analyzes product and stakeholder signals in parallel, scores renewal risk,
+creates accountable interventions, pauses for revenue-owner review, publishes
+the plan and confirms the evidence, decision and deliverable in the context
+graph. Read the [end-to-end industry case](docs/CUSTOMER_SUCCESS_CASE.md).
+
 ## Use the Workbench
 
 Start the local API and React interface together:
@@ -70,7 +96,7 @@ versioned contracts used by the compiler and runtime:
    state access and execution policies in the inspector.
 3. Load a Pack fixture or edit graph input from the **Input** inspector.
 4. Run the saved graph, inspect its ordered event stream, and approve or reject
-   work at a human checkpoint.
+   human checkpoints or policy-gated tool calls.
 5. Open **Runs** to revisit execution history and **Context** to inspect the
    confirmed objects, relations and provenance produced by approved work.
 6. Open **Packs**, choose **Import .gpack**, review compatibility, permissions
@@ -88,6 +114,14 @@ Graph drafts, installed Packs, active Pack selection, runs and checkpoints are
 stored locally in `.graphwork/workbench.json`. Architecture and Research are
 bundled; trusted `.gpack` artifacts can be imported from the Packs view or
 installed through the CLI and are stored under `.graphwork/packs`.
+
+Optional declarative tool policy lives at `.graphwork/policy.json`. Completed
+or paused runs can be exported from the run console as portable, integrity-
+checked audit bundles for independent verification.
+
+Workspace upgrades are automatic and fail-safe. Opening a legacy v1 workspace
+preserves an untouched `workbench.json.v1.backup` before atomically migrating
+it to the current format with a stable workspace identity.
 
 ## Create an Industry Pack
 
@@ -151,6 +185,15 @@ pnpm graphwork pack run packs/research/src/index.ts --set "goal=Evaluate a workf
 pnpm graphwork pack resume packs/research/src/index.ts --run <run-id> --database runs.sqlite --decision approval=true
 ```
 
+For team execution, point the same commands at PostgreSQL and run one or more
+workers. Queue leases, heartbeats and retries are durable; graph checkpoints
+remain the source of recovery:
+
+```bash
+graphwork worker start research --installed --database "$GRAPHWORK_POSTGRES_URL" --concurrency 4
+graphwork pack enqueue research --installed --database "$GRAPHWORK_POSTGRES_URL" --set "goal=Review a workflow"
+```
+
 ## Why two graphs?
 
 Most Agent frameworks stop after a run. Industry work cannot: teams need to know
@@ -170,15 +213,20 @@ The kernel generalizes mechanisms. Industry Packs own business semantics.
 
 ```text
 packages/contracts   Serializable execution, context and Pack contracts
-packages/core        Compiler, runtime and memory/SQLite context stores
+packages/core        Compiler, runtime and memory/SQLite/PostgreSQL stores
 packages/pack-sdk    authoring, packaging, integrity and lifecycle SDK
-packs/research       Zero-key cross-industry reference Pack
 packs/architecture   Evidence-backed concept design Industry Pack
+packs/customer-success Evidence-based renewal workflow Industry Pack
+packs/research       Zero-key cross-industry reference Pack
 apps/cli             graphwork CLI
 apps/workbench       Persistent local API and React graph editor
 tests                Contract and end-to-end behavior tests
 docs                 Charter, authoring guide, ADRs and roadmap
 ```
+
+See the [reference deployment](docs/DEPLOYMENT.md), [performance budgets](docs/PERFORMANCE.md)
+and [trust and isolation boundary](docs/TRUST_AND_ISOLATION.md). Maintainers can
+run the complete [release-readiness gate](docs/RELEASE_READINESS.md) locally.
 
 ## Current capabilities
 
@@ -186,6 +234,8 @@ docs                 Charter, authoring guide, ADRs and roadmap
 - typed state with node-level write permissions;
 - parallel ready sets, joins, routers and conditional edges;
 - functions, Agent adapters and human pause/resume checkpoints;
+- provider-neutral, bounded Agent tool loops across OpenAI-compatible,
+  Anthropic Messages and Gemini GenerateContent protocols;
 - role-scoped tools, risk authorization and secret-isolated tool adapters;
 - run budgets and ordered event traces;
 - node retry and timeout policies plus resumable run cancellation;
@@ -210,7 +260,9 @@ docs                 Charter, authoring guide, ADRs and roadmap
   context graph provenance exploration.
 
 Read the [Product Charter](docs/PRODUCT_CHARTER.md),
+[Why execution and context graphs must connect](docs/WHY_TWO_GRAPHS.md),
 [Pack Authoring Guide](docs/PACK_AUTHORING.md),
+[Extension points](docs/EXTENSION_POINTS.md),
 [`.gpack` Package Format](docs/PACK_FORMAT.md),
 [Registry Trust and Worker Isolation](docs/TRUST_AND_ISOLATION.md),
 [Registry Publishing Guide](docs/REGISTRY_PUBLISHING.md),

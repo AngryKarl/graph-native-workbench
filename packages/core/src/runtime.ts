@@ -6,13 +6,21 @@ import type {
   GraphNode,
 } from '@graph-native/contracts';
 import type { CompiledGraph } from './compiler.js';
-import type { RuntimeBindings } from './adapters.js';
+import {
+  AgentSuspensionError,
+  ToolApprovalRequiredError,
+  type RuntimeBindings,
+  type ToolAuthorizationDecision,
+  type ToolAuthorizationEffect,
+} from './adapters.js';
 import type { RunStore } from './run-store.js';
+import { sha256Json } from './integrity.js';
 import { assertValidPatch, assertValidState, type GraphState } from './state.js';
 
 export interface RunOptions {
   readonly runId?: string;
   readonly decisions?: Readonly<Record<string, unknown>>;
+  readonly toolApprovals?: Readonly<Record<string, boolean>>;
   readonly onEvent?: (event: GraphEvent) => void | Promise<void>;
   readonly store?: RunStore;
   readonly signal?: AbortSignal;
@@ -56,6 +64,8 @@ interface MutableRun {
   nextSeq: number;
   stepCount: number;
   startedAt: string;
+  activeStartedAtMs: number;
+  suspensions: Map<string, unknown>;
   events: GraphEvent[];
 }
 
@@ -77,6 +87,14 @@ class NodeTimeoutError extends Error {
     super(`Node "${nodeId}" timed out after ${timeoutMs}ms.`);
     this.name = 'NodeTimeoutError';
   }
+}
+
+function authorizationDecision(
+  value: boolean | ToolAuthorizationEffect | ToolAuthorizationDecision,
+): ToolAuthorizationDecision {
+  if (typeof value === 'boolean') return { effect: value ? 'allow' : 'deny' };
+  if (typeof value === 'string') return { effect: value };
+  return value;
 }
 
 function conditionMatches(condition: EdgeCondition | undefined, state: GraphState): boolean {
@@ -119,6 +137,8 @@ export class GraphRuntime {
       nextSeq: 1,
       stepCount: 0,
       startedAt: new Date().toISOString(),
+      activeStartedAtMs: Date.now(),
+      suspensions: new Map(),
       events: [],
     };
     await options.store?.createRun({
@@ -155,6 +175,8 @@ export class GraphRuntime {
       nextSeq: checkpoint.nextSeq,
       stepCount: checkpoint.stepCount,
       startedAt: checkpoint.startedAt,
+      activeStartedAtMs: Date.now(),
+      suspensions: new Map(Object.entries(checkpoint.suspensions)),
       events: [],
     };
     await options.store?.updateRun(mutable.runId, {
@@ -181,7 +203,7 @@ export class GraphRuntime {
       while (mutable.ready.length > 0) {
         if (options.signal?.aborted) throw new RunCancelledError();
         if (mutable.stepCount >= budget.maxSteps) throw new Error(`Step budget exceeded (${budget.maxSteps}).`);
-        if (Date.now() - Date.parse(mutable.startedAt) > budget.maxDurationMs) {
+        if (Date.now() - mutable.activeStartedAtMs > budget.maxDurationMs) {
           throw new Error(`Duration budget exceeded (${budget.maxDurationMs}ms).`);
         }
 
@@ -341,7 +363,7 @@ export class GraphRuntime {
         maxAttempts,
       });
       const result = await this.executeNodeAttempt(mutable, node, state, options);
-      if (result.status === 'completed' || result.status === 'cancelled') return result;
+      if (result.status === 'completed' || result.status === 'cancelled' || result.status === 'paused') return result;
       const timedOut = result.error instanceof NodeTimeoutError;
       if (timedOut) {
         await this.emit(mutable, 'node.timed_out', options, nodeId, {
@@ -376,7 +398,7 @@ export class GraphRuntime {
     node: GraphNode,
     state: GraphState,
     options: RunOptions,
-  ): Promise<Extract<NodeResult, { status: 'completed' | 'failed' | 'cancelled' }>> {
+  ): Promise<NodeResult> {
     const controller = new AbortController();
     let rejectCancellation: ((error: RunCancelledError) => void) | undefined;
     const cancellationPromise = options.signal
@@ -409,6 +431,7 @@ export class GraphRuntime {
       return { nodeId: node.id, status: 'completed', patch: result.patch, detail: result.detail };
     } catch (error) {
       if (options.signal?.aborted) return { nodeId: node.id, status: 'cancelled' };
+      if (error instanceof ToolApprovalRequiredError) return { nodeId: node.id, status: 'paused' };
       return { nodeId: node.id, status: 'failed', error: asError(error) };
     } finally {
       if (timeout) clearTimeout(timeout);
@@ -436,19 +459,27 @@ export class GraphRuntime {
         const toolIds = Array.isArray(node.config.toolIds)
           ? node.config.toolIds.filter((item): item is string => typeof item === 'string')
           : [];
+        const tools = this.bindings.pack?.tools.filter((item) => toolIds.includes(item.id)) ?? [];
         const result = await agent.run({
           runId: mutable.runId,
           node,
           state,
           signal,
           toolIds,
+          tools,
+          ...(mutable.suspensions.has(node.id) ? { resumeState: mutable.suspensions.get(node.id) } : {}),
           ...(role ? { role } : {}),
           invokeTool: (toolId, input) =>
             this.invokeTool(mutable, options, node, roleId, toolIds, toolId, input, signal),
         });
+        mutable.suspensions.delete(node.id);
         assertValidPatch(this.graph.definition.state, node.writes, result.patch, node.id);
         return { patch: result.patch, detail: result.usage ? { usage: result.usage } : {} };
       } catch (error) {
+        if (error instanceof AgentSuspensionError) {
+          mutable.suspensions.set(node.id, structuredClone(error.suspensionState));
+          throw error.reason;
+        }
         throw asError(error);
       }
     }
@@ -510,10 +541,43 @@ export class GraphRuntime {
     const adapter = this.bindings.tools?.[toolId];
     if (!adapter) return deny('no runtime adapter is registered');
 
-    const authorized = this.bindings.authorizeTool
+    const requested = this.bindings.authorizeTool
       ? await this.bindings.authorizeTool({ runId: mutable.runId, node, role, tool, input })
-      : tool.risk === 'read';
-    if (!authorized) return deny(`risk level "${tool.risk}" requires authorization`);
+      : tool.risk === 'read' ? 'allow' : 'require-approval';
+    const authorization = authorizationDecision(requested);
+    if (authorization.effect === 'deny') {
+      return deny(authorization.reason ?? `risk level "${tool.risk}" is denied by policy`);
+    }
+    if (authorization.effect === 'require-approval') {
+      const inputDigest = sha256Json(input);
+      const approvalId = `tool-${sha256Json({
+        runId: mutable.runId,
+        nodeId: node.id,
+        roleId: role.id,
+        toolId,
+        inputDigest,
+      }).slice(0, 24)}`;
+      const approved = options.toolApprovals?.[approvalId];
+      if (approved === undefined) {
+        await this.emit(mutable, 'tool.approval_requested', options, node.id, {
+          approvalId,
+          toolId,
+          roleId: role.id,
+          risk: tool.risk,
+          inputDigest,
+          ...(authorization.ruleId ? { policyRuleId: authorization.ruleId } : {}),
+          ...(authorization.reason ? { reason: authorization.reason } : {}),
+        });
+        throw new ToolApprovalRequiredError(approvalId);
+      }
+      await this.emit(mutable, 'tool.approval_resolved', options, node.id, {
+        approvalId,
+        toolId,
+        approved,
+        ...(authorization.ruleId ? { policyRuleId: authorization.ruleId } : {}),
+      });
+      if (!approved) return deny('the requested tool approval was rejected');
+    }
 
     const secrets: Record<string, string> = {};
     for (const name of new Set(adapter.requiredSecrets ?? [])) {
@@ -575,6 +639,7 @@ export class GraphRuntime {
       nextSeq: mutable.nextSeq,
       stepCount: mutable.stepCount,
       startedAt: mutable.startedAt,
+      suspensions: Object.fromEntries(mutable.suspensions),
     };
   }
 

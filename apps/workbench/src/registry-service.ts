@@ -1,7 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import {
+  evaluateEngineCompatibility,
   fetchSignedPackRegistry,
+  GRAPHWORK_ENGINE_VERSION,
   installPackFromSignedRegistry,
   listInstalledPacks,
   type RegistryInstallOptions,
@@ -33,6 +35,8 @@ export interface RegistryPackView {
   readonly license?: string;
   readonly version: string;
   readonly engineRange: string;
+  readonly compatible: boolean;
+  readonly compatibilityMessage: string;
   readonly permissions: readonly string[];
   readonly installed: boolean;
   readonly active: boolean;
@@ -180,17 +184,22 @@ export class WorkbenchRegistryService {
           publisherKeyId: verified.publisherKeyId,
           generatedAt: verified.payload.generatedAt,
           expiresAt: verified.payload.expiresAt,
-          packs: verified.payload.packs.map((pack) => ({
-            id: pack.id,
-            name: pack.name ?? pack.id,
-            description: pack.description ?? 'Signed Industry Pack',
-            ...(pack.license ? { license: pack.license } : {}),
-            version: pack.version,
-            engineRange: pack.engineRange,
-            permissions: pack.permissions,
-            installed: Boolean(installed[pack.id]?.versions[pack.version]),
-            active: installed[pack.id]?.activeVersion === pack.version,
-          })),
+          packs: verified.payload.packs.map((pack) => {
+            const compatibility = evaluateEngineCompatibility(pack.engineRange, GRAPHWORK_ENGINE_VERSION);
+            return {
+              id: pack.id,
+              name: pack.name ?? pack.id,
+              description: pack.description ?? 'Signed Industry Pack',
+              ...(pack.license ? { license: pack.license } : {}),
+              version: pack.version,
+              engineRange: pack.engineRange,
+              compatible: compatibility.compatible,
+              compatibilityMessage: compatibility.message,
+              permissions: pack.permissions,
+              installed: Boolean(installed[pack.id]?.versions[pack.version]),
+              active: installed[pack.id]?.activeVersion === pack.version,
+            };
+          }),
         };
       } catch (error) {
         return {

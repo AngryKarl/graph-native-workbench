@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import type { IndustryPackManifest } from '@graph-native/contracts';
 import {
   compilePack,
+  createJsonModelAgent,
   GraphRuntime,
+  ModelProviderClient,
   type AgentAdapter,
   type ToolAdapter,
 } from '@graph-native/core';
@@ -78,6 +80,154 @@ function graph(pack: IndustryPackManifest) {
 }
 
 describe('Agent and tool adapters', () => {
+  it('runs a model-directed tool loop through the existing governed invokeTool boundary', async () => {
+    const pack = governedPack('lookup');
+    let round = 0;
+    const request: typeof fetch = vi.fn(async (_input, init) => {
+      round += 1;
+      const payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      if (round === 1) {
+        expect(payload.tools).toEqual([expect.objectContaining({
+          function: expect.objectContaining({ name: 'graphwork_tool_1' }),
+        })]);
+        return new Response(JSON.stringify({
+          id: 'request-1',
+          model: 'test-model',
+          choices: [{ message: { content: null, tool_calls: [{
+            id: 'call-1',
+            type: 'function',
+            function: { name: 'graphwork_tool_1', arguments: '{"query":"graph governance"}' },
+          }] } }],
+          usage: { prompt_tokens: 8, completion_tokens: 2, total_tokens: 10 },
+        }));
+      }
+      const messages = payload.messages as Array<Record<string, unknown>>;
+      expect(messages.at(-1)).toMatchObject({
+        role: 'tool',
+        tool_call_id: 'call-1',
+        content: 'found:graph governance',
+      });
+      return new Response(JSON.stringify({
+        id: 'request-2',
+        model: 'test-model',
+        choices: [{ message: { content: '{"answer":"found:graph governance"}' } }],
+        usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+      }));
+    });
+    const client = new ModelProviderClient({
+      id: 'test',
+      label: 'Test provider',
+      protocol: 'openai-compatible',
+      baseUrl: 'http://127.0.0.1:9876/v1',
+    }, request);
+    const result = await new GraphRuntime(graph(pack), {
+      pack,
+      agents: { 'adapter_test.agent': createJsonModelAgent(client, { model: 'test-model' }) },
+      tools: {
+        lookup: {
+          execute: (input) => `found:${String((input as { query: string }).query)}`,
+        },
+      },
+    }).run({ query: 'graph governance' });
+
+    expect(result.status).toBe('completed');
+    expect(result.state.answer).toBe('found:graph governance');
+    expect(result.events.map((event) => event.type)).toEqual(
+      expect.arrayContaining(['tool.requested', 'tool.started', 'tool.completed']),
+    );
+    expect(result.events.find((event) => event.type === 'node.completed' && event.nodeId === 'analyze'))
+      .toMatchObject({ detail: { usage: { inputTokens: 20, outputTokens: 5, totalTokens: 25 } } });
+  });
+
+  it('fails closed when a model exceeds the configured tool-call limit', async () => {
+    const pack = governedPack('lookup');
+    let round = 0;
+    const request: typeof fetch = async () => {
+      round += 1;
+      return new Response(JSON.stringify({
+        id: `request-${round}`,
+        choices: [{ message: { content: null, tool_calls: [{
+          id: `call-${round}`,
+          type: 'function',
+          function: { name: 'graphwork_tool_1', arguments: '{"query":"again"}' },
+        }] } }],
+      }));
+    };
+    const client = new ModelProviderClient({
+      id: 'test', label: 'Test provider', protocol: 'openai-compatible', baseUrl: 'http://127.0.0.1:9876/v1',
+    }, request);
+    const execute = vi.fn(() => 'result');
+    const result = await new GraphRuntime(graph(pack), {
+      pack,
+      agents: {
+        'adapter_test.agent': createJsonModelAgent(client, { model: 'test-model', maxToolRounds: 1 }),
+      },
+      tools: { lookup: { execute } },
+    }).run({ query: 'loop forever' });
+
+    expect(result.status).toBe('failed');
+    if (result.status !== 'failed') throw new Error('Expected a failed run.');
+    expect(result.error.message).toContain('1-round tool-call limit');
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('resumes an approved model tool call without repeating the provider request', async () => {
+    const pack = governedPack('publish');
+    let providerRequests = 0;
+    const request: typeof fetch = async (_input, init) => {
+      providerRequests += 1;
+      const payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      if (providerRequests === 1) {
+        return new Response(JSON.stringify({
+          id: 'approval-request-1',
+          model: 'test-model',
+          choices: [{ message: { content: null, tool_calls: [{
+            id: 'publish-call-1',
+            type: 'function',
+            function: { name: 'graphwork_tool_1', arguments: '{"content":"approved draft"}' },
+          }] } }],
+          usage: { prompt_tokens: 8, completion_tokens: 2, total_tokens: 10 },
+        }));
+      }
+      expect((payload.messages as Array<Record<string, unknown>>).at(-1)).toMatchObject({
+        role: 'tool',
+        tool_call_id: 'publish-call-1',
+        content: 'published',
+      });
+      return new Response(JSON.stringify({
+        id: 'approval-request-2',
+        model: 'test-model',
+        choices: [{ message: { content: '{"answer":"published"}' } }],
+        usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+      }));
+    };
+    const client = new ModelProviderClient({
+      id: 'test', label: 'Test provider', protocol: 'openai-compatible', baseUrl: 'http://127.0.0.1:9876/v1',
+    }, request);
+    const execute = vi.fn(() => 'published');
+    const runtime = new GraphRuntime(graph(pack), {
+      pack,
+      agents: { 'adapter_test.agent': createJsonModelAgent(client, { model: 'test-model' }) },
+      tools: { publish: { execute } },
+    });
+
+    const paused = await runtime.run({ query: 'publish this' });
+    expect(paused.status).toBe('paused');
+    expect(providerRequests).toBe(1);
+    if (paused.status !== 'paused') throw new Error('Expected tool approval pause.');
+    const approvalId = String(paused.events.find((event) =>
+      event.type === 'tool.approval_requested')?.detail.approvalId ?? '');
+
+    const completed = await runtime.resume(paused.checkpoint, {
+      toolApprovals: { [approvalId]: true },
+    });
+    expect(completed.status).toBe('completed');
+    expect(providerRequests).toBe(2);
+    expect(execute).toHaveBeenCalledOnce();
+    expect(completed.events.find((event) => event.type === 'node.completed'))
+      .toMatchObject({ detail: { usage: { totalTokens: 25 } } });
+  });
+
   it('scopes tools to the Pack role and exposes only declared secrets to the tool adapter', async () => {
     const pack = governedPack('lookup');
     const secret = 'private-test-token';
@@ -113,10 +263,10 @@ describe('Agent and tool adapters', () => {
     expect(JSON.stringify({ state: result.state, events: result.events })).not.toContain(secret);
   });
 
-  it('denies non-read tools by default before the adapter can execute', async () => {
+  it('checkpoints non-read tools for a bound human approval before execution', async () => {
     const pack = governedPack('publish');
     const execute = vi.fn(() => 'published');
-    const result = await new GraphRuntime(graph(pack), {
+    const runtime = new GraphRuntime(graph(pack), {
       pack,
       agents: {
         'adapter_test.agent': {
@@ -126,11 +276,27 @@ describe('Agent and tool adapters', () => {
         },
       },
       tools: { publish: { execute } },
-    }).run({ query: 'publish this' });
+    });
+    const paused = await runtime.run({ query: 'publish this' });
 
-    expect(result.status).toBe('failed');
+    expect(paused.status).toBe('paused');
     expect(execute).not.toHaveBeenCalled();
-    expect(result.events.some((event) => event.type === 'tool.denied')).toBe(true);
+    const request = paused.events.find((event) => event.type === 'tool.approval_requested');
+    expect(request).toMatchObject({
+      nodeId: 'analyze',
+      detail: { toolId: 'publish', risk: 'external', roleId: 'analyst' },
+    });
+    if (paused.status !== 'paused' || typeof request?.detail.approvalId !== 'string') {
+      throw new Error('Expected a tool approval checkpoint.');
+    }
+
+    const resumed = await runtime.resume(paused.checkpoint, {
+      toolApprovals: { [request.detail.approvalId]: true },
+    });
+    expect(resumed.status).toBe('completed');
+    expect(resumed.state.answer).toBe('published');
+    expect(execute).toHaveBeenCalledOnce();
+    expect(resumed.events.some((event) => event.type === 'tool.approval_resolved')).toBe(true);
   });
 
   it('allows an authorized external tool and records Agent usage', async () => {

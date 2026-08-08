@@ -1,12 +1,21 @@
 #!/usr/bin/env node
+import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve } from 'node:path';
 import { industryPackJsonSchema, type GraphEvent } from '@graph-native/contracts';
 import {
   compilePack,
+  createPolicyToolAuthorizer,
+  createRunAuditBundle,
+  defaultToolPolicy,
   GraphRuntime,
   InMemoryContextGraphStore,
+  parseToolPolicy,
+  PostgresRunQueue,
+  PostgresRunStore,
   SQLiteRunStore,
+  type RunStore,
+  verifyRunAuditBundle,
 } from '@graph-native/core';
 import {
   projectResearchRun,
@@ -35,6 +44,7 @@ import {
   runPackFixture,
   scaffoldPack,
   uninstallInstalledPack,
+  type IsolatedPackPolicy,
 } from '@graph-native/pack-sdk';
 
 const args = process.argv.slice(2);
@@ -78,13 +88,51 @@ function assignments(flag: string): Record<string, unknown> {
   return Object.assign({}, ...valuesAfter(flag).map((value) => assignment(value, flag)));
 }
 
+function booleanAssignments(flag: string): Record<string, boolean> {
+  const values = assignments(flag);
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof value !== 'boolean') throw new Error(`${flag} expects ${key}=true or ${key}=false.`);
+  }
+  return values as Record<string, boolean>;
+}
+
+async function toolAuthorizer() {
+  const policyPath = valueAfter('--policy');
+  const policy = policyPath
+    ? parseToolPolicy(JSON.parse(await readFile(resolve(policyPath), 'utf8')) as unknown)
+    : defaultToolPolicy;
+  return createPolicyToolAuthorizer(policy);
+}
+
+type ClosableRunStore = RunStore & { close(): void | Promise<void> };
+
+function isPostgresTarget(target: string): boolean {
+  return /^postgres(?:ql)?:\/\//i.test(target);
+}
+
+function openRunStore(target: string): ClosableRunStore {
+  return isPostgresTarget(target)
+    ? new PostgresRunStore(target)
+    : new SQLiteRunStore(resolve(target));
+}
+
+function postgresTarget(): string {
+  const target = valueAfter('--database') ?? process.env.GRAPHWORK_POSTGRES_URL;
+  if (!target || !isPostgresTarget(target)) {
+    throw new Error('Distributed execution requires a PostgreSQL URL via --database or GRAPHWORK_POSTGRES_URL.');
+  }
+  return target;
+}
+
 function usage(): string {
   return [
     'Graph Native Workbench',
     '',
     'Usage:',
-    '  graphwork workbench [--port 4311] [--no-open]',
+    '  graphwork workbench [--port 4311] [--policy .graphwork/policy.json] [--no-open]',
     '  graphwork demo [--pause]',
+    '  graphwork audit export --database <runs.sqlite-or-postgres-url> --run <run-id> [--output run.audit.json]',
+    '  graphwork audit verify <run.audit.json>',
     '  graphwork pack init <pack-id> [directory]',
     '  graphwork pack validate [module-or-json]',
     '  graphwork pack inspect [module-or-json-or-gpack]',
@@ -100,9 +148,11 @@ function usage(): string {
     '  graphwork pack activate <pack-id>@<version> [--root .graphwork/packs]',
     '  graphwork pack rollback <pack-id> [--root .graphwork/packs]',
     '  graphwork pack uninstall <pack-id> [--version 0.1.0] [--root .graphwork/packs]',
-    '  graphwork pack run <module> --set topic=hello [--decision approval=true] [--database runs.sqlite]',
+    '  graphwork pack run <module> --set topic=hello [--decision approval=true] [--policy policy.json] [--database runs.sqlite]',
+    '  graphwork pack enqueue <module-or-pack-id> --database <postgres-url> --set topic=hello [--installed]',
     '  graphwork pack run <pack-id> --installed --set topic=hello [--root .graphwork/packs]',
-    '  graphwork pack resume <module-or-pack-id> --run <run-id> --database runs.sqlite [--installed]',
+    '  graphwork pack resume <module-or-pack-id> --run <run-id> --database runs.sqlite [--tool-approval id=true] [--installed]',
+    '  graphwork worker start <module-or-pack-id> --database <postgres-url> [--concurrency 4] [--installed] [--container]',
     '  graphwork pack schema [output.json]',
     '',
     'Repeat --set/--decision/--permission for more values. --input/--decisions also accept JSON or @file.json.',
@@ -154,6 +204,48 @@ async function demo(): Promise<void> {
   }
 }
 
+async function auditCommand(): Promise<void> {
+  const action = args[1];
+  if (action === 'verify') {
+    const subject = args[2];
+    if (!subject) throw new Error('Audit verification requires a bundle path.');
+    const bundle = verifyRunAuditBundle(JSON.parse(await readFile(resolve(subject), 'utf8')) as unknown);
+    console.log(`✓ Verified audit bundle for ${bundle.run.runId}`);
+    console.log(`  SHA-256 ${bundle.integrity.digest}`);
+    console.log(`  ${bundle.events.length} event(s)`);
+    return;
+  }
+  if (action === 'export') {
+    const databasePath = valueAfter('--database');
+    const runId = valueAfter('--run');
+    if (!databasePath || !runId) throw new Error('Audit export requires --database and --run.');
+    const store = openRunStore(databasePath);
+    try {
+      const run = await store.getRun(runId);
+      if (!run) throw new Error(`Run "${runId}" does not exist.`);
+      const [events, checkpoint] = await Promise.all([
+        store.listEvents(runId),
+        store.getCheckpoint(runId),
+      ]);
+      const bundle = createRunAuditBundle({
+        run,
+        events,
+        ...(checkpoint ? { checkpoint } : {}),
+      });
+      const output = resolve(valueAfter('--output') ?? `${runId}.audit.json`);
+      await mkdir(dirname(output), { recursive: true });
+      await writeFile(output, `${JSON.stringify(bundle, null, 2)}\n`, 'utf8');
+      console.log(`✓ Exported audit bundle for ${runId}`);
+      console.log(`  ${output}`);
+      console.log(`  SHA-256 ${bundle.integrity.digest}`);
+    } finally {
+      await store.close();
+    }
+    return;
+  }
+  throw new Error(`Unknown audit command "${action ?? ''}".\n\n${usage()}`);
+}
+
 async function workbench(): Promise<void> {
   const port = Number(valueAfter('--port') ?? 4311);
   if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error('Workbench port must be an integer between 1 and 65535.');
@@ -162,6 +254,8 @@ async function workbench(): Promise<void> {
   process.env.GRAPH_WORKBENCH_DATA ??= resolve(workspace, '.graphwork/workbench.json');
   process.env.GRAPH_WORKBENCH_PACKS ??= resolve(workspace, '.graphwork/packs');
   process.env.GRAPH_WORKBENCH_TRUST ??= resolve(workspace, '.graphwork/trust.json');
+  const policyPath = valueAfter('--policy');
+  if (policyPath) process.env.GRAPH_WORKBENCH_POLICY = resolve(policyPath);
   process.env.GRAPH_WORKBENCH_OPEN = args.includes('--no-open') ? 'false' : 'true';
   const server = packagedDistribution
     ? new URL('./workbench-server.mjs', import.meta.url)
@@ -175,9 +269,26 @@ async function resolvePack(path: string | undefined) {
 }
 
 async function resolveRunnablePack(subject: string) {
+  if (!args.includes('--installed') && subject === 'research') {
+    return { pack: researchPack, handlers: researchHandlers, source: 'built-in:research' };
+  }
   return args.includes('--installed')
-    ? loadInstalledPackIsolated(subject, valueAfter('--root'))
+    ? loadInstalledPackIsolated(subject, valueAfter('--root'), isolationPolicy())
     : loadPackModule(subject);
+}
+
+function isolationPolicy(): IsolatedPackPolicy {
+  if (!args.includes('--container')) return {};
+  const runtime = valueAfter('--container-runtime') ?? 'docker';
+  if (runtime !== 'docker' && runtime !== 'podman') throw new Error('--container-runtime must be docker or podman.');
+  return {
+    allowNetwork: args.includes('--allow-network'),
+    container: {
+      runtime,
+      image: valueAfter('--container-image') ?? 'node:24-alpine',
+      network: valueAfter('--container-network') ?? 'none',
+    },
+  };
 }
 
 async function trustedRegistryKeys(): Promise<Record<string, string>> {
@@ -413,6 +524,38 @@ async function packCommand(): Promise<void> {
     console.log(`✓ Uninstalled ${subject}${valueAfter('--version') ? `@${valueAfter('--version')}` : ''}`);
     return;
   }
+  if (action === 'enqueue') {
+    if (!subject) throw new Error('Missing Pack module path or installed Pack id.');
+    const loaded = await resolveRunnablePack(subject);
+    const compiled = compilePack(loaded.pack);
+    const graphId = valueAfter('--graph') ?? compiled.manifest.graphs[0]?.id;
+    const graph = graphId ? compiled.graphs.get(graphId) : undefined;
+    if (!graph) throw new Error(`Graph "${graphId ?? ''}" does not exist in Pack "${compiled.manifest.id}".`);
+    const queue = new PostgresRunQueue(postgresTarget(), {
+      queueName: valueAfter('--queue-name') ?? 'graphwork-runs',
+    });
+    const runId = valueAfter('--run-id') ?? `run-${randomUUID()}`;
+    try {
+      const jobId = await queue.enqueue({
+        formatVersion: 1,
+        runId,
+        packId: compiled.manifest.id,
+        graphId: graph.definition.id,
+        graphVersion: graph.definition.version,
+        input: {
+          ...await recordInput(valueAfter('--input'), '--input'),
+          ...assignments('--set'),
+        },
+        submittedAt: new Date().toISOString(),
+      });
+      console.log(`✓ Enqueued ${runId}`);
+      console.log(`  Job: ${jobId}`);
+      console.log(`  Queue: ${queue.queueName}`);
+    } finally {
+      await queue.close();
+    }
+    return;
+  }
   if (action === 'run') {
     if (!subject) throw new Error('Missing Pack module path.');
     const loaded = await resolveRunnablePack(subject);
@@ -429,14 +572,16 @@ async function packCommand(): Promise<void> {
       ...assignments('--decision'),
     };
     const databasePath = valueAfter('--database');
-    const store = databasePath ? new SQLiteRunStore(resolve(databasePath)) : undefined;
+    const store = databasePath ? openRunStore(databasePath) : undefined;
     try {
       const runId = valueAfter('--run-id');
       const result = await new GraphRuntime(graph, {
         handlers: loaded.handlers,
         pack: compiled.manifest,
+        authorizeTool: await toolAuthorizer(),
       }).run(input, {
         decisions,
+        toolApprovals: booleanAssignments('--tool-approval'),
         onEvent: printEvent,
         ...(runId ? { runId } : {}),
         ...(store ? { store } : {}),
@@ -444,7 +589,7 @@ async function packCommand(): Promise<void> {
       console.log(JSON.stringify({ status: result.status, runId: result.runId, state: result.state }, null, 2));
       if (result.status === 'failed') throw result.error;
     } finally {
-      store?.close();
+      await store?.close();
     }
     return;
   }
@@ -456,7 +601,7 @@ async function packCommand(): Promise<void> {
     if (!databasePath) throw new Error('Missing --database <runs.sqlite>.');
     const loaded = await resolveRunnablePack(subject);
     const compiled = compilePack(loaded.pack);
-    const store = new SQLiteRunStore(resolve(databasePath));
+    const store = openRunStore(databasePath);
     try {
       const storedRun = await store.getRun(runId);
       if (!storedRun) throw new Error(`Run "${runId}" does not exist.`);
@@ -469,22 +614,83 @@ async function packCommand(): Promise<void> {
       const result = await new GraphRuntime(graph, {
         handlers: loaded.handlers,
         pack: compiled.manifest,
-      }).resumeStored(runId, store, { decisions, onEvent: printEvent });
+        authorizeTool: await toolAuthorizer(),
+      }).resumeStored(runId, store, {
+        decisions,
+        toolApprovals: booleanAssignments('--tool-approval'),
+        onEvent: printEvent,
+      });
       console.log(JSON.stringify({ status: result.status, runId: result.runId, state: result.state }, null, 2));
       if (result.status === 'failed') throw result.error;
     } finally {
-      store.close();
+      await store.close();
     }
     return;
   }
   throw new Error(`Unknown pack command "${action ?? ''}".\n\n${usage()}`);
 }
 
+async function workerCommand(): Promise<void> {
+  const action = args[1];
+  const subject = args[2];
+  if (action !== 'start' || !subject) throw new Error(`Worker requires start <module-or-pack-id>.\n\n${usage()}`);
+  const loaded = await resolveRunnablePack(subject);
+  const compiled = compilePack(loaded.pack);
+  const database = postgresTarget();
+  const concurrency = Number(valueAfter('--concurrency') ?? 1);
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 64) {
+    throw new Error('Worker concurrency must be an integer between 1 and 64.');
+  }
+  const store = new PostgresRunStore(database);
+  const queue = new PostgresRunQueue(database, {
+    queueName: valueAfter('--queue-name') ?? 'graphwork-runs',
+  });
+  const authorizeTool = await toolAuthorizer();
+  try {
+    await queue.work(async (request) => {
+      if (request.packId !== compiled.manifest.id) {
+        throw new Error(`Worker for Pack "${compiled.manifest.id}" cannot execute Pack "${request.packId}".`);
+      }
+      const graph = compiled.graphs.get(request.graphId);
+      if (!graph || graph.definition.version !== request.graphVersion) {
+        throw new Error(`Worker does not have graph "${request.graphId}" version ${request.graphVersion}.`);
+      }
+      const runtime = new GraphRuntime(graph, {
+        handlers: loaded.handlers,
+        pack: compiled.manifest,
+        authorizeTool,
+      });
+      const existing = await store.getRun(request.runId);
+      if (existing && ['completed', 'paused', 'cancelled'].includes(existing.status)) {
+        return { runId: existing.runId, status: existing.status };
+      }
+      const result = existing
+        ? await runtime.resumeStored(request.runId, store)
+        : await runtime.run(request.input, { runId: request.runId, store });
+      if (result.status === 'failed') throw result.error;
+      return { runId: result.runId, status: result.status };
+    }, { concurrency });
+    console.log(`✓ Worker ready for ${compiled.manifest.id}@${compiled.manifest.version}`);
+    console.log(`  Queue: ${queue.queueName}`);
+    console.log(`  Concurrency: ${concurrency}`);
+    console.log('  Press Ctrl+C to stop gracefully.');
+    await new Promise<void>((resolveShutdown) => {
+      process.once('SIGINT', resolveShutdown);
+      process.once('SIGTERM', resolveShutdown);
+    });
+  } finally {
+    await queue.close();
+    await store.close();
+  }
+}
+
 async function main(): Promise<void> {
   const command = args[0] ?? (packagedDistribution ? 'workbench' : 'demo');
   if (command === 'workbench') return workbench();
   if (command === 'demo') return demo();
+  if (command === 'audit') return auditCommand();
   if (command === 'pack') return packCommand();
+  if (command === 'worker') return workerCommand();
   if (command === 'version' || command === '--version' || command === '-v') {
     console.log(graphworkVersion);
     return;

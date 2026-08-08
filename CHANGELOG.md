@@ -3,7 +3,7 @@
 All notable changes will be documented here. The project follows semantic
 versioning once public packages begin publishing.
 
-## Unreleased
+## 0.2.0-rc.1 - 2026-08-08
 
 ### Added
 
@@ -34,6 +34,29 @@ versioning once public packages begin publishing.
 - Multi-provider Agent execution for OpenAI-compatible, Anthropic Messages and
   Gemini GenerateContent APIs, with Workbench configuration, normalized usage
   events and server-only credential handling.
+- Provider-neutral model-directed tool loops that reuse Pack role permissions,
+  risk authorization, secret isolation and ordered runtime tool events.
+- Structured Pack engine compatibility reports shared by artifact inspection,
+  signed Registry catalogs and installation errors.
+- Automatic, backed-up Workbench workspace migration from format v1 to v2 with
+  stable workspace identity and lifecycle timestamps.
+- Ordered declarative tool policies with input-bound approval checkpoints that
+  resume the original model exchange without duplicate provider calls.
+- Portable SHA-256-verified run audit bundles from the Workbench and CLI.
+- PostgreSQL run and context stores with schema initialization and the same
+  validation contracts as local persistence.
+- pg-boss-backed distributed run workers with version-bound requests,
+  heartbeats, retries and checkpoint recovery.
+- Docker/Podman Pack isolation with network-deny defaults and bounded container
+  capabilities, resources and mounts.
+- Cross-platform performance budgets and a Docker Compose reference deployment
+  for the Workbench, PostgreSQL and distributed Workers.
+- Playwright browser E2E, clean npm-install smoke and release-readiness metadata
+  gates for the complete onboarding and approval journey.
+- Customer Success Renewal Pack with two golden fixtures, an approval-gated
+  success plan and evidence-linked context projection.
+- Public extension-point guide, maintained good-first-issue scopes, a dual-graph
+  architecture article and an end-to-end customer-success industry case.
 
 ### Changed
 

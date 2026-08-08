@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: npm-distribution-release
@@ -38,9 +39,8 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm dist:check
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm release:check
 
       - name: Verify npm package contents
         working-directory: apps/distribution
@@ -60,4 +60,4 @@ jobs:
         working-directory: apps/distribution
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public --tag "${{ inputs.npm_tag }}"
+        run: npm publish --access public --provenance --tag "${{ inputs.npm_tag }}"

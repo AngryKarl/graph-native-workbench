@@ -5,7 +5,12 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const cli = resolve(root, 'apps/distribution/dist/graphwork.js');
+const expectedVersion = JSON.parse(
+  await readFile(resolve(root, 'apps/distribution/package.json'), 'utf8'),
+).version;
+const cli = process.argv[2]
+  ? resolve(process.argv[2])
+  : resolve(root, 'apps/distribution/dist/graphwork.js');
 
 function run(args, cwd) {
   return new Promise((resolveRun, reject) => {
@@ -52,7 +57,9 @@ const workspace = await mkdtemp(join(tmpdir(), 'graphwork-distribution-'));
 let serverChild;
 try {
   const version = await run(['--version'], workspace);
-  if (!/^0\.1\.0\s*$/.test(version.stdout)) throw new Error(`Unexpected distribution version: ${version.stdout}`);
+  if (version.stdout.trim() !== expectedVersion) {
+    throw new Error(`Unexpected distribution version: ${version.stdout}`);
+  }
   const demo = await run(['demo'], workspace);
   if (!demo.stdout.includes('Context graph: 7 objects, 9 typed relations')) throw new Error('Packaged demo output is incomplete.');
 
@@ -88,6 +95,8 @@ try {
   const url = `http://127.0.0.1:${port}`;
   const bootstrap = await waitForWorkbench(url, serverChild, () => serverOutput);
   if (!Array.isArray(bootstrap.catalog) || bootstrap.catalog.length < 3) throw new Error('Packaged Workbench catalog is incomplete.');
+  const health = await (await fetch(`${url}/api/health`)).json();
+  if (health.status !== 'ok') throw new Error('Packaged Workbench health endpoint is not ready.');
   const html = await (await fetch(url)).text();
   if (!html.includes('Graph Native Workbench')) throw new Error('Packaged Workbench client assets were not served.');
 

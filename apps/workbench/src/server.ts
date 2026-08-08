@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { inspectPackArtifact, installPackArtifact } from '@graph-native/pack-sdk';
+import { defaultToolPolicy, parseToolPolicy, type ToolPolicy } from '@graph-native/core';
 import { bundledPackCatalog, discoverInstalledPackRuntimes } from './catalog.js';
 import { WorkbenchService } from './service.js';
 import { WorkbenchRegistryService } from './registry-service.js';
@@ -14,16 +15,29 @@ import { WorkbenchRegistryService } from './registry-service.js';
 const appDirectory = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const workspaceDirectory = resolve(appDirectory, '..', '..');
 const port = Number(process.env.GRAPH_WORKBENCH_PORT ?? 4310);
+const host = process.env.GRAPH_WORKBENCH_HOST ?? '127.0.0.1';
 const dataFile = process.env.GRAPH_WORKBENCH_DATA
   ?? resolve(workspaceDirectory, '.graphwork/workbench.json');
 const packRoot = process.env.GRAPH_WORKBENCH_PACKS
   ?? resolve(workspaceDirectory, '.graphwork/packs');
 const trustFile = process.env.GRAPH_WORKBENCH_TRUST
   ?? resolve(workspaceDirectory, '.graphwork/trust.json');
+const policyFile = process.env.GRAPH_WORKBENCH_POLICY
+  ?? resolve(workspaceDirectory, '.graphwork/policy.json');
 const discovery = await discoverInstalledPackRuntimes(packRoot);
-const service = new WorkbenchService({ dataFile });
+const service = new WorkbenchService({ dataFile, toolPolicy: await loadToolPolicy(policyFile) });
 const registryService = await WorkbenchRegistryService.fromConfigFile(trustFile, packRoot);
 const clientDirectory = resolve(appDirectory, 'dist/client');
+
+async function loadToolPolicy(path: string): Promise<ToolPolicy> {
+  try {
+    return parseToolPolicy(JSON.parse(await readFile(path, 'utf8')) as unknown);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return defaultToolPolicy;
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid tool policy at ${path}: ${message}`);
+  }
+}
 
 const mediaTypes: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
@@ -87,12 +101,18 @@ function artifactPreview(filePath: string) {
     bytes: inspection.bytes,
     checksum: inspection.checksum,
     compatible: inspection.compatible,
+    compatibilityCode: inspection.compatibility.code,
+    compatibilityMessage: inspection.compatibility.message,
     engineRange: inspection.descriptor.engine.graphwork,
     permissions: inspection.descriptor.permissions,
   };
 }
 
 async function api(request: IncomingMessage, response: ServerResponse, pathname: string): Promise<boolean> {
+  if (request.method === 'GET' && pathname === '/api/health') {
+    json(response, 200, { status: 'ok' });
+    return true;
+  }
   if (request.method === 'GET' && pathname === '/api/workbench') {
     json(response, 200, service.describeWorkbench());
     return true;
@@ -233,6 +253,18 @@ async function api(request: IncomingMessage, response: ServerResponse, pathname:
     json(response, 200, await service.decide(decodeURIComponent(decision[1]!), payload.approved));
     return true;
   }
+  const audit = pathname.match(/^\/api\/runs\/([^/]+)\/audit$/);
+  if (request.method === 'GET' && audit) {
+    const runId = decodeURIComponent(audit[1]!);
+    const bundle = service.exportAudit(runId);
+    response.writeHead(200, {
+      'content-type': 'application/vnd.graphwork.audit+json; charset=utf-8',
+      'content-disposition': `attachment; filename="${runId}.audit.json"`,
+      'cache-control': 'no-store',
+    });
+    response.end(`${JSON.stringify(bundle, null, 2)}\n`);
+    return true;
+  }
   const run = pathname.match(/^\/api\/runs\/([^/]+)$/);
   if (request.method === 'GET' && run) {
     const snapshot = service.get(decodeURIComponent(run[1]!));
@@ -292,8 +324,8 @@ createServer(async (request, response) => {
     const resolved = error instanceof Error ? error : new Error(String(error));
     json(response, 400, { error: resolved.message });
   }
-}).listen(port, '127.0.0.1', () => {
-  const url = `http://127.0.0.1:${port}`;
+}).listen(port, host, () => {
+  const url = `http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`;
   console.log(`Graph Native Workbench: ${url}`);
   if (discovery.loaded > 0) console.log(`Loaded ${discovery.loaded} trusted Pack(s) from ${packRoot}`);
   for (const error of discovery.errors) console.warn(`Skipped installed Pack: ${error}`);

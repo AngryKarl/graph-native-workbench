@@ -44,6 +44,27 @@ by the node's declared `writes`. Provider, protocol, model, token counts,
 latency and request ID are normalized into the ordered runtime event stream so
 context projectors can preserve model-call provenance alongside deliverables.
 
+## Model-directed tool loop
+
+Model-backed Agent nodes receive only the Pack tools declared in the node's
+`config.toolIds` and allowed by its role. OpenAI-compatible function calls,
+Anthropic tool-use blocks and Gemini function calls are normalized into the
+same internal request, then executed through the existing governed
+`context.invokeTool` boundary.
+
+Each request therefore passes the Pack declaration, node scope, role
+permission, runtime adapter, risk authorization and secret checks described
+below. Calls run in provider order so tools with side effects remain
+predictable. Results are returned to the model until it produces the final
+state patch or reaches the bounded tool-round limit. Usage metadata is summed
+across model rounds.
+
+Tool inputs and outputs are not copied into runtime events. Events contain the
+tool identity, risk, outcome and safe error details. When policy requires
+approval, the model exchange and completed tool results are serialized into the
+run checkpoint. Resuming therefore continues the same provider conversation
+without repeating the model request or already completed tools.
+
 ## Tool governance
 
 A tool call succeeds only when all of these conditions hold:
@@ -52,11 +73,42 @@ A tool call succeeds only when all of these conditions hold:
 2. the Agent node includes the tool in `config.toolIds`;
 3. the node's Pack role includes the tool in `allowedTools`;
 4. a matching runtime adapter is registered;
-5. the runtime authorizer approves the call.
+5. the runtime policy allows the call or a reviewer approves its bound request.
 
-Without an authorizer, only `read` tools are allowed. `draft`, `write` and
-`external` tools require an explicit authorization decision. Requested,
-started, completed, denied and failed tool calls produce ordered events.
+The default policy allows `read` tools and checkpoints `draft`, `write` and
+`external` tools for approval. Requested, approval-requested, approval-resolved,
+started, completed, denied and failed tool calls produce ordered events. Each
+approval is bound to the run, node, role, tool and a SHA-256 digest of its input.
+
+Workbench reads an optional `.graphwork/policy.json` file. Set
+`GRAPH_WORKBENCH_POLICY` or pass `graphwork workbench --policy <file>` to use a
+different path:
+
+```json
+{
+  "formatVersion": 1,
+  "defaultEffect": "deny",
+  "rules": [
+    {
+      "id": "review-external-publication",
+      "effect": "require-approval",
+      "roleIds": ["publisher"],
+      "toolIds": ["external_publish"],
+      "risks": ["external"],
+      "reason": "External publication requires a reviewer."
+    },
+    {
+      "id": "allow-approved-readers",
+      "effect": "allow",
+      "risks": ["read"]
+    }
+  ]
+}
+```
+
+Rules are evaluated in order and can select run, node, role, tool and risk.
+The first match wins; otherwise `defaultEffect` applies. Policy can return
+`allow`, `deny` or `require-approval`.
 
 ## Secret boundary
 
@@ -71,12 +123,69 @@ access appropriately.
 
 ## Durable runs
 
-`SQLiteRunStore` persists run records, ordered events and the latest checkpoint.
+`SQLiteRunStore` provides zero-setup local persistence. `PostgresRunStore`
+implements the same interface for shared deployments; `PostgresContextGraphStore`
+does the same for typed context objects and relations. Both PostgreSQL stores
+initialize the versioned Graphwork schema and preserve the contract validation
+used by the in-memory and SQLite adapters.
+
 The runtime updates the checkpoint after each completed scheduling batch. A new
 runtime instance can call `resumeStored` after a process restart. Successful
 completion clears the checkpoint while retaining the final run and event trace.
 
 The CLI exposes this through `pack run --database` and `pack resume`.
+
+```bash
+graphwork pack run packs/research/src/index.ts \
+  --database "$GRAPHWORK_POSTGRES_URL" --set "goal=Durable team workflow"
+graphwork pack resume packs/research/src/index.ts \
+  --database "$GRAPHWORK_POSTGRES_URL" --run <run-id> --decision approval=true
+```
+
+## Distributed PostgreSQL workers
+
+`PostgresRunQueue` delegates job leases, heartbeats, expiry and retry recovery to
+pg-boss rather than implementing another queue protocol. A queued request is a
+versioned contract binding the run, Pack and graph versions to serializable
+input. Workers reject requests for a different Pack or graph version.
+
+Start one or more workers with the same installed Pack and PostgreSQL database:
+
+```bash
+graphwork worker start research --installed \
+  --database "$GRAPHWORK_POSTGRES_URL" --concurrency 4
+```
+
+Then enqueue work from any machine that has the same Pack contract:
+
+```bash
+graphwork pack enqueue research --installed \
+  --database "$GRAPHWORK_POSTGRES_URL" --set "goal=Review the operating model"
+```
+
+Workers persist checkpoints through `PostgresRunStore`. A failed job is retried
+from its latest checkpoint; a crash after a completed or paused run is handled
+idempotently. Human and governed tool checkpoints remain explicit and can be
+resumed with `pack resume`.
+
+## Portable audit bundles
+
+Every Workbench run can be exported from the execution console as a portable
+JSON audit bundle. It contains run identity and state, ordered events, the
+current checkpoint when present, projected context objects and relations, and
+a canonical SHA-256 integrity digest. Tool secrets and raw tool inputs remain
+outside the bundle.
+
+SQLite- and PostgreSQL-backed CLI runs use the same format:
+
+```bash
+graphwork audit export --database runs.sqlite --run <run-id> --output run.audit.json
+graphwork audit verify run.audit.json
+```
+
+Verification checks the digest, run identity, event ordering, checkpoint and
+typed context records. The digest detects accidental or malicious modification;
+it is not a publisher signature or timestamp-authority proof.
 
 ## Reliability policies
 

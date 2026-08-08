@@ -1,5 +1,5 @@
 import type { GraphEvent, IndustryPackManifest } from '@graph-native/contracts';
-import type { ContextGraphStore, GraphState, HandlerRegistry } from '@graph-native/core';
+import type { ContextGraphStore, GraphState, HandlerRegistry, ToolAdapterRegistry } from '@graph-native/core';
 import { listInstalledPacks, loadInstalledPackIsolated } from '@graph-native/pack-sdk';
 import {
   architectureHandlers,
@@ -7,14 +7,21 @@ import {
   projectArchitectureRun,
 } from '@graph-native/pack-architecture';
 import {
+  customerSuccessHandlers,
+  customerSuccessPack,
+  projectCustomerSuccessRun,
+} from '@graph-native/pack-customer-success';
+import {
   projectResearchRun,
   researchHandlers,
   researchPack,
+  researchTools,
 } from '@graph-native/pack-research';
 
 export interface PackRuntimeDefinition {
   readonly manifest: IndustryPackManifest;
   readonly handlers: HandlerRegistry;
+  readonly tools?: ToolAdapterRegistry;
   readonly projector?: (
     store: ContextGraphStore,
     run: {
@@ -40,10 +47,21 @@ export const bundledPackCatalog = new Map<string, PackRuntimeDefinition>([
     },
   ],
   [
+    customerSuccessPack.id,
+    {
+      manifest: customerSuccessPack,
+      handlers: customerSuccessHandlers,
+      projector: projectCustomerSuccessRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
+  [
     researchPack.id,
     {
       manifest: researchPack,
       handlers: researchHandlers,
+      tools: researchTools,
       projector: projectResearchRun,
       executionMode: 'in-process',
       trustSource: 'bundled',

@@ -16,8 +16,9 @@ import type { HandlerRegistry } from '@graph-native/core';
 import { compilePack } from '@graph-native/core';
 import { build as bundle } from 'esbuild';
 import { unzipSync, zipSync, strFromU8, strToU8 } from 'fflate';
-import { satisfies, valid, validRange } from 'semver';
+import { valid, validRange } from 'semver';
 import { z } from 'zod';
+import { evaluateEngineCompatibility, type EngineCompatibilityReport } from './compatibility.js';
 import { loadPackModule } from './load.js';
 
 export const PACK_FORMAT_VERSION = 1 as const;
@@ -69,6 +70,7 @@ export interface PackArtifactInspection {
   readonly checksum: string;
   readonly bytes: number;
   readonly compatible: boolean;
+  readonly compatibility: EngineCompatibilityReport;
   readonly descriptor: PackPackageDescriptor;
   readonly manifest: IndustryPackManifest;
 }
@@ -290,11 +292,16 @@ export function inspectPackArtifact(filePath: string): PackArtifactInspection {
   if (manifest.id !== descriptor.pack.id || manifest.version !== descriptor.pack.version) {
     throw new Error('Pack descriptor and manifest identity do not match.');
   }
+  const compatibility = evaluateEngineCompatibility(
+    descriptor.engine.graphwork,
+    GRAPHWORK_ENGINE_VERSION,
+  );
   return {
     artifact,
     checksum: sha256(raw),
     bytes: raw.byteLength,
-    compatible: satisfies(GRAPHWORK_ENGINE_VERSION, descriptor.engine.graphwork),
+    compatible: compatibility.compatible,
+    compatibility,
     descriptor,
     manifest,
   };
@@ -307,9 +314,7 @@ export function installPackArtifact(
   const root = resolve(options.root ?? '.graphwork/packs');
   const inspection = inspectPackArtifact(filePath);
   if (!inspection.compatible) {
-    throw new Error(
-      `Pack requires Graphwork ${inspection.descriptor.engine.graphwork}; current engine is ${GRAPHWORK_ENGINE_VERSION}.`,
-    );
+    throw new Error(inspection.compatibility.message);
   }
   if (!options.trust) {
     throw new Error(
@@ -520,7 +525,7 @@ export function formatArtifactInspection(inspection: PackArtifactInspection): st
     `${inspection.manifest.name} (${inspection.manifest.id}@${inspection.manifest.version})`,
     `Artifact: ${basename(inspection.artifact)} (${inspection.bytes} bytes)`,
     `SHA-256: ${inspection.checksum}`,
-    `Engine: ${inspection.descriptor.engine.graphwork} (${inspection.compatible ? 'compatible' : 'incompatible'})`,
+    `Engine: ${inspection.descriptor.engine.graphwork} (${inspection.compatibility.message})`,
     `Permissions: ${trust}`,
   ].join('\n');
 }

@@ -7,9 +7,14 @@ import type {
 import { graphDefinitionSchema } from '@graph-native/contracts';
 import {
   compilePack,
+  createRunAuditBundle,
+  createPolicyToolAuthorizer,
+  defaultToolPolicy,
   GraphRuntime,
   InMemoryContextGraphStore,
   type GraphState,
+  type ToolAuthorizer,
+  type ToolPolicy,
 } from '@graph-native/core';
 import { bundledPackCatalog, requirePackRuntime } from './catalog.js';
 import { WorkbenchModelService } from './model-service.js';
@@ -33,6 +38,14 @@ export interface WorkbenchRunSnapshot {
   readonly state: GraphState;
   readonly events: readonly GraphEvent[];
   readonly error?: string;
+  readonly pendingApproval?: {
+    readonly kind: 'human' | 'tool';
+    readonly id: string;
+    readonly nodeId: string;
+    readonly toolId?: string;
+    readonly risk?: string;
+    readonly inputDigest?: string;
+  };
   readonly context?: WorkbenchContextSnapshot;
 }
 
@@ -51,7 +64,36 @@ function draftKey(packId: string, graphId: string): string {
   return `${packId}:${graphId}`;
 }
 
+function pendingToolApproval(events: readonly GraphEvent[]) {
+  const resolved = new Set(events
+    .filter((event) => event.type === 'tool.approval_resolved')
+    .map((event) => String(event.detail.approvalId ?? '')));
+  const requested = [...events].reverse().find((event) =>
+    event.type === 'tool.approval_requested'
+    && typeof event.detail.approvalId === 'string'
+    && !resolved.has(event.detail.approvalId));
+  if (!requested || typeof requested.detail.approvalId !== 'string' || !requested.nodeId) return undefined;
+  return {
+    kind: 'tool' as const,
+    id: requested.detail.approvalId,
+    nodeId: requested.nodeId,
+    ...(typeof requested.detail.toolId === 'string' ? { toolId: requested.detail.toolId } : {}),
+    ...(typeof requested.detail.risk === 'string' ? { risk: requested.detail.risk } : {}),
+    ...(typeof requested.detail.inputDigest === 'string' ? { inputDigest: requested.detail.inputDigest } : {}),
+  };
+}
+
+function pendingApproval(session: StoredRunSession): WorkbenchRunSnapshot['pendingApproval'] {
+  if (session.status !== 'paused' || !session.checkpoint) return undefined;
+  const tool = pendingToolApproval(session.events);
+  if (tool) return tool;
+  const human = session.graph.nodes.find((node) =>
+    node.kind === 'human' && session.checkpoint?.readyNodeIds.includes(node.id));
+  return human ? { kind: 'human', id: human.id, nodeId: human.id } : undefined;
+}
+
 function publicRun(session: StoredRunSession): WorkbenchRunSnapshot {
+  const approval = pendingApproval(session);
   return {
     runId: session.runId,
     packId: session.packId,
@@ -59,6 +101,7 @@ function publicRun(session: StoredRunSession): WorkbenchRunSnapshot {
     status: session.status,
     state: session.state,
     events: session.events,
+    ...(approval ? { pendingApproval: approval } : {}),
     ...(session.error ? { error: session.error } : {}),
     ...(session.context ? { context: session.context } : {}),
   };
@@ -67,14 +110,17 @@ function publicRun(session: StoredRunSession): WorkbenchRunSnapshot {
 export class WorkbenchService {
   private readonly store: WorkbenchWorkspaceStore;
   private readonly models: WorkbenchModelService;
+  private readonly authorizeTool: ToolAuthorizer;
 
   constructor(options: {
     readonly dataFile?: string;
     readonly modelEnvironment?: NodeJS.ProcessEnv;
     readonly modelFetch?: typeof fetch;
+    readonly toolPolicy?: ToolPolicy;
   } = {}) {
     this.store = new WorkbenchWorkspaceStore(options.dataFile);
     this.models = new WorkbenchModelService(options.modelEnvironment, options.modelFetch);
+    this.authorizeTool = createPolicyToolAuthorizer(options.toolPolicy ?? defaultToolPolicy);
     const workspace = this.store.snapshot();
     const installedPackIds = workspace.installedPackIds.filter((id) => bundledPackCatalog.has(id));
     const fallback = bundledPackCatalog.keys().next().value as string | undefined;
@@ -253,7 +299,9 @@ export class WorkbenchService {
     const result = await new GraphRuntime(workflow, {
       handlers: runtime.handlers,
       agents: this.models.agents(workspace.modelProvider, graph),
+      ...(runtime.tools ? { tools: runtime.tools } : {}),
       pack: manifest,
+      authorizeTool: this.authorizeTool,
     }).run(input);
     const session = await this.toSession(packId, graph, result, []);
     this.saveSession(session);
@@ -272,11 +320,17 @@ export class WorkbenchService {
       graphs: runtime.manifest.graphs.map((item) => item.id === existing.graph.id ? existing.graph : item),
     };
     const workflow = compilePack(manifest).graphs.get(existing.graph.id)!;
+    const approval = pendingApproval(existing);
+    if (!approval) throw new Error(`Run "${runId}" does not have a pending approval.`);
     const result = await new GraphRuntime(workflow, {
       handlers: runtime.handlers,
       agents: this.models.agents(this.store.snapshot().modelProvider, existing.graph),
+      ...(runtime.tools ? { tools: runtime.tools } : {}),
       pack: manifest,
-    }).resume(existing.checkpoint, { decisions: { approval: approved } });
+      authorizeTool: this.authorizeTool,
+    }).resume(existing.checkpoint, approval.kind === 'tool'
+      ? { toolApprovals: { [approval.id]: approved } }
+      : { decisions: { [approval.nodeId]: approved } });
     const session = await this.toSession(existing.packId, existing.graph, result, existing.events);
     this.saveSession(session);
     return publicRun(session);
@@ -289,6 +343,27 @@ export class WorkbenchService {
 
   listRuns(): readonly WorkbenchRunSnapshot[] {
     return Object.values(this.store.snapshot().runs).map(publicRun);
+  }
+
+  exportAudit(runId: string) {
+    const session = this.store.snapshot().runs[runId];
+    if (!session) throw new Error(`Run "${runId}" does not exist.`);
+    return createRunAuditBundle({
+      run: {
+        runId: session.runId,
+        packId: session.packId,
+        graphId: session.graph.id,
+        graphVersion: session.graph.version,
+        status: session.status,
+        state: session.state,
+        ...(session.events[0] ? { startedAt: session.events[0].timestamp } : {}),
+        ...(session.events.at(-1) ? { updatedAt: session.events.at(-1)!.timestamp } : {}),
+        ...(session.error ? { error: session.error } : {}),
+      },
+      events: session.events,
+      ...(session.checkpoint ? { checkpoint: session.checkpoint } : {}),
+      ...(session.context ? { context: session.context } : {}),
+    });
   }
 
   private async toSession(
