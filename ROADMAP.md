@@ -25,6 +25,7 @@ today from the evidence still required before a stable 1.0 release.
   vulnerability reporting
 - [x] Activate and verify the signed Reference Registry on GitHub Pages
 - [x] Publish the first maintained `good first issue` set
+- [x] Ship the `0.2.1` graph-editing interaction polish patch
 - [ ] Collect onboarding feedback from external Pack authors
 
 ## Before stable 1.0

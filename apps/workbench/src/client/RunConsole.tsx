@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Check, ChevronDown, ChevronUp, Circle, Clock3, Download, FileText, Network, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { GraphEvent, RunSnapshot } from './types.js';
@@ -43,13 +43,16 @@ export function RunConsole({ run, busy, onDecision, onExport }: {
   onDecision: (approved: boolean) => void;
   onExport: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(run?.status === 'paused');
   const [tab, setTab] = useState<ConsoleTab>('events');
+  const previousRunId = useRef(run?.runId);
   const deliverable = typeof run?.state.deliverable === 'string' ? run.state.deliverable : '';
   const events = useMemo(() => [...(run?.events ?? [])].reverse(), [run?.events]);
   useEffect(() => {
-    if (run) setOpen(true);
-  }, [run?.runId, run?.status]);
+    const hasNewRun = Boolean(run?.runId && run.runId !== previousRunId.current);
+    if (busy || run?.status === 'paused' || hasNewRun) setOpen(true);
+    previousRunId.current = run?.runId;
+  }, [busy, run?.runId, run?.status]);
   return (
     <section className={`run-console ${open ? 'is-open' : ''}`}>
       <header>

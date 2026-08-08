@@ -3,7 +3,7 @@
 **Turn an SOP into an executable, inspectable work graph — then preserve its
 evidence, decisions and deliverables as organizational context.**
 
-[中文说明](README.zh-CN.md) · `0.2.0` public alpha · MIT licensed
+[中文说明](README.zh-CN.md) · `0.2.1` public alpha · MIT licensed
 
 Graph Native Workbench is an open-source foundation for complex industry work.
 It connects an **execution graph** (agents, functions, tools, humans and quality

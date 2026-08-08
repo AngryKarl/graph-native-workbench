@@ -21,8 +21,8 @@ actual Workbench HTTP API and static client. `dist:pack` creates
 Test the tarball through the same temporary installation path used by `dlx`:
 
 ```bash
-pnpm dlx /absolute/path/to/release/npm/graphwork-0.2.0.tgz --version
-pnpm dlx /absolute/path/to/release/npm/graphwork-0.2.0.tgz demo
+pnpm dlx /absolute/path/to/release/npm/graphwork-0.2.1.tgz --version
+pnpm dlx /absolute/path/to/release/npm/graphwork-0.2.1.tgz demo
 ```
 
 The public user entrypoints are:
@@ -68,4 +68,5 @@ README and public repository timing before running with `publish=true`.
 `graphwork@0.1.0` was the initial `latest` release on 2026-08-05.
 `graphwork@0.2.0-rc.1` was published with provenance on 2026-08-08 under the
 `next` tag. `graphwork@0.2.0` is the first stable public-alpha release under
+`latest`. `graphwork@0.2.1` is the current interaction-polish patch under
 `latest`.

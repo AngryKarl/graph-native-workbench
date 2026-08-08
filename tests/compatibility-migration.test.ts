@@ -29,7 +29,7 @@ function legacyWorkspace() {
 
 describe('compatibility and workspace migration', () => {
   it('uses the Pack SDK package version as the engine compatibility authority', () => {
-    expect(GRAPHWORK_ENGINE_VERSION).toBe('0.2.0');
+    expect(GRAPHWORK_ENGINE_VERSION).toBe('0.2.1');
   });
 
   it('returns actionable engine compatibility reasons from one authority', () => {

@@ -3,6 +3,22 @@
 All notable changes will be documented here. The project follows semantic
 versioning once public packages begin publishing.
 
+## 0.2.1 - 2026-08-08
+
+### Fixed
+
+- Kept node positions synchronized with React Flow throughout pointer movement,
+  making canvas dragging responsive while preserving save and undo history.
+- Reduced canvas obstruction with a smaller desktop minimap and a hidden mobile
+  minimap, and moved the mobile inspector handle clear of title controls.
+- Kept completed historical run consoles collapsed after reload so the graph
+  retains the primary workspace.
+
+### Tests
+
+- Added a browser regression covering continuous node movement, save and
+  position persistence after reload.
+
 ## 0.2.0 - 2026-08-08
 
 ### Changed
