@@ -104,12 +104,37 @@ The default Worker boundary provides:
 - IPC-only state patches and recorded context projection operations;
 - a fresh process for each handler or projector invocation.
 
-Packs declaring filesystem access require explicit read/write roots. Packs
-declaring network access require explicit operator approval, but Node’s
-permission model does not provide network isolation. Use an OS sandbox or
-container when network denial, syscall filtering, tenant isolation or stronger
-resource guarantees are required.
+Packs declaring filesystem access require explicit read/write roots. The local
+child-process boundary cannot deny network access because Node’s permission
+model does not cover networking.
 
-The Worker reduces blast radius; it does not make unknown code safe. Signed
+For a deny-by-default network boundary, run an installed Pack through the
+container adapter:
+
+```ts
+const loaded = await loadInstalledPackIsolated('customer_success', packRoot, {
+  container: { runtime: 'docker', network: 'none' },
+});
+```
+
+The adapter invokes Docker or Podman without a shell and applies `network=none`,
+a read-only root filesystem, a non-root user, no Linux capabilities, no-new-
+privileges, bounded memory/CPU/PIDs and a small no-exec temporary filesystem.
+Only the Worker and Pack artifact are mounted read-only. Explicit environment
+values are passed by name so their contents do not appear on the command line.
+
+The CLI exposes the same mode for installed Pack workers:
+
+```bash
+graphwork worker start customer_success --installed --container \
+  --database "$GRAPHWORK_POSTGRES_URL"
+```
+
+Use `--container-network <network> --allow-network` only after reviewing a Pack
+that requires network access. Host filesystem roots and Pack-spawned child
+processes are rejected in container mode; required files should be packaged in
+the signed artifact.
+
+These boundaries reduce blast radius; they do not make unknown code safe. Signed
 metadata establishes publisher identity and artifact integrity, not publisher
 trustworthiness.

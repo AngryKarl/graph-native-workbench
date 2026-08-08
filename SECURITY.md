@@ -15,10 +15,12 @@ identity, checksum, engine range and permissions.
 
 Third-party handlers and context projectors execute in a restricted child
 process without inherited application secrets and with filesystem, child-process,
-memory and time limits. Node's permission model does not isolate network access.
-Only install Packs whose publisher you trust, and use a separate OS account or
-container when network denial or stronger tenant isolation is required. See the
-[trust and isolation model](docs/TRUST_AND_ISOLATION.md).
+memory and time limits. For network denial, the Docker/Podman adapter adds a
+read-only, non-root, capability-dropped container with `network=none` by default.
+Only install Packs whose publisher you trust; isolation reduces impact but does
+not prove code safe. See the
+[trust and isolation model](docs/TRUST_AND_ISOLATION.md) and the project
+[threat model](docs/THREAT_MODEL.md).
 
 ## Registry signing keys
 
@@ -31,7 +33,7 @@ is exposed in logs, artifacts or a Pack repository. See the
 
 The npm release workflow keeps publication manual, performs a full package dry
 run first, refuses version replacement and reads `NPM_TOKEN` only from GitHub
-Actions secrets. Published packages include npm provenance; never place npm
+Actions secrets. Never place npm
 tokens in repository files, Pack sources or workflow artifacts.
 
 ## Reporting a vulnerability

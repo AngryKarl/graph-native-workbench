@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { GraphRuntime, InMemoryContextGraphStore, compilePack } from '@graph-native/core';
 import {
   buildPackArtifact,
+  createContainerIsolationCommand,
   inspectPackArtifact,
   inspectInstalledPack,
   installPackArtifact,
@@ -133,6 +134,28 @@ describe('signed Pack registry', () => {
 });
 
 describe('isolated Pack workers', () => {
+  it('builds a deny-by-default container boundary without exposing environment values', () => {
+    const command = createContainerIsolationCommand(
+      resolve('packs/example/dist/index.mjs'),
+      { container: {}, environment: { PACK_TOKEN: 'not-on-the-command-line' } },
+      'test-boundary',
+    );
+    expect(command.command).toBe('docker');
+    expect(command.args).toEqual(expect.arrayContaining([
+      '--network=none',
+      '--read-only',
+      '--cap-drop=ALL',
+      '--security-opt=no-new-privileges',
+      '--user=65532:65532',
+      '--env',
+      'PACK_TOKEN',
+    ]));
+    expect(command.args.join(' ')).not.toContain('not-on-the-command-line');
+    expect(() => createContainerIsolationCommand('pack.mjs', {
+      container: { network: 'bridge' },
+    })).toThrow(/requires allowNetwork approval/);
+  });
+
   it('keeps parent secrets out of handlers, isolates projectors and denies undeclared writes', async () => {
     const fixture = await packFixture('isolated_ops');
     const original = await readFile(fixture.source, 'utf8');

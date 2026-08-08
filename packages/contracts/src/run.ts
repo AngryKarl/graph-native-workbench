@@ -25,6 +25,8 @@ export const graphEventSchema = z
       'human.requested',
       'human.resolved',
       'tool.requested',
+      'tool.approval_requested',
+      'tool.approval_resolved',
       'tool.started',
       'tool.completed',
       'tool.denied',
@@ -51,6 +53,7 @@ export const graphCheckpointSchema = z
     nextSeq: z.number().int().positive(),
     stepCount: z.number().int().nonnegative(),
     startedAt: z.string().datetime(),
+    suspensions: z.record(identifierSchema, z.unknown()).default({}),
   })
   .strict();
 
@@ -67,7 +70,20 @@ export const graphRunRecordSchema = z
   })
   .strict();
 
+export const distributedRunRequestSchema = z
+  .object({
+    formatVersion: z.literal(1),
+    runId: identifierSchema,
+    packId: identifierSchema,
+    graphId: identifierSchema,
+    graphVersion: z.number().int().positive(),
+    input: z.record(z.string(), z.unknown()),
+    submittedAt: z.string().datetime(),
+  })
+  .strict();
+
 export type GraphRunStatus = z.infer<typeof graphRunStatusSchema>;
 export type GraphEvent = z.infer<typeof graphEventSchema>;
 export type GraphCheckpoint = z.infer<typeof graphCheckpointSchema>;
 export type GraphRunRecord = z.infer<typeof graphRunRecordSchema>;
+export type DistributedRunRequest = z.infer<typeof distributedRunRequestSchema>;

@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: graphwork
+      POSTGRES_USER: graphwork
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U graphwork -d graphwork"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  workbench:
+    build:
+      context: ..
+    restart: unless-stopped
+    command: ["workbench", "--port", "4311", "--no-open"]
+    environment:
+      GRAPH_WORKBENCH_HOST: 0.0.0.0
+      GRAPH_WORKBENCH_DATA: /data/workbench.json
+      GRAPH_WORKBENCH_PACKS: /data/packs
+      GRAPH_WORKBENCH_TRUST: /data/trust.json
+      GRAPH_WORKBENCH_POLICY: /data/policy.json
+    volumes:
+      - workbench-data:/data
+    ports:
+      - "127.0.0.1:${GRAPHWORK_PORT:-4311}:4311"
+
+  worker:
+    build:
+      context: ..
+    restart: unless-stopped
+    command: ["worker", "start", "research", "--concurrency", "${GRAPHWORK_WORKER_CONCURRENCY:-2}"]
+    environment:
+      GRAPHWORK_POSTGRES_URL: postgresql://graphwork:${POSTGRES_PASSWORD}@postgres:5432/graphwork
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  workbench-data:

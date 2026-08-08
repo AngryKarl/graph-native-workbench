@@ -84,7 +84,13 @@ describe('Workbench Registry catalog', () => {
       name: 'Verified catalog',
       status: 'verified',
       publisherKeyId: 'publisher.catalog',
-      packs: [{ id: 'catalog_pack', name: 'Catalog Pack Pack', installed: false }],
+      packs: [{
+        id: 'catalog_pack',
+        name: 'Catalog Pack Pack',
+        installed: false,
+        compatible: true,
+        compatibilityMessage: 'Compatible with Graphwork 0.1.0.',
+      }],
     });
 
     await service.install('catalog', 'catalog_pack', '0.1.0');

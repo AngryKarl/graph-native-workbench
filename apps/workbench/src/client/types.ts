@@ -63,6 +63,8 @@ export interface PackArtifactPreview {
   bytes: number;
   checksum: string;
   compatible: boolean;
+  compatibilityCode: 'compatible' | 'requires-newer-engine' | 'requires-older-engine' | 'unsupported-engine-range';
+  compatibilityMessage: string;
   engineRange: string;
   permissions: Array<'handlers.execute' | 'context.write' | 'network' | 'filesystem'>;
 }
@@ -74,6 +76,8 @@ export interface RegistryPackItem {
   license?: string;
   version: string;
   engineRange: string;
+  compatible: boolean;
+  compatibilityMessage: string;
   permissions: string[];
   installed: boolean;
   active: boolean;
@@ -126,6 +130,14 @@ export interface RunSnapshot {
   state: Record<string, unknown>;
   events: GraphEvent[];
   error?: string;
+  pendingApproval?: {
+    kind: 'human' | 'tool';
+    id: string;
+    nodeId: string;
+    toolId?: string;
+    risk?: string;
+    inputDigest?: string;
+  };
   context?: {
     objects: ContextObjectView[];
     relations: ContextRelationView[];

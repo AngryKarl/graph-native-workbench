@@ -1,0 +1,9 @@
+.git
+.github
+.graphwork
+node_modules
+**/node_modules
+**/dist
+tests/.tmp-*
+*.log
+*.sqlite

@@ -1,6 +1,6 @@
 {
   "name": "graphwork",
-  "version": "0.1.0",
+  "version": "0.2.0-rc.1",
   "description": "Graph-native workbench and Industry Pack toolkit for executable organizational workflows.",
   "type": "module",
   "license": "MIT",
@@ -36,6 +36,8 @@
     "access": "public"
   },
   "dependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "pg": "^8.22.0",
+    "pg-boss": "^12.27.0"
   }
 }

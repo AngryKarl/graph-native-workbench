@@ -1,84 +1,42 @@
 # Roadmap
 
-The roadmap follows the Product Charter: mechanisms enter the kernel; domain
-meaning enters Industry Packs. Priorities may change when user evidence changes,
-but the boundary does not change casually.
+Graphwork is preparing its first public alpha. The roadmap separates what is
+available in the release candidate from the evidence still required before a
+stable 1.0 release.
 
-## 0.1 — Executable foundation
+## Public-alpha release candidate
 
-- [x] Dual execution/context graph contracts
-- [x] Graph and Pack compiler
+- [x] Dual execution and context graph contracts
 - [x] Parallel execution, joins, routing and human checkpoints
-- [x] Provenance-linked context projection
-- [x] Deterministic Research Pack
+- [x] Typed state permissions, retry, timeout, cancellation and resumable runs
+- [x] Provider-neutral model execution and governed tool loops
+- [x] Memory, SQLite and PostgreSQL persistence
+- [x] Distributed PostgreSQL workers and reference deployment
+- [x] Visual graph authoring, run history, approvals and context exploration
+- [x] Portable `.gpack` lifecycle with compatibility and integrity checks
+- [x] Signed Registry verification and isolated third-party Pack execution
+- [x] Research, Architecture and Customer Success reference Packs
+- [x] Clean-install, browser E2E, performance and release-readiness gates
 
-## 0.2 — Plug-and-play Pack experience
+## Public launch
 
-- [x] Pack SDK and `init / validate / inspect / run` CLI
-- [x] In-memory and SQLite context stores
-- [x] GitHub community health files and cross-platform CI
-- [x] JSON Schema export for editor completion
-- [x] `.gpack` compatibility, version activation and rollback commands
-- [x] Reproducible `graphwork` npm tarball and cross-platform distribution smoke tests
-- [x] Publish `graphwork` and activate the public `pnpm dlx graphwork` path
+- [ ] Publish the `0.2.0-rc.1` npm release under the `next` tag
+- [ ] Make the GitHub repository public and enable Discussions and private
+  vulnerability reporting
+- [ ] Activate and verify the signed Reference Registry on GitHub Pages
+- [ ] Publish the first maintained `good first issue` set
+- [ ] Collect onboarding feedback from external Pack authors
 
-## 0.3 — Real Agent and tool adapters
+## Before stable 1.0
 
-- [x] Runtime-neutral Agent adapter interface
-- [x] Multi-provider Agent runtime for OpenAI-compatible, Anthropic Messages and Gemini GenerateContent
-- [x] Tool permission enforcement and secret boundaries
-- [x] Durable SQLite run/event/checkpoint repository
-- [x] Retry, timeout and failure-policy contracts
-- [ ] Governed model-directed tool loop
+- [ ] Validate at least three independently authored Industry Packs
+- [ ] Complete one real team pilot using shared PostgreSQL execution
+- [ ] Add team identity, workspace authorization and approval ownership
+- [ ] Publish compatibility guarantees for stable Pack contracts
+- [ ] Measure first-run success and Pack-authoring completion time
+- [ ] Complete an independent security review of Pack isolation and Registry
+  trust boundaries
 
-## 0.4 — First deep vertical
-
-- [x] Architecture ontology and workflow Pack
-- [x] Domain fixtures and golden evaluations
-- [x] Migration guide from embedded architecture logic to Pack semantics
-- [x] Evidence that a second Pack needs no kernel branching
-
-## 0.5 — Graph-native Workbench UI
-
-- [x] Read-only run and context graph explorer
-- [x] Human inbox and checkpoint resume experience
-- [x] Responsive local interface and zero-key vertical workflow
-
-## 0.6 — Visual authoring and durable workspace
-
-- [x] Visual authoring as a projection of the same versioned contracts
-- [x] Node, edge, handler, state-access and execution-policy editing
-- [x] Autosaved drafts, undo/redo, run history and checkpoint persistence
-
-## 0.7 — Portable local Pack ecosystem
-
-- [x] `.gpack` build, inspection, integrity and compatibility contract
-- [x] Side-by-side installation, activation, rollback and removal
-- [x] Workbench Pack import with explicit executable-code trust review
-- [x] Trusted local third-party Pack discovery and execution
-- [x] Bundled Pack installation, activation and configuration
-
-## 0.8 — Registry trust and execution isolation
-
-- [x] Ed25519-signed remote Registry metadata with expiry and trusted-key verification
-- [x] Registry-bound artifact identity, checksum, compatibility and permissions
-- [x] HTTPS Registry install and CLI publisher trust workflow
-- [x] Restricted child-process handlers and context projectors for third-party Packs
-- [x] Environment, filesystem, child-process, memory and execution-time boundaries
-- [ ] OS/container network isolation adapter
-
-## 0.9 — Registry experience and distribution
-
-- [x] Workbench catalog for configured signed Registries
-- [x] Verified publisher, expiry, compatibility and permission presentation
-- [x] One-action Registry installation with server-side re-verification
-- [x] Out-of-band local trust configuration and publisher key rotation
-- [x] Reproducible reference Registry build and automated signed publishing workflow
-- [ ] Activate the public Reference Registry after repository visibility and signing-key setup
-
-## Before 1.0
-
-- Stable compatibility policy and migrations
-- PostgreSQL and distributed worker adapters
-- Threat model, audit export and policy evaluation
-- Performance baselines and larger production reference deployments
+Priorities may change as public usage provides evidence. Domain-specific
+capabilities continue to ship as Packs; the core remains focused on execution,
+governance, provenance and portable extension contracts.

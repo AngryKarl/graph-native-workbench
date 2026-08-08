@@ -125,3 +125,20 @@ export function decideRun(runId: string, approved: boolean): Promise<RunSnapshot
     body: JSON.stringify({ approved }),
   });
 }
+
+export async function downloadRunAudit(runId: string): Promise<void> {
+  const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/audit`);
+  if (!response.ok) {
+    const value = await response.json() as { error?: string };
+    throw new Error(value.error ?? `Audit export failed (${response.status}).`);
+  }
+  const url = URL.createObjectURL(await response.blob());
+  try {
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${runId}.audit.json`;
+    anchor.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

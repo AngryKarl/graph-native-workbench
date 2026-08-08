@@ -2,7 +2,7 @@ import { createPrivateKey, createPublicKey, KeyObject, randomUUID, sign, verify 
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { identifierSchema } from '@graph-native/contracts';
-import { satisfies, valid, validRange } from 'semver';
+import { valid, validRange } from 'semver';
 import { z } from 'zod';
 import {
   GRAPHWORK_ENGINE_VERSION,
@@ -10,6 +10,7 @@ import {
   installPackArtifact,
   type InstalledPackVersion,
 } from './package.js';
+import { evaluateEngineCompatibility } from './compatibility.js';
 
 const maxRegistryBytes = 1024 * 1024;
 const maxArtifactBytes = 25 * 1024 * 1024;
@@ -197,9 +198,8 @@ export async function installPackFromSignedRegistry(
   const verified = await fetchSignedPackRegistry(registryUrl, options);
   const entry = verified.payload.packs.find((item) => item.id === packId && item.version === version);
   if (!entry) throw new Error(`Signed registry does not contain Pack "${packId}@${version}".`);
-  if (!satisfies(GRAPHWORK_ENGINE_VERSION, entry.engineRange)) {
-    throw new Error(`Pack requires Graphwork ${entry.engineRange}; current engine is ${GRAPHWORK_ENGINE_VERSION}.`);
-  }
+  const compatibility = evaluateEngineCompatibility(entry.engineRange, GRAPHWORK_ENGINE_VERSION);
+  if (!compatibility.compatible) throw new Error(compatibility.message);
   const artifactUrl = new URL(entry.artifact, registryUrl);
   assertRegistryUrl(artifactUrl, options.allowInsecureHttp);
   if (!options.allowCrossOriginArtifacts && artifactUrl.origin !== registryUrl.origin) {

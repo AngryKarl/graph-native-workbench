@@ -38,6 +38,8 @@ function client(protocol: ModelProtocol, baseUrl: string, apiKey = 'test-secret'
 }
 
 describe('model provider protocols', () => {
+  const tools = [{ id: 'source.search', description: 'Search approved sources.' }];
+
   it('normalizes OpenAI-compatible chat output and usage', async () => {
     const baseUrl = await fakeProvider((request, response, payload) => {
       expect(request.url).toBe('/v1/chat/completions');
@@ -68,6 +70,48 @@ describe('model provider protocols', () => {
     expect(JSON.stringify(result)).not.toContain('test-secret');
   });
 
+  it('round-trips OpenAI-compatible tool calls', async () => {
+    let round = 0;
+    const baseUrl = await fakeProvider((_request, response, payload) => {
+      round += 1;
+      const messages = payload.messages as Array<Record<string, unknown>>;
+      if (round === 1) {
+        expect(payload.tools).toEqual([expect.objectContaining({
+          function: expect.objectContaining({ name: 'graphwork_tool_1' }),
+        })]);
+        response.end(JSON.stringify({
+          id: 'chat-tool-1',
+          choices: [{ message: { content: null, tool_calls: [{
+            id: 'call-1',
+            type: 'function',
+            function: { name: 'graphwork_tool_1', arguments: '{"query":"graphs"}' },
+          }] } }],
+        }));
+        return;
+      }
+      expect(messages.at(-2)).toMatchObject({ role: 'assistant', tool_calls: [expect.objectContaining({ id: 'call-1' })] });
+      expect(messages.at(-1)).toMatchObject({ role: 'tool', tool_call_id: 'call-1', content: '{"items":["result"]}' });
+      response.end(JSON.stringify({
+        id: 'chat-tool-2',
+        choices: [{ message: { content: '{"answer":"done"}' } }],
+      }));
+    });
+    const provider = client('openai-compatible', baseUrl);
+    const first = await provider.generate({ model: 'test', prompt: 'research', tools });
+    expect(first.toolCalls).toEqual([{ id: 'call-1', toolId: 'source.search', input: { query: 'graphs' } }]);
+    const second = await provider.generate({
+      model: 'test',
+      prompt: 'research',
+      tools,
+      exchanges: [{
+        text: first.text,
+        calls: first.toolCalls,
+        results: [{ callId: 'call-1', toolId: 'source.search', output: { items: ['result'] } }],
+      }],
+    });
+    expect(second.text).toBe('{"answer":"done"}');
+  });
+
   it('normalizes Anthropic Messages output and headers', async () => {
     const baseUrl = await fakeProvider((request, response, payload) => {
       expect(request.url).toBe('/v1/messages');
@@ -89,6 +133,34 @@ describe('model provider protocols', () => {
     });
     expect(result.text).toBe('ready');
     expect(result.usage).toMatchObject({ inputTokens: 5, outputTokens: 1, totalTokens: 6 });
+  });
+
+  it('round-trips Anthropic tool use blocks', async () => {
+    let round = 0;
+    const baseUrl = await fakeProvider((_request, response, payload) => {
+      round += 1;
+      const messages = payload.messages as Array<Record<string, unknown>>;
+      if (round === 1) {
+        expect(payload.tools).toEqual([expect.objectContaining({ name: 'graphwork_tool_1' })]);
+        response.end(JSON.stringify({
+          id: 'message-tool-1',
+          content: [{ type: 'tool_use', id: 'use-1', name: 'graphwork_tool_1', input: { query: 'graphs' } }],
+          usage: { input_tokens: 4, output_tokens: 2 },
+        }));
+        return;
+      }
+      expect(messages.at(-2)).toMatchObject({ role: 'assistant', content: [expect.objectContaining({ type: 'tool_use', id: 'use-1' })] });
+      expect(messages.at(-1)).toMatchObject({ role: 'user', content: [expect.objectContaining({ type: 'tool_result', tool_use_id: 'use-1' })] });
+      response.end(JSON.stringify({ id: 'message-tool-2', content: [{ type: 'text', text: '{"answer":"done"}' }] }));
+    });
+    const provider = client('anthropic-messages', baseUrl);
+    const first = await provider.generate({ model: 'test', prompt: 'research', tools });
+    expect(first.toolCalls).toEqual([{ id: 'use-1', toolId: 'source.search', input: { query: 'graphs' } }]);
+    const second = await provider.generate({
+      model: 'test', prompt: 'research', tools,
+      exchanges: [{ text: '', calls: first.toolCalls, results: [{ callId: 'use-1', toolId: 'source.search', output: 'result' }] }],
+    });
+    expect(second.text).toBe('{"answer":"done"}');
   });
 
   it('normalizes Gemini GenerateContent output and headers', async () => {
@@ -116,6 +188,38 @@ describe('model provider protocols', () => {
       requestId: 'gemini-1',
       totalTokens: 5,
     });
+  });
+
+  it('round-trips Gemini function calls and responses', async () => {
+    let round = 0;
+    const baseUrl = await fakeProvider((_request, response, payload) => {
+      round += 1;
+      const contents = payload.contents as Array<Record<string, unknown>>;
+      if (round === 1) {
+        expect(payload.tools).toEqual([{ functionDeclarations: [expect.objectContaining({ name: 'graphwork_tool_1' })] }]);
+        response.end(JSON.stringify({
+          responseId: 'gemini-tool-1',
+          candidates: [{ content: { parts: [{ functionCall: { name: 'graphwork_tool_1', args: { query: 'graphs' } } }] } }],
+        }));
+        return;
+      }
+      expect(contents.at(-2)).toMatchObject({ role: 'model', parts: [expect.objectContaining({ functionCall: expect.any(Object) })] });
+      expect(contents.at(-1)).toMatchObject({ role: 'user', parts: [expect.objectContaining({ functionResponse: expect.any(Object) })] });
+      response.end(JSON.stringify({
+        responseId: 'gemini-tool-2',
+        candidates: [{ content: { parts: [{ text: '{"answer":"done"}' }] } }],
+      }));
+    });
+    const provider = client('gemini-generate-content', baseUrl);
+    const first = await provider.generate({ model: 'test', prompt: 'research', tools });
+    expect(first.toolCalls).toEqual([{
+      id: 'gemini-tool-1:1', toolId: 'source.search', input: { query: 'graphs' },
+    }]);
+    const second = await provider.generate({
+      model: 'test', prompt: 'research', tools,
+      exchanges: [{ text: '', calls: first.toolCalls, results: [{ callId: first.toolCalls[0]!.id, toolId: 'source.search', output: 'result' }] }],
+    });
+    expect(second.text).toBe('{"answer":"done"}');
   });
 
   it('returns a stable authentication error without exposing credentials', async () => {

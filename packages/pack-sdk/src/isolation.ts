@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { fork } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { fork, spawn } from 'node:child_process';
+import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { ContextObject, ContextRelation, GraphNode } from '@graph-native/contracts';
 import type { ContextGraphStore, GraphState, HandlerRegistry } from '@graph-native/core';
@@ -15,6 +15,14 @@ export interface IsolatedPackPolicy {
   readonly allowNetwork?: boolean;
   readonly environment?: Readonly<Record<string, string>>;
   readonly maxExecutionMs?: number;
+  readonly container?: {
+    readonly runtime?: 'docker' | 'podman';
+    readonly image?: string;
+    readonly network?: string;
+    readonly memoryMb?: number;
+    readonly cpus?: number;
+    readonly pidsLimit?: number;
+  };
 }
 
 export interface IsolatedInstalledPack extends InstalledPackFiles {
@@ -44,6 +52,134 @@ function permissionArguments(entry: string, policy: IsolatedPackPolicy): string[
   return args;
 }
 
+export interface ContainerIsolationCommand {
+  readonly command: 'docker' | 'podman';
+  readonly args: readonly string[];
+  readonly environmentKeys: readonly string[];
+}
+
+export function createContainerIsolationCommand(
+  entry: string,
+  policy: IsolatedPackPolicy,
+  nonce: string = randomUUID(),
+): ContainerIsolationCommand {
+  const container = policy.container;
+  if (!container) throw new Error('Container isolation configuration is required.');
+  if ((policy.filesystemRead?.length ?? 0) > 0 || (policy.filesystemWrite?.length ?? 0) > 0) {
+    throw new Error('Container isolation does not accept host filesystem roots; package required files inside the Pack artifact.');
+  }
+  if (policy.allowChildProcess) throw new Error('Container-isolated Packs cannot request child-process access.');
+  const image = container.image ?? 'node:24-alpine';
+  const network = container.network ?? 'none';
+  const memoryMb = container.memoryMb ?? 256;
+  const cpus = container.cpus ?? 1;
+  const pidsLimit = container.pidsLimit ?? 64;
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._/@:-]*$/.test(image)) throw new Error('Container image is invalid.');
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(network)) throw new Error('Container network is invalid.');
+  if (network !== 'none' && !policy.allowNetwork) {
+    throw new Error('Container network access requires allowNetwork approval.');
+  }
+  if (!Number.isInteger(memoryMb) || memoryMb < 64 || memoryMb > 4096) {
+    throw new Error('Container memoryMb must be an integer between 64 and 4096.');
+  }
+  if (!Number.isFinite(cpus) || cpus < 0.1 || cpus > 16) {
+    throw new Error('Container cpus must be between 0.1 and 16.');
+  }
+  if (!Number.isInteger(pidsLimit) || pidsLimit < 16 || pidsLimit > 1024) {
+    throw new Error('Container pidsLimit must be an integer between 16 and 1024.');
+  }
+  const environmentKeys = Object.keys(policy.environment ?? {});
+  if (environmentKeys.some((key) => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key))) {
+    throw new Error('Container environment variable names must be valid identifiers.');
+  }
+  const packDirectory = dirname(resolve(entry));
+  const args = [
+    'run', '--rm', '--interactive',
+    `--name=graphwork-pack-${nonce}`,
+    `--network=${network}`,
+    '--read-only',
+    '--cap-drop=ALL',
+    '--security-opt=no-new-privileges',
+    '--user=65532:65532',
+    `--memory=${memoryMb}m`,
+    `--cpus=${cpus}`,
+    `--pids-limit=${pidsLimit}`,
+    '--tmpfs=/tmp:rw,noexec,nosuid,size=16m',
+    `--volume=${resolve(workerPath)}:/graphwork/isolated-worker.mjs:ro`,
+    `--volume=${packDirectory}:/graphwork/pack:ro`,
+    ...environmentKeys.flatMap((key) => ['--env', key]),
+    image,
+    'node', '--permission',
+    '--allow-fs-read=/graphwork',
+    '/graphwork/isolated-worker.mjs',
+  ];
+  return { command: container.runtime ?? 'docker', args, environmentKeys };
+}
+
+function executionLimit(policy: IsolatedPackPolicy): number {
+  const maximum = policy.maxExecutionMs ?? 30_000;
+  if (!Number.isFinite(maximum) || maximum < 1 || maximum > 5 * 60_000) {
+    throw new Error('Isolated Pack maxExecutionMs must be between 1 and 300000.');
+  }
+  return maximum;
+}
+
+function runContainerWorker(
+  entry: string,
+  request: Record<string, unknown>,
+  policy: IsolatedPackPolicy,
+  signal?: AbortSignal,
+): Promise<unknown> {
+  const invocation = createContainerIsolationCommand(entry, policy);
+  const maximum = executionLimit(policy);
+  const containerEntry = `/graphwork/pack/${basename(entry)}`;
+  const payload = JSON.stringify({ ...request, entry: `file://${containerEntry}`, nonce: randomUUID() });
+  return new Promise((resolvePromise, reject) => {
+    let settled = false;
+    let stdout = '';
+    let stderr = '';
+    const child = spawn(invocation.command, [...invocation.args], {
+      env: { ...process.env, ...policy.environment },
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+    const timeout = setTimeout(() => finish(new Error(`Isolated Pack container exceeded ${maximum}ms.`)), maximum);
+    const finish = (error?: Error, value?: unknown) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', cancel);
+      if (!child.killed) child.kill();
+      if (error) reject(error);
+      else resolvePromise(value);
+    };
+    const cancel = () => finish(new Error('Isolated Pack container was cancelled.'));
+    signal?.addEventListener('abort', cancel, { once: true });
+    child.stdout.on('data', (chunk: Buffer) => {
+      if (stdout.length < 4 * 1024 * 1024) stdout += chunk.toString('utf8').slice(0, 4 * 1024 * 1024 - stdout.length);
+    });
+    child.stderr.on('data', (chunk: Buffer) => {
+      if (stderr.length < 4096) stderr += chunk.toString('utf8').slice(0, 4096 - stderr.length);
+    });
+    child.once('error', (error) => finish(error));
+    child.once('exit', (code, signalName) => {
+      if (settled) return;
+      if (code !== 0) {
+        finish(new Error(`Isolated Pack container exited (${signalName ?? code ?? 'unknown'}).${stderr.trim() ? ` ${stderr.trim()}` : ''}`));
+        return;
+      }
+      try {
+        const response = JSON.parse(stdout) as WorkerResponse;
+        if (!response.ok) finish(new Error(response.error ?? 'Isolated Pack container failed.'));
+        else finish(undefined, response.result);
+      } catch {
+        finish(new Error('Isolated Pack container returned an invalid response.'));
+      }
+    });
+    child.stdin.end(payload);
+  });
+}
+
 function runWorker(
   entry: string,
   request: Record<string, unknown>,
@@ -51,6 +187,8 @@ function runWorker(
   signal?: AbortSignal,
 ): Promise<unknown> {
   if (signal?.aborted) return Promise.reject(new Error('Isolated Pack worker was cancelled.'));
+  if (policy.container) return runContainerWorker(entry, request, policy, signal);
+  const maximum = executionLimit(policy);
   return new Promise((resolvePromise, reject) => {
     let settled = false;
     let stderr = '';
@@ -61,12 +199,6 @@ function runWorker(
       serialization: 'advanced',
       stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
     });
-    const maximum = policy.maxExecutionMs ?? 30_000;
-    if (!Number.isFinite(maximum) || maximum < 1 || maximum > 5 * 60_000) {
-      child.kill();
-      reject(new Error('Isolated Pack maxExecutionMs must be between 1 and 300000.'));
-      return;
-    }
     const timeout = setTimeout(() => {
       finish(new Error(`Isolated Pack worker exceeded ${maximum}ms.`));
     }, maximum);
@@ -111,6 +243,15 @@ function assertPolicy(inspected: InstalledPackFiles, policy: IsolatedPackPolicy)
   const permissions = inspected.descriptor.permissions;
   if (permissions.includes('network') && !policy.allowNetwork) {
     throw new Error('Pack declares network access; isolated execution requires allowNetwork approval.');
+  }
+  if (policy.container?.network && policy.container.network !== 'none' && !policy.allowNetwork) {
+    throw new Error('Container network access requires allowNetwork approval.');
+  }
+  if (policy.container?.network && policy.container.network !== 'none' && !permissions.includes('network')) {
+    throw new Error('Container network access requires the Pack to declare network permission.');
+  }
+  if (policy.container && permissions.includes('filesystem')) {
+    throw new Error('Container-isolated Packs must package required files inside the signed artifact.');
   }
   if (
     permissions.includes('filesystem')

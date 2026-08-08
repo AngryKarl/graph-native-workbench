@@ -36,7 +36,26 @@ export interface AgentResult {
 export interface AgentContext extends HandlerContext {
   readonly role?: RoleDefinition;
   readonly toolIds: readonly string[];
+  readonly tools: readonly ToolDefinition[];
+  readonly resumeState?: unknown;
   invokeTool(toolId: string, input: unknown): Promise<unknown>;
+}
+
+export class ToolApprovalRequiredError extends Error {
+  constructor(readonly approvalId: string) {
+    super(`Tool approval "${approvalId}" is required.`);
+    this.name = 'ToolApprovalRequiredError';
+  }
+}
+
+export class AgentSuspensionError extends Error {
+  constructor(
+    readonly suspensionState: unknown,
+    readonly reason: Error,
+  ) {
+    super(reason.message, { cause: reason });
+    this.name = 'AgentSuspensionError';
+  }
 }
 
 export interface AgentAdapter {
@@ -71,9 +90,18 @@ export interface ToolAuthorizationRequest {
   readonly input: unknown;
 }
 
+export type ToolAuthorizationEffect = 'allow' | 'deny' | 'require-approval';
+
+export interface ToolAuthorizationDecision {
+  readonly effect: ToolAuthorizationEffect;
+  readonly reason?: string;
+  readonly ruleId?: string;
+}
+
 export type ToolAuthorizer = (
   request: ToolAuthorizationRequest,
-) => boolean | Promise<boolean>;
+) => boolean | ToolAuthorizationEffect | ToolAuthorizationDecision
+  | Promise<boolean | ToolAuthorizationEffect | ToolAuthorizationDecision>;
 
 export interface RuntimeBindings {
   readonly handlers?: HandlerRegistry;

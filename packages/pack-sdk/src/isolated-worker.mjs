@@ -35,7 +35,7 @@ function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
-process.once('message', async (request) => {
+async function execute(request) {
   try {
     const imported = await import(`${request.entry}?worker=${request.nonce}`);
     if (request.operation === 'handler') {
@@ -47,18 +47,25 @@ process.once('message', async (request) => {
         state: request.context.state,
         signal: new AbortController().signal,
       });
-      process.send?.({ ok: true, result });
-      return;
+      return { ok: true, result };
     }
     if (request.operation === 'projector') {
       if (typeof imported.projector !== 'function') throw new Error('Pack does not export a context projector.');
       const store = new RecordingContextStore();
       await imported.projector(store, request.run);
-      process.send?.({ ok: true, result: { objects: store.objects, relations: store.relations } });
-      return;
+      return { ok: true, result: { objects: store.objects, relations: store.relations } };
     }
     throw new Error('Unknown isolated Pack worker operation.');
   } catch (error) {
-    process.send?.({ ok: false, error: errorMessage(error) });
+    return { ok: false, error: errorMessage(error) };
   }
-});
+}
+
+if (typeof process.send === 'function') {
+  process.once('message', async (request) => process.send?.(await execute(request)));
+} else {
+  const chunks = [];
+  for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
+  const response = await execute(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+  process.stdout.write(JSON.stringify(response));
+}

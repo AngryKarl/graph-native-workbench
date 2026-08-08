@@ -16,7 +16,7 @@ const shared = {
   format: 'esm',
   target: 'node24',
   packages: 'bundle',
-  external: ['esbuild'],
+  external: ['esbuild', 'pg', 'pg-boss'],
   treeShaking: true,
   minify: false,
   sourcemap: false,

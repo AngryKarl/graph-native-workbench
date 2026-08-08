@@ -112,13 +112,13 @@ export const researchPack: IndustryPackManifest = {
       id: 'source_search',
       label: 'Source search',
       risk: 'read',
-      description: 'Search approved evidence sources.',
+      description: 'Search approved evidence sources. Input is an object with an optional query and optional domain of market or technology.',
     },
     {
       id: 'document_read',
       label: 'Document read',
       risk: 'read',
-      description: 'Read a document without mutating it.',
+      description: 'Read a document without mutating it. Input is an object with a locator string returned by source_search or supplied evidence.',
     },
   ],
   evaluations: [
@@ -252,7 +252,8 @@ export const researchPack: IndustryPackManifest = {
           writes: ['synthesis'],
           config: {
             roleId: 'researcher',
-            modelInstructions: 'Write a concise synthesis grounded only in the supplied market_evidence and technology_evidence. Preserve every source locator and return a JSON object with a single synthesis string.',
+            toolIds: ['source_search', 'document_read'],
+            modelInstructions: 'Before writing the final synthesis, use document_read for at least one supplied source locator. Write a concise synthesis grounded only in the supplied market_evidence, technology_evidence and returned documents. Preserve every source locator and return a JSON object with a single synthesis string.',
           },
         },
         {

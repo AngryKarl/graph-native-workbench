@@ -77,7 +77,7 @@ export function PackManager({
             <div><h2>{artifact.preview.name}</h2><span>{artifact.preview.id}@{artifact.preview.version}</span></div>
             <p>{artifact.preview.description}</p>
             <dl>
-              <div><dt>Compatibility</dt><dd className={artifact.preview.compatible ? 'ok' : 'bad'}>{artifact.preview.compatible ? 'Compatible' : 'Incompatible'} · {artifact.preview.engineRange}</dd></div>
+              <div><dt>Compatibility</dt><dd className={artifact.preview.compatible ? 'ok' : 'bad'}>{artifact.preview.compatibilityMessage}</dd></div>
               <div><dt>Permissions</dt><dd>{artifact.preview.permissions.join(', ') || 'none'}</dd></div>
               <div><dt>Artifact</dt><dd>{fileSize(artifact.preview.bytes)} · SHA-256 {artifact.preview.checksum.slice(0, 12)}…</dd></div>
             </dl>
@@ -120,10 +120,10 @@ export function PackManager({
                   return (
                     <article className="registry-pack" key={`${pack.id}@${pack.version}`}>
                       <div className="registry-pack-icon"><PackageCheck size={19} /></div>
-                      <div><span className="registry-pack-title"><strong>{pack.name}</strong><code>{pack.id}@{pack.version}</code>{pack.active ? <em>Active</em> : pack.installed ? <em>Installed</em> : null}</span><p>{pack.description}</p><small>Graphwork {pack.engineRange} · {pack.permissions.length ? pack.permissions.join(', ') : 'No permissions'}{pack.license ? ` · ${pack.license}` : ''}</small></div>
-                      <button className="button primary" disabled={pack.active || busyPackId !== null} onClick={() => onInstallRegistry(registry.id, pack.id, pack.version)}>
+                      <div><span className="registry-pack-title"><strong>{pack.name}</strong><code>{pack.id}@{pack.version}</code>{pack.active ? <em>Active</em> : pack.installed ? <em>Installed</em> : null}</span><p>{pack.description}</p><small className={pack.compatible ? '' : 'compatibility-error'}>{pack.compatibilityMessage} · {pack.permissions.length ? pack.permissions.join(', ') : 'No permissions'}{pack.license ? ` · ${pack.license}` : ''}</small></div>
+                      <button className="button primary" disabled={!pack.compatible || pack.active || busyPackId !== null} onClick={() => onInstallRegistry(registry.id, pack.id, pack.version)}>
                         {busyPackId === busyId ? <LoaderCircle className="spin" size={14} /> : pack.installed ? <Check size={14} /> : <Download size={14} />}
-                        {pack.active ? 'In workspace' : pack.installed ? 'Verify & open' : 'Verify & install'}
+                        {!pack.compatible ? 'Incompatible' : pack.active ? 'In workspace' : pack.installed ? 'Verify & open' : 'Verify & install'}
                       </button>
                     </article>
                   );

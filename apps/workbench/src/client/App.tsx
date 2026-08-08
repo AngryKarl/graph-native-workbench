@@ -5,7 +5,7 @@ import {
   Save, Undo2, Redo2, UserRoundCheck,
 } from 'lucide-react';
 import {
-  activatePack, configureModelProvider, decideRun, inspectPackArtifact, installPack, installPackArtifact, installRegistryPack,
+  activatePack, configureModelProvider, decideRun, downloadRunAudit, inspectPackArtifact, installPack, installPackArtifact, installRegistryPack,
   loadRegistries, loadWorkbench, resetGraphDraft,
   saveGraphDraft, startRun, testModelProvider, uninstallPack,
 } from './api.js';
@@ -249,7 +249,11 @@ export function App() {
       const next = await startRun(pack.id, editor.graph.id, input);
       setRun(next);
       setBootstrap((current) => current ? { ...current, runs: [next, ...current.runs.filter((item) => item.runId !== next.runId)] } : current);
-      setNotice(next.status === 'paused' ? 'Run paused safely for human review.' : `Run ${next.status}.`);
+      setNotice(next.status === 'paused'
+        ? next.pendingApproval?.kind === 'tool'
+          ? 'Run paused safely for tool approval.'
+          : 'Run paused safely for human review.'
+        : `Run ${next.status}.`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
     } finally {
@@ -259,16 +263,33 @@ export function App() {
 
   const decide = async (approved: boolean) => {
     if (!run) return;
+    const approvalKind = run.pendingApproval?.kind;
     setBusy(true);
     try {
       const next = await decideRun(run.runId, approved);
       setRun(next);
       setBootstrap((current) => current ? { ...current, runs: current.runs.map((item) => item.runId === next.runId ? next : item) } : current);
-      setNotice(approved ? 'Run approved, resumed and projected.' : 'Run rejected with its audit trail preserved.');
+      setNotice(approved
+        ? approvalKind === 'tool'
+          ? 'Tool approved and run resumed.'
+          : 'Run approved, resumed and projected.'
+        : approvalKind === 'tool'
+          ? 'Tool rejected with its audit trail preserved.'
+          : 'Run rejected with its audit trail preserved.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const exportAudit = async () => {
+    if (!run) return;
+    try {
+      await downloadRunAudit(run.runId);
+      setNotice('Verified audit bundle exported.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -370,7 +391,7 @@ export function App() {
               <FlowCanvas graph={editor.graph} positions={editor.positions} run={run} selectedNodeId={selectedNodeId} onSelectNode={(id) => { setSelectedNodeId(id); if (id) { setInspectorTab('node'); setInspectorOpen(true); } }} onChange={commitEditor} />
             </section>
             <Inspector tab={inspectorTab} onTab={setInspectorTab} node={selectedNode} pack={pack} input={input} open={inspectorOpen} onToggle={() => setInspectorOpen((value) => !value)} onInput={setInput} onUpdateNode={updateNode} onSelectFixture={selectFixture} />
-            <RunConsole run={run} busy={busy} onDecision={(approved) => void decide(approved)} />
+            <RunConsole run={run} busy={busy} onDecision={(approved) => void decide(approved)} onExport={() => void exportAudit()} />
           </div>
         ) : null}
         {view === 'runs' ? <RunHistory runs={bootstrap.runs} selectedRunId={run?.runId} onSelect={(selected) => { setRun(selected); setView('editor'); }} /> : null}

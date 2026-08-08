@@ -6,5 +6,5 @@
 - Use GitHub Discussions for setup questions once Discussions are enabled.
 - Follow SECURITY.md for vulnerabilities; never post secrets or customer data.
 
-This project is pre-alpha. Public APIs may change, but breaking changes should
-be documented and accompanied by a migration path when practical.
+This project is in public alpha. Public APIs may change before 1.0, but breaking
+changes are documented and accompanied by a migration path when practical.

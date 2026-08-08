@@ -2,11 +2,13 @@
 
 **把企业 SOP 变成可执行、可检查的工作图，再把证据、决策和交付物沉淀为组织上下文。**
 
-[English](README.md) · Pre-alpha · MIT
+[English](README.md) · `0.2.0-rc.1` 公开 Alpha 候选版 · MIT
 
 Graph Native Workbench 是一个面向复杂行业工作的开源 Graph-native
 Workbench。它把 Agent 执行图与组织上下文图连接起来，使企业能够把自己的
 SOP、角色、工具、知识、质量标准和交付物封装成可安装的 Industry Pack。
+
+![Customer Success Renewal Pack 在 Workbench 中运行](docs/assets/customer-success-output.png)
 
 ## 核心模型
 
@@ -46,6 +48,30 @@ Demo 会并行运行两条证据分支，在 Join 节点汇合，通过质量检
 pnpm dlx graphwork demo --pause
 ```
 
+## 三个可安装示例
+
+在 **Packs** 中安装后，同一个 Industry Pack 会立即获得图编辑器、运行时、
+审批入口、交付物控制台和上下文浏览器：
+
+![Research、Architecture 与 Customer Success 示例 Pack](docs/assets/reference-packs.png)
+
+| Industry Pack | 直接产出 | 验证重点 |
+| --- | --- | --- |
+| Customer Success Renewal | 经审批的续约风险评估与责任明确的成功计划 | 常见企业 SOP 无需修改内核即可得到完整工作台 |
+| Architecture Concept Design | 证据可追溯、经过评审的概念设计简报 | 深度垂直行业的约束、证据和决策能够保持关联 |
+| Cross-industry Research | 经审批的证据综合报告 | 零密钥完成第一次运行并检查全过程 |
+
+从源码运行客户成功案例：
+
+```bash
+pnpm graphwork pack demo packs/customer-success/src/index.ts --fixture enterprise_renewal
+```
+
+它会并行分析产品使用与利益相关方信号，评估续约风险，生成带负责人、
+期限和成功指标的干预计划，在收入负责人审批后发布交付物，并把证据、
+决策和成功计划确认进上下文图。完整过程见
+[客户成功行业案例](docs/CUSTOMER_SUCCESS_CASE.md)。
+
 ## 使用 Workbench 界面
 
 ```bash
@@ -59,7 +85,8 @@ pnpm workbench
 2. 从左侧节点库拖入节点，在画布上移动、连线或删除节点。
 3. 在右侧检查器修改节点名称、处理器、状态读写范围、配置和执行策略。
 4. 在 **Input** 中载入 Pack 样例或编辑输入，然后运行经过保存和验证的真实执行图。
-5. 在人工节点批准或退回，并在底部查看事件、状态、Markdown 交付物和上下文摘要。
+5. 审批或拒绝人工检查点与策略要求确认的工具调用，并在底部查看事件、状态、
+   Markdown 交付物和上下文摘要。
 6. 在 **Runs** 中回看历史运行，在 **Context** 中检查对象、关系和完整来源信息。
 7. 在 **Packs** 中选择 **Import .gpack**，检查兼容范围、权限和 SHA-256 指纹后，
    显式信任并安装制品。
@@ -70,10 +97,19 @@ xAI Grok、Mistral AI、Groq、OpenRouter、Ollama 或自定义 OpenAI-compatibl
 端点。模型 ID 与兼容端点地址可以编辑。API 密钥只从服务端环境变量读取，
 不会传回浏览器，也不会写入工作区文件。
 
+模型驱动的 Agent 可以在有界循环中调用 Pack 声明的工具。所有调用继续经过
+节点范围、角色权限、风险授权和密钥隔离检查，并作为有序事件显示在运行控制台。
+
 图草稿、已安装 Pack、当前 Pack、运行记录和人工检查点会持久化到本地
-`.graphwork/workbench.json`。Architecture 与 Research 是内置 Pack；可信的
+`.graphwork/workbench.json`。Architecture、Customer Success 与 Research 是内置 Pack；可信的
 `.gpack` 可以直接从 Packs 页面导入，也可以通过 CLI 安装，并保存在
 `.graphwork/packs`。
+
+可选的声明式工具策略位于 `.graphwork/policy.json`。暂停或完成的运行可以从控制台
+导出为带完整性校验的可移植审计包，并在其他环境独立验证。
+
+Workbench 会自动、安全地升级工作区格式。打开旧版 v1 工作区时，会先保留未经修改的
+`workbench.json.v1.backup`，再原子迁移到带稳定工作区标识的当前格式。
 
 ## 创建 Industry Pack
 
@@ -140,7 +176,18 @@ pnpm graphwork pack run packs/research/src/index.ts --set "goal=Evaluate a workf
 pnpm graphwork pack resume packs/research/src/index.ts --run <run-id> --database runs.sqlite --decision approval=true
 ```
 
+团队部署可以让相同命令连接 PostgreSQL，并启动一个或多个 Worker。任务租约、心跳和
+重试由数据库持久化，图检查点仍是恢复执行的权威来源：
+
+```bash
+graphwork worker start research --installed --database "$GRAPHWORK_POSTGRES_URL" --concurrency 4
+graphwork pack enqueue research --installed --database "$GRAPHWORK_POSTGRES_URL" --set "goal=Review a workflow"
+```
+
 零安装 npm 分发包的构建、完整烟测和发布门禁见
 [npm 分发指南](docs/NPM_DISTRIBUTION.md)。
 
 本项目采用 [MIT License](LICENSE)。
+
+生产化入口见[参考部署](docs/DEPLOYMENT.md)、[性能预算](docs/PERFORMANCE.md)与
+[信任和隔离边界](docs/TRUST_AND_ISOLATION.md)。

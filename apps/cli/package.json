@@ -1,8 +1,9 @@
 {
   "name": "@graph-native/cli",
-  "version": "0.1.0",
+  "version": "0.2.0-rc.1",
   "private": true,
   "type": "module",
+  "license": "MIT",
   "bin": {
     "graphwork": "./src/main.ts",
     "graph-native": "./src/main.ts"

@@ -15,12 +15,18 @@ Read the Product Charter and keep the central boundary intact:
 - generic execution, governance and provenance mechanisms belong in the core;
 - industry nouns, workflows and evaluation meaning belong in Packs.
 
+Before choosing an implementation boundary, read the
+[extension-point guide](docs/EXTENSION_POINTS.md). New contributors can start
+from the maintained [good first issues](docs/GOOD_FIRST_ISSUES.md).
+
 ## Local workflow
 
 ```bash
 pnpm install
 pnpm typecheck
 pnpm test
+pnpm perf:check
+pnpm test:e2e
 pnpm build
 pnpm demo
 ```
@@ -28,6 +34,7 @@ pnpm demo
 Pull requests should be focused, explain user-visible behavior, include tests
 for failure as well as success, and update documentation when a public contract
 changes. Do not add a dependency when a small platform API is sufficient.
+Browser-facing changes should keep the Workbench Playwright journey passing.
 
 ## Good first contributions
 
@@ -36,6 +43,9 @@ changes. Do not add a dependency when a small platform API is sufficient.
 - contribute an example or Industry Pack fixture;
 - implement a storage, Agent or tool adapter behind an existing interface;
 - improve onboarding documentation or cross-platform behavior.
+
+The concrete acceptance criteria and ownership boundaries for current starter
+tasks live in [Good first issues](docs/GOOD_FIRST_ISSUES.md).
 
 By participating, you agree to follow the Code of Conduct. Contributions are
 licensed under the repository's MIT License.

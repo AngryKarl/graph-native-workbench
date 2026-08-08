@@ -39,9 +39,10 @@ describe('Registry release publisher', () => {
       packs: [
         { id: 'research', version: '0.1.0' },
         { id: 'architecture', version: '0.1.0' },
+        { id: 'customer_success', version: '0.1.0' },
       ],
     });
-    expect(release.artifacts).toHaveLength(2);
+    expect(release.artifacts).toHaveLength(3);
     for (const artifact of release.artifacts) {
       expect(inspectPackArtifact(artifact.artifact).checksum).toBe(artifact.checksum);
       expect(release.payload.packs.some((pack) => pack.artifactChecksum === artifact.checksum)).toBe(true);
@@ -55,7 +56,7 @@ describe('Registry release publisher', () => {
     expect(verifySignedPackRegistry(signed, {
       trustedKeys: { 'graphwork.reference.v1': publicKey },
       now,
-    }).payload.packs).toHaveLength(2);
+    }).payload.packs).toHaveLength(3);
   });
 
   it('rejects insecure publishing URLs and excessive catalog lifetimes', async () => {
