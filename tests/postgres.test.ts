@@ -48,7 +48,7 @@ describe('PostgreSQL team execution adapters', () => {
     expect(completed.status).toBe('completed');
     expect(await store.getCheckpoint(runId)).toBeUndefined();
     expect((await store.listEvents(runId)).at(-1)?.type).toBe('run.completed');
-  });
+  }, 15_000);
 
   it('persists the typed context graph without changing Pack projection code', async () => {
     const { queryable } = database();

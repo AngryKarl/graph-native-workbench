@@ -26,7 +26,7 @@ describe('Registry release publisher', () => {
       {
         configDirectory: resolve('registry'),
         outputDirectory,
-        artifactBaseUrl: 'https://github.com/example/project/releases/download/packs-v0.1.0',
+        artifactBaseUrl: 'https://github.com/example/project/releases/download/packs-v0.2.0',
         expiresInDays: 30,
         now,
       },
@@ -37,9 +37,9 @@ describe('Registry release publisher', () => {
       generatedAt: now.toISOString(),
       expiresAt: '2026-09-03T12:00:00.000Z',
       packs: [
-        { id: 'research', version: '0.1.0' },
-        { id: 'architecture', version: '0.1.0' },
-        { id: 'customer_success', version: '0.1.0' },
+        { id: 'research', version: '0.2.0', engineRange: '^0.2.0' },
+        { id: 'architecture', version: '0.2.0', engineRange: '^0.2.0' },
+        { id: 'customer_success', version: '0.2.0', engineRange: '^0.2.0' },
       ],
     });
     expect(release.artifacts).toHaveLength(3);
@@ -48,7 +48,7 @@ describe('Registry release publisher', () => {
       expect(release.payload.packs.some((pack) => pack.artifactChecksum === artifact.checksum)).toBe(true);
     }
     expect(release.payload.packs[0]?.artifact).toBe(
-      'https://github.com/example/project/releases/download/packs-v0.1.0/packs/research-0.1.0.gpack',
+      'https://github.com/example/project/releases/download/packs-v0.2.0/packs/research-0.2.0.gpack',
     );
 
     const { privateKey, publicKey } = generateKeyPairSync('ed25519');
@@ -85,6 +85,6 @@ describe('Registry release publisher', () => {
       outputDirectory: resolve('tests', '.unused-release'),
       artifactBaseUrl: 'https://example.com/releases/',
       expiresInDays: 30,
-    })).rejects.toThrow(/duplicate Pack "research@0.1.0"/);
+    })).rejects.toThrow(/duplicate Pack "research@0.2.0"/);
   });
 });

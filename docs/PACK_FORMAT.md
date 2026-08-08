@@ -22,11 +22,11 @@ installation.
   "formatVersion": 1,
   "pack": {
     "id": "customer_success",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "manifest": "manifest.json",
     "entry": "dist/index.mjs"
   },
-  "engine": { "graphwork": "^0.1.0" },
+  "engine": { "graphwork": "^0.2.0" },
   "permissions": ["handlers.execute"],
   "integrity": {
     "algorithm": "sha256",
@@ -47,8 +47,8 @@ separate runtime milestone and must not be assumed.
 
 ```bash
 pnpm graphwork pack build packs/customer_success/src/index.ts \
-  --output dist/customer_success-0.1.0.gpack
-pnpm graphwork pack inspect dist/customer_success-0.1.0.gpack
+  --output dist/customer_success-0.2.0.gpack
+pnpm graphwork pack inspect dist/customer_success-0.2.0.gpack
 ```
 
 Building executes the local source module to validate its manifest, then
@@ -58,7 +58,7 @@ the `context.write` permission. Build only source you trust.
 ## Install and run
 
 ```bash
-pnpm graphwork pack install dist/customer_success-0.1.0.gpack --trust
+pnpm graphwork pack install dist/customer_success-0.2.0.gpack --trust
 pnpm graphwork pack list
 pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
 ```
@@ -81,7 +81,7 @@ Versions are stored side by side. A newly installed version becomes active by
 default; use `--no-activate` to stage it.
 
 ```bash
-pnpm graphwork pack activate customer_success@0.1.0
+pnpm graphwork pack activate customer_success@0.2.0
 pnpm graphwork pack rollback customer_success
 pnpm graphwork pack uninstall customer_success --version 0.2.0
 ```

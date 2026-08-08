@@ -130,9 +130,9 @@ pnpm graphwork pack run packs/customer_success/src/index.ts --set "topic=renewal
 把同一个 Pack 打包、安装并按 ID 运行：
 
 ```bash
-pnpm graphwork pack build packs/customer_success/src/index.ts --output customer_success-0.1.0.gpack
-pnpm graphwork pack inspect customer_success-0.1.0.gpack
-pnpm graphwork pack install customer_success-0.1.0.gpack --trust
+pnpm graphwork pack build packs/customer_success/src/index.ts --output customer_success-0.2.0.gpack
+pnpm graphwork pack inspect customer_success-0.2.0.gpack
+pnpm graphwork pack install customer_success-0.2.0.gpack --trust
 pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
 ```
 
@@ -149,7 +149,7 @@ pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
 ```bash
 pnpm graphwork pack registry verify https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
-pnpm graphwork pack registry install customer_success@0.1.0 \
+pnpm graphwork pack registry install customer_success@0.2.0 \
   --registry https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
 ```
