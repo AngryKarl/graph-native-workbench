@@ -89,7 +89,7 @@ describe('Workbench Registry catalog', () => {
         name: 'Catalog Pack Pack',
         installed: false,
         compatible: true,
-        compatibilityMessage: 'Compatible with Graphwork 0.2.1.',
+        compatibilityMessage: 'Compatible with Graphwork 0.2.2.',
       }],
     });
 

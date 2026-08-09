@@ -5,6 +5,8 @@ versioning once public packages begin publishing.
 
 ## Unreleased
 
+## 0.2.2 - 2026-08-09
+
 ### Changed
 
 - Unified the public product, repository, CLI and internal package namespace
