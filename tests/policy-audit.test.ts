@@ -6,7 +6,7 @@ import {
   parseToolPolicy,
   verifyRunAuditBundle,
   type ToolAuthorizationRequest,
-} from '@graph-native/core';
+} from '@graphwork/core';
 
 const request = {
   runId: 'run-policy-test',

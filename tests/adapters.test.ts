@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { IndustryPackManifest } from '@graph-native/contracts';
+import type { IndustryPackManifest } from '@graphwork/contracts';
 import {
   compilePack,
   createJsonModelAgent,
@@ -7,7 +7,7 @@ import {
   ModelProviderClient,
   type AgentAdapter,
   type ToolAdapter,
-} from '@graph-native/core';
+} from '@graphwork/core';
 
 function governedPack(toolId: 'lookup' | 'publish'): IndustryPackManifest {
   return {

@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { GraphRuntime, InMemoryContextGraphStore, compilePack } from '@graph-native/core';
+import { GraphRuntime, InMemoryContextGraphStore, compilePack } from '@graphwork/core';
 import {
   buildPackArtifact,
   createContainerIsolationCommand,
@@ -19,7 +19,7 @@ import {
   signPackRegistry,
   verifySignedPackRegistry,
   type SignedPackRegistryPayload,
-} from '@graph-native/pack-sdk';
+} from '@graphwork/pack-sdk';
 
 const temporaryDirectories: string[] = [];
 const servers: Server[] = [];
@@ -177,7 +177,7 @@ describe('isolated Pack workers', () => {
     const fixture = await packFixture('isolated_ops');
     const original = await readFile(fixture.source, 'utf8');
     await writeFile(fixture.source, original
-      .replace("import { defineHandlers, definePack } from '@graph-native/pack-sdk';", "import { writeFileSync } from 'node:fs';\nimport { defineHandlers, definePack } from '@graph-native/pack-sdk';")
+      .replace("import { defineHandlers, definePack } from '@graphwork/pack-sdk';", "import { writeFileSync } from 'node:fs';\nimport { defineHandlers, definePack } from '@graphwork/pack-sdk';")
       .replace(
         "'isolated_ops.produce': ({ state }) => ({ result: 'Pack isolated_ops processed: ' + String(state.topic) }),",
         "'isolated_ops.produce': ({ state }) => { if (state.topic === 'filesystem') writeFileSync('escape.txt', 'blocked'); if (state.topic === 'loop') while (true) {} return { result: process.env.GRAPHWORK_ISOLATION_SECRET ?? 'hidden' }; },",

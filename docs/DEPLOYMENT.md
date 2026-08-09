@@ -15,7 +15,7 @@ use any username and `GRAPHWORK_AUTH_TOKEN` as the password. The port remains
 bound to loopback by default. Put an HTTPS reverse proxy in front before exposing
 it to a network because Basic credentials must not cross an unencrypted network.
 
-The server rejects non-loopback listeners unless `GRAPH_WORKBENCH_AUTH_TOKEN`
+The server rejects non-loopback listeners unless `GRAPHWORK_AUTH_TOKEN`
 contains at least 32 characters. It also rejects cross-origin requests and Host
 headers that do not belong to a loopback listener. API clients may send the same
 token as `Authorization: Bearer <token>`.

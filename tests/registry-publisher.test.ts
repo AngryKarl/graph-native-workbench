@@ -7,7 +7,7 @@ import {
   inspectPackArtifact,
   signPackRegistry,
   verifySignedPackRegistry,
-} from '@graph-native/pack-sdk';
+} from '@graphwork/pack-sdk';
 
 const temporaryDirectories: string[] = [];
 

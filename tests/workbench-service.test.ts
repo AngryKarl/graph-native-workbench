@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { verifyRunAuditBundle } from '@graph-native/core';
-import { researchPack } from '@graph-native/pack-research';
+import { verifyRunAuditBundle } from '@graphwork/core';
+import { researchPack } from '@graphwork/pack-research';
 import { bundledPackCatalog } from '../apps/workbench/src/catalog.js';
 import { WorkbenchService } from '../apps/workbench/src/service.js';
 
@@ -256,7 +256,7 @@ describe('Workbench service', () => {
   });
 
   it('persists installed Packs, the active Pack, drafts and runs across service restarts', async () => {
-    const directory = await mkdtemp(join(tmpdir(), 'graph-native-workbench-'));
+    const directory = await mkdtemp(join(tmpdir(), 'graphwork-'));
     const dataFile = join(directory, 'workbench.json');
     try {
       const first = new WorkbenchService({ dataFile });

@@ -1,12 +1,12 @@
 {
-  "name": "@graph-native/core",
+  "name": "@graphwork/core",
   "version": "0.2.1",
   "private": false,
   "type": "module",
   "license": "MIT",
   "exports": "./src/index.ts",
   "dependencies": {
-    "@graph-native/contracts": "workspace:*",
+    "@graphwork/contracts": "workspace:*",
     "pg": "^8.22.0",
     "pg-boss": "^12.27.0"
   }

@@ -1,11 +1,11 @@
-# Graph Native Workbench
+# Graphwork
 
 **Turn an SOP into an executable, inspectable work graph — then preserve its
 evidence, decisions and deliverables as organizational context.**
 
 [中文说明](README.zh-CN.md) · `0.2.1` public alpha · MIT licensed
 
-Graph Native Workbench is an open-source foundation for complex industry work.
+Graphwork is an open-source foundation for complex industry work.
 It connects an **execution graph** (agents, functions, tools, humans and quality
 gates) to a durable **context graph** (sources, evidence, artifacts, versions
 and decisions). Teams ship their own domain behavior as installable Industry
@@ -161,7 +161,7 @@ Organizations can publish the same artifacts through an Ed25519-signed HTTPS
 Registry. Publisher keys are configured out of band; the signed index binds the
 Pack identity, checksum, compatibility and permissions before download:
 
-The public [Graphwork Reference Registry](https://angrykarl.github.io/graph-native-workbench/registry/registry.json)
+The public [Graphwork Reference Registry](https://angrykarl.github.io/graphwork/registry/registry.json)
 contains the three bundled examples. Its source-controlled publisher key and
 fingerprint are documented in the [Registry publishing guide](docs/REGISTRY_PUBLISHING.md).
 
@@ -289,4 +289,4 @@ Early contributors can shape the public contract before 1.0. Start with
 Please also read the [Code of Conduct](CODE_OF_CONDUCT.md) and
 [Security Policy](SECURITY.md).
 
-Graph Native Workbench is available under the [MIT License](LICENSE).
+Graphwork is available under the [MIT License](LICENSE).

@@ -1,7 +1,7 @@
 import { createPrivateKey, createPublicKey, KeyObject, randomUUID, sign, verify } from 'node:crypto';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { identifierSchema } from '@graph-native/contracts';
+import { identifierSchema } from '@graphwork/contracts';
 import { valid, validRange } from 'semver';
 import { z } from 'zod';
 import {

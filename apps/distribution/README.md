@@ -1,7 +1,7 @@
 # Graphwork
 
 Graphwork is the zero-install distribution of
-[Graph Native Workbench](https://github.com/AngryKarl/graph-native-workbench).
+[Graphwork](https://github.com/AngryKarl/graphwork).
 It connects executable Agent workflows to durable organizational context and
 packages domain behavior as portable Industry Packs.
 
@@ -40,4 +40,4 @@ pnpm dlx graphwork pack build packs/customer_success/src/index.mjs \
 
 Run `pnpm dlx graphwork help` for the complete Pack lifecycle and signed
 Registry commands. Documentation, examples and security boundaries are in the
-[main repository](https://github.com/AngryKarl/graph-native-workbench).
+[main repository](https://github.com/AngryKarl/graphwork).

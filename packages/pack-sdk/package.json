@@ -1,13 +1,13 @@
 {
-  "name": "@graph-native/pack-sdk",
+  "name": "@graphwork/pack-sdk",
   "version": "0.2.1",
   "private": false,
   "type": "module",
   "license": "MIT",
   "exports": "./src/index.ts",
   "dependencies": {
-    "@graph-native/contracts": "workspace:*",
-    "@graph-native/core": "workspace:*",
+    "@graphwork/contracts": "workspace:*",
+    "@graphwork/core": "workspace:*",
     "esbuild": "^0.25.0",
     "fflate": "^0.8.2",
     "semver": "^7.7.0",

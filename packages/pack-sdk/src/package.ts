@@ -10,10 +10,10 @@ import {
 import { basename, dirname, isAbsolute, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
-import type { IndustryPackManifest } from '@graph-native/contracts';
-import { identifierSchema, industryPackManifestSchema } from '@graph-native/contracts';
-import type { HandlerRegistry } from '@graph-native/core';
-import { compilePack } from '@graph-native/core';
+import type { IndustryPackManifest } from '@graphwork/contracts';
+import { identifierSchema, industryPackManifestSchema } from '@graphwork/contracts';
+import type { HandlerRegistry } from '@graphwork/core';
+import { compilePack } from '@graphwork/core';
 import { build as bundle } from 'esbuild';
 import { unzipSync, zipSync, strFromU8, strToU8 } from 'fflate';
 import { valid, validRange } from 'semver';

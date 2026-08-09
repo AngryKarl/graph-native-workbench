@@ -11,7 +11,7 @@ import {
   type GraphEvent,
   type GraphRunRecord,
   type IndustryPackManifest,
-} from '@graph-native/contracts';
+} from '@graphwork/contracts';
 import type { ContextGraphStore } from './context-store.js';
 import { assertPackObject, assertPackRelation } from './context-validation.js';
 import type { RunStore, RunUpdate } from './run-store.js';

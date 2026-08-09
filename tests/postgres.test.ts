@@ -1,7 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { PgBoss, fromPglite } from 'pg-boss';
 import { afterEach, describe, expect, it } from 'vitest';
-import { researchHandlers, researchPack, projectResearchRun } from '@graph-native/pack-research';
+import { researchHandlers, researchPack, projectResearchRun } from '@graphwork/pack-research';
 import {
   compilePack,
   GraphRuntime,
@@ -9,7 +9,7 @@ import {
   PostgresRunQueue,
   PostgresRunStore,
   type PostgresQueryable,
-} from '@graph-native/core';
+} from '@graphwork/core';
 
 const databases: PGlite[] = [];
 

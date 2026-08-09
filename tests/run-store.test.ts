@@ -1,8 +1,8 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { researchHandlers, researchPack } from '@graph-native/pack-research';
-import { compilePack, GraphRuntime, SQLiteRunStore } from '@graph-native/core';
+import { researchHandlers, researchPack } from '@graphwork/pack-research';
+import { compilePack, GraphRuntime, SQLiteRunStore } from '@graphwork/core';
 
 const temporaryDirectories: string[] = [];
 

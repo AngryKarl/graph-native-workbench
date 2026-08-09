@@ -5,8 +5,7 @@
   "type": "module",
   "license": "MIT",
   "bin": {
-    "graphwork": "dist/graphwork.js",
-    "graph-native": "dist/graphwork.js"
+    "graphwork": "dist/graphwork.js"
   },
   "files": [
     "dist",
@@ -26,11 +25,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AngryKarl/graph-native-workbench.git"
+    "url": "git+https://github.com/AngryKarl/graphwork.git"
   },
-  "homepage": "https://github.com/AngryKarl/graph-native-workbench#readme",
+  "homepage": "https://github.com/AngryKarl/graphwork#readme",
   "bugs": {
-    "url": "https://github.com/AngryKarl/graph-native-workbench/issues"
+    "url": "https://github.com/AngryKarl/graphwork/issues"
   },
   "publishConfig": {
     "access": "public"

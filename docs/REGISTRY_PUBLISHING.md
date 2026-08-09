@@ -91,7 +91,7 @@ gh workflow run publish-registry.yml \
 For this repository the resulting endpoint will be:
 
 ```text
-https://angrykarl.github.io/graph-native-workbench/registry/registry.json
+https://angrykarl.github.io/graphwork/registry/registry.json
 ```
 
 The endpoint was activated on 2026-08-08. Verify the live catalog against the
@@ -99,7 +99,7 @@ repository trust key with:
 
 ```bash
 pnpm graphwork pack registry verify \
-  https://angrykarl.github.io/graph-native-workbench/registry/registry.json \
+  https://angrykarl.github.io/graphwork/registry/registry.json \
   --key graphwork.reference.v1=registry/reference-public.pem
 ```
 

@@ -11,22 +11,22 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.5.4
         version: 0.5.4
-      '@graph-native/contracts':
+      '@graphwork/contracts':
         specifier: workspace:*
         version: link:packages/contracts
-      '@graph-native/core':
+      '@graphwork/core':
         specifier: workspace:*
         version: link:packages/core
-      '@graph-native/pack-architecture':
+      '@graphwork/pack-architecture':
         specifier: workspace:*
         version: link:packs/architecture
-      '@graph-native/pack-customer-success':
+      '@graphwork/pack-customer-success':
         specifier: workspace:*
         version: link:packs/customer-success
-      '@graph-native/pack-research':
+      '@graphwork/pack-research':
         specifier: workspace:*
         version: link:packs/research
-      '@graph-native/pack-sdk':
+      '@graphwork/pack-sdk':
         specifier: workspace:*
         version: link:packages/pack-sdk
       '@playwright/test':
@@ -59,16 +59,16 @@ importers:
 
   apps/cli:
     dependencies:
-      '@graph-native/contracts':
+      '@graphwork/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@graph-native/core':
+      '@graphwork/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@graph-native/pack-research':
+      '@graphwork/pack-research':
         specifier: workspace:*
         version: link:../../packs/research
-      '@graph-native/pack-sdk':
+      '@graphwork/pack-sdk':
         specifier: workspace:*
         version: link:../../packages/pack-sdk
 
@@ -86,22 +86,22 @@ importers:
 
   apps/workbench:
     dependencies:
-      '@graph-native/contracts':
+      '@graphwork/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@graph-native/core':
+      '@graphwork/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@graph-native/pack-architecture':
+      '@graphwork/pack-architecture':
         specifier: workspace:*
         version: link:../../packs/architecture
-      '@graph-native/pack-customer-success':
+      '@graphwork/pack-customer-success':
         specifier: workspace:*
         version: link:../../packs/customer-success
-      '@graph-native/pack-research':
+      '@graphwork/pack-research':
         specifier: workspace:*
         version: link:../../packs/research
-      '@graph-native/pack-sdk':
+      '@graphwork/pack-sdk':
         specifier: workspace:*
         version: link:../../packages/pack-sdk
       '@xyflow/react':
@@ -141,7 +141,7 @@ importers:
 
   packages/core:
     dependencies:
-      '@graph-native/contracts':
+      '@graphwork/contracts':
         specifier: workspace:*
         version: link:../contracts
       pg:
@@ -153,10 +153,10 @@ importers:
 
   packages/pack-sdk:
     dependencies:
-      '@graph-native/contracts':
+      '@graphwork/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@graph-native/core':
+      '@graphwork/core':
         specifier: workspace:*
         version: link:../core
       esbuild:
@@ -178,28 +178,28 @@ importers:
 
   packs/architecture:
     dependencies:
-      '@graph-native/contracts':
+      '@graphwork/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@graph-native/core':
+      '@graphwork/core':
         specifier: workspace:*
         version: link:../../packages/core
 
   packs/customer-success:
     dependencies:
-      '@graph-native/contracts':
+      '@graphwork/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@graph-native/core':
+      '@graphwork/core':
         specifier: workspace:*
         version: link:../../packages/core
 
   packs/research:
     dependencies:
-      '@graph-native/contracts':
+      '@graphwork/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@graph-native/core':
+      '@graphwork/core':
         specifier: workspace:*
         version: link:../../packages/core
 

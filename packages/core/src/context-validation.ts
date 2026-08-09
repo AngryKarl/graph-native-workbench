@@ -2,7 +2,7 @@ import type {
   ContextObject,
   ContextRelation,
   IndustryPackManifest,
-} from '@graph-native/contracts';
+} from '@graphwork/contracts';
 import { assertValidState } from './state.js';
 
 export function assertPackObject(

@@ -1,6 +1,6 @@
 # Registry trust and Worker isolation
 
-Graph Native Workbench treats publisher identity and code execution as separate
+Graphwork treats publisher identity and code execution as separate
 security boundaries.
 
 ## Signed Registry v1
@@ -55,7 +55,7 @@ metadata.
 ### Workbench Registry catalog
 
 The Workbench reads trusted Registry sources from `.graphwork/trust.json` by
-default. Set `GRAPH_WORKBENCH_TRUST` to use a different file. Public-key paths
+default. Set `GRAPHWORK_TRUST` to use a different file. Public-key paths
 are resolved relative to the trust file:
 
 ```json

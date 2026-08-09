@@ -14,8 +14,8 @@ import type {
   GraphCheckpoint,
   GraphDefinition,
   GraphEvent,
-} from '@graph-native/contracts';
-import type { GraphState } from '@graph-native/core';
+} from '@graphwork/contracts';
+import type { GraphState } from '@graphwork/core';
 
 export interface StoredGraphDraft {
   readonly graph: GraphDefinition;

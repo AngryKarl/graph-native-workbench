@@ -1,4 +1,4 @@
-import type { IndustryPackManifest } from '@graph-native/contracts';
+import type { IndustryPackManifest } from '@graphwork/contracts';
 
 export const customerSuccessPack: IndustryPackManifest = {
   id: 'customer_success',

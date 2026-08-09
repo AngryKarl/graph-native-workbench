@@ -1,26 +1,26 @@
-import type { GraphEvent, IndustryPackManifest } from '@graph-native/contracts';
-import type { ContextGraphStore, GraphState, HandlerRegistry, ToolAdapterRegistry } from '@graph-native/core';
+import type { GraphEvent, IndustryPackManifest } from '@graphwork/contracts';
+import type { ContextGraphStore, GraphState, HandlerRegistry, ToolAdapterRegistry } from '@graphwork/core';
 import {
   listInstalledPacks,
   loadInstalledPackIsolated,
   type IsolatedPackPolicy,
-} from '@graph-native/pack-sdk';
+} from '@graphwork/pack-sdk';
 import {
   architectureHandlers,
   architecturePack,
   projectArchitectureRun,
-} from '@graph-native/pack-architecture';
+} from '@graphwork/pack-architecture';
 import {
   customerSuccessHandlers,
   customerSuccessPack,
   projectCustomerSuccessRun,
-} from '@graph-native/pack-customer-success';
+} from '@graphwork/pack-customer-success';
 import {
   projectResearchRun,
   researchHandlers,
   researchPack,
   researchTools,
-} from '@graph-native/pack-research';
+} from '@graphwork/pack-research';
 
 export interface PackRuntimeDefinition {
   readonly manifest: IndustryPackManifest;

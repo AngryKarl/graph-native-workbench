@@ -3,7 +3,7 @@ import type {
   IndustryPackManifest,
   RoleDefinition,
   ToolDefinition,
-} from '@graph-native/contracts';
+} from '@graphwork/contracts';
 import type { GraphState } from './state.js';
 
 export interface HandlerContext {

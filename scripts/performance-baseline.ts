@@ -1,6 +1,6 @@
 import { performance } from 'node:perf_hooks';
-import { compilePack, GraphRuntime, InMemoryContextGraphStore } from '@graph-native/core';
-import { projectResearchRun, researchHandlers, researchPack } from '@graph-native/pack-research';
+import { compilePack, GraphRuntime, InMemoryContextGraphStore } from '@graphwork/core';
+import { projectResearchRun, researchHandlers, researchPack } from '@graphwork/pack-research';
 
 interface Measurement {
   readonly name: string;

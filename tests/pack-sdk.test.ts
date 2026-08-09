@@ -1,15 +1,15 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { industryPackJsonSchema } from '@graph-native/contracts';
-import { compilePack, GraphRuntime } from '@graph-native/core';
+import { industryPackJsonSchema } from '@graphwork/contracts';
+import { compilePack, GraphRuntime } from '@graphwork/core';
 import {
   formatPackInspection,
   inspectPack,
   loadPackModule,
   scaffoldPack,
-} from '@graph-native/pack-sdk';
-import { researchPack } from '@graph-native/pack-research';
+} from '@graphwork/pack-sdk';
+import { researchPack } from '@graphwork/pack-research';
 
 const temporaryDirectories: string[] = [];
 

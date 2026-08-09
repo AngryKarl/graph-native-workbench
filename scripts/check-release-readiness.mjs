@@ -48,6 +48,12 @@ for (const { path, value } of manifests) {
 }
 
 const distribution = manifests.find((item) => item.path === 'apps/distribution/package.json')?.value;
+if (distribution?.name !== 'graphwork') {
+  throw new Error('Public package must use the Graphwork package name.');
+}
+if (JSON.stringify(distribution.bin) !== JSON.stringify({ graphwork: 'dist/graphwork.js' })) {
+  throw new Error('Public package must expose only the graphwork CLI command.');
+}
 for (const dependency of ['esbuild', 'pg', 'pg-boss']) {
   if (!distribution?.dependencies?.[dependency]) {
     throw new Error(`Public graphwork package is missing runtime dependency "${dependency}".`);
@@ -55,6 +61,14 @@ for (const dependency of ['esbuild', 'pg', 'pg-boss']) {
 }
 if (!distribution.repository?.url || !distribution.homepage || !distribution.bugs?.url) {
   throw new Error('Public package repository, homepage and issue metadata are required.');
+}
+const repositoryUrl = 'https://github.com/AngryKarl/graphwork';
+if (
+  distribution.repository.url !== `git+${repositoryUrl}.git`
+  || distribution.homepage !== `${repositoryUrl}#readme`
+  || distribution.bugs.url !== `${repositoryUrl}/issues`
+) {
+  throw new Error('Public package metadata must point to the Graphwork repository.');
 }
 
 const referenceRegistry = JSON.parse(await readFile(resolve(root, 'registry/reference.json'), 'utf8'));

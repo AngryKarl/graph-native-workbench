@@ -3,14 +3,14 @@ import type {
   FixtureExpectation,
   IndustryPackManifest,
   PackFixtureDefinition,
-} from '@graph-native/contracts';
+} from '@graphwork/contracts';
 import {
   compilePack,
   GraphRuntime,
   type GraphState,
   type HandlerRegistry,
   type RunResult,
-} from '@graph-native/core';
+} from '@graphwork/core';
 
 export interface FixtureExpectationResult {
   readonly expectation: FixtureExpectation;

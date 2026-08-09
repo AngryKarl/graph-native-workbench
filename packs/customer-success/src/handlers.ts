@@ -1,4 +1,4 @@
-import type { HandlerRegistry } from '@graph-native/core';
+import type { HandlerRegistry } from '@graphwork/core';
 
 interface HealthSignal {
   readonly kind: string;

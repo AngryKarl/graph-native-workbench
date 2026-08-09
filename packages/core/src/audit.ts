@@ -9,7 +9,7 @@ import {
   type GraphCheckpoint,
   type GraphEvent,
   type GraphRunStatus,
-} from '@graph-native/contracts';
+} from '@graphwork/contracts';
 import type { GraphState } from './state.js';
 import { sha256Json } from './integrity.js';
 

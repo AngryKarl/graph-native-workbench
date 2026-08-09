@@ -22,10 +22,10 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 30_000,
     env: {
-      GRAPH_WORKBENCH_DATA: resolve(workspace, `workbench-${process.pid}.json`),
-      GRAPH_WORKBENCH_PACKS: resolve(workspace, `packs-${process.pid}`),
-      GRAPH_WORKBENCH_TRUST: resolve(workspace, `trust-${process.pid}.json`),
-      GRAPH_WORKBENCH_POLICY: resolve(workspace, `policy-${process.pid}.json`),
+      GRAPHWORK_DATA: resolve(workspace, `workbench-${process.pid}.json`),
+      GRAPHWORK_PACKS: resolve(workspace, `packs-${process.pid}`),
+      GRAPHWORK_TRUST: resolve(workspace, `trust-${process.pid}.json`),
+      GRAPHWORK_POLICY: resolve(workspace, `policy-${process.pid}.json`),
     },
   },
 });

@@ -1,8 +1,8 @@
 import { readFile, stat } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { IndustryPackManifest } from '@graph-native/contracts';
-import type { HandlerRegistry } from '@graph-native/core';
+import type { IndustryPackManifest } from '@graphwork/contracts';
+import type { HandlerRegistry } from '@graphwork/core';
 
 export interface LoadedPackModule {
   readonly pack: IndustryPackManifest;
