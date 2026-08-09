@@ -37,9 +37,9 @@ describe('Registry release publisher', () => {
       generatedAt: now.toISOString(),
       expiresAt: '2026-09-03T12:00:00.000Z',
       packs: [
-        { id: 'research', version: '0.2.0', engineRange: '^0.2.1' },
-        { id: 'architecture', version: '0.2.0', engineRange: '^0.2.1' },
-        { id: 'customer_success', version: '0.2.0', engineRange: '^0.2.1' },
+        { id: 'research', version: '0.2.0', engineRange: '^0.2.2' },
+        { id: 'architecture', version: '0.2.0', engineRange: '^0.2.2' },
+        { id: 'customer_success', version: '0.2.0', engineRange: '^0.2.2' },
       ],
     });
     expect(release.artifacts).toHaveLength(3);

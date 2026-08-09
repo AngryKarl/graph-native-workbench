@@ -127,7 +127,7 @@ describe('Pack lifecycle', () => {
     expect(() => installPackArtifact(artifact, {
       root: paths.registry,
       trust: true,
-    })).toThrow(/current engine is 0.2.1/);
+    })).toThrow(/current engine is 0.2.2/);
   });
 
   it('rejects an oversized expanded artifact before decompression', async () => {
