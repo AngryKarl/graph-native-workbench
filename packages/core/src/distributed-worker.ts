@@ -1,7 +1,7 @@
 import {
   distributedRunRequestSchema,
   type DistributedRunRequest,
-} from '@graph-native/contracts';
+} from '@graphwork/contracts';
 import {
   PgBoss,
   type ConstructorOptions as PgBossOptions,

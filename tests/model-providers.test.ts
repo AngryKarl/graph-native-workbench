@@ -5,7 +5,7 @@ import {
   ModelProviderClient,
   ModelProviderError,
   type ModelProtocol,
-} from '@graph-native/core';
+} from '@graphwork/core';
 
 const servers: ReturnType<typeof createServer>[] = [];
 

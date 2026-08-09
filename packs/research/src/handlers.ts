@@ -1,4 +1,4 @@
-import type { HandlerRegistry } from '@graph-native/core';
+import type { HandlerRegistry } from '@graphwork/core';
 
 function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';

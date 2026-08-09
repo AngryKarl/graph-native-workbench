@@ -81,7 +81,7 @@ started, completed, denied and failed tool calls produce ordered events. Each
 approval is bound to the run, node, role, tool and a SHA-256 digest of its input.
 
 Workbench reads an optional `.graphwork/policy.json` file. Set
-`GRAPH_WORKBENCH_POLICY` or pass `graphwork workbench --policy <file>` to use a
+`GRAPHWORK_POLICY` or pass `graphwork workbench --policy <file>` to use a
 different path:
 
 ```json

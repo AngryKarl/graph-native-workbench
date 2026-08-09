@@ -9,7 +9,7 @@ import {
   registryPayloadFromArtifacts,
   scaffoldPack,
   signPackRegistry,
-} from '@graph-native/pack-sdk';
+} from '@graphwork/pack-sdk';
 import { loadRegistryTrustConfig, WorkbenchRegistryService } from '../apps/workbench/src/registry-service.js';
 
 const temporaryDirectories: string[] = [];

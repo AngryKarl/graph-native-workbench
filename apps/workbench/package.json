@@ -1,5 +1,5 @@
 {
-  "name": "@graph-native/workbench",
+  "name": "@graphwork/workbench",
   "version": "0.2.1",
   "private": true,
   "type": "module",
@@ -11,12 +11,12 @@
     "start": "tsx src/server.ts"
   },
   "dependencies": {
-    "@graph-native/contracts": "workspace:*",
-    "@graph-native/core": "workspace:*",
-    "@graph-native/pack-sdk": "workspace:*",
-    "@graph-native/pack-architecture": "workspace:*",
-    "@graph-native/pack-customer-success": "workspace:*",
-    "@graph-native/pack-research": "workspace:*",
+    "@graphwork/contracts": "workspace:*",
+    "@graphwork/core": "workspace:*",
+    "@graphwork/pack-sdk": "workspace:*",
+    "@graphwork/pack-architecture": "workspace:*",
+    "@graphwork/pack-customer-success": "workspace:*",
+    "@graphwork/pack-research": "workspace:*",
     "@xyflow/react": "^12.11.2",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",

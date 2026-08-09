@@ -1,4 +1,4 @@
-import type { ToolAdapterRegistry } from '@graph-native/core';
+import type { ToolAdapterRegistry } from '@graphwork/core';
 
 const documents = [
   {

@@ -49,7 +49,7 @@ domain boundary has leaked.
 2. Define the ontology before prompts or UI.
 3. Declare graph state and each node's exact `reads` and `writes`.
 4. Run `pnpm graphwork pack validate <module>`; do not bypass compiler errors.
-5. Use `definePack` and `defineHandlers` from `@graph-native/pack-sdk`.
+5. Use `definePack` and `defineHandlers` from `@graphwork/pack-sdk`.
 6. Implement deterministic handlers first, then add an Agent SDK adapter.
 7. Declare at least one deliverable and one zero-key fixture.
 8. Run `pnpm graphwork pack test <module>` and add one context-projection test.

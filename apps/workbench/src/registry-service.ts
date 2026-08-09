@@ -7,7 +7,7 @@ import {
   installPackFromSignedRegistry,
   listInstalledPacks,
   type RegistryInstallOptions,
-} from '@graph-native/pack-sdk';
+} from '@graphwork/pack-sdk';
 
 export interface RegistryTrustKeyConfig {
   readonly keyId: string;

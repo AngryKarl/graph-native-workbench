@@ -1,6 +1,6 @@
 # Architecture Concept Design Pack
 
-The Architecture Pack is the first deep vertical for Graph Native Workbench. It
+The Architecture Pack is the first deep vertical for Graphwork. It
 turns a structured project intake into an evidence-backed concept design brief
 without adding architecture-specific behavior to the kernel.
 

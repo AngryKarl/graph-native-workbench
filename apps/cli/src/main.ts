@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve } from 'node:path';
-import { industryPackJsonSchema, type GraphEvent } from '@graph-native/contracts';
+import { industryPackJsonSchema, type GraphEvent } from '@graphwork/contracts';
 import {
   compilePack,
   createPolicyToolAuthorizer,
@@ -16,12 +16,12 @@ import {
   SQLiteRunStore,
   type RunStore,
   verifyRunAuditBundle,
-} from '@graph-native/core';
+} from '@graphwork/core';
 import {
   projectResearchRun,
   researchHandlers,
   researchPack,
-} from '@graph-native/pack-research';
+} from '@graphwork/pack-research';
 import {
   activateInstalledPack,
   buildPackArtifact,
@@ -46,7 +46,7 @@ import {
   scaffoldPack,
   uninstallInstalledPack,
   type IsolatedPackPolicy,
-} from '@graph-native/pack-sdk';
+} from '@graphwork/pack-sdk';
 
 const args = process.argv.slice(2);
 declare const __GRAPHWORK_PACKAGED__: boolean;
@@ -127,7 +127,7 @@ function postgresTarget(): string {
 
 function usage(): string {
   return [
-    'Graph Native Workbench',
+    'Graphwork',
     '',
     'Usage:',
     '  graphwork workbench [--port 4311] [--policy .graphwork/policy.json] [--no-open]',
@@ -252,13 +252,13 @@ async function workbench(): Promise<void> {
   const port = Number(valueAfter('--port') ?? 4311);
   if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error('Workbench port must be an integer between 1 and 65535.');
   const workspace = process.cwd();
-  process.env.GRAPH_WORKBENCH_PORT = String(port);
-  process.env.GRAPH_WORKBENCH_DATA ??= resolve(workspace, '.graphwork/workbench.json');
-  process.env.GRAPH_WORKBENCH_PACKS ??= resolve(workspace, '.graphwork/packs');
-  process.env.GRAPH_WORKBENCH_TRUST ??= resolve(workspace, '.graphwork/trust.json');
+  process.env.GRAPHWORK_PORT = String(port);
+  process.env.GRAPHWORK_DATA ??= resolve(workspace, '.graphwork/workbench.json');
+  process.env.GRAPHWORK_PACKS ??= resolve(workspace, '.graphwork/packs');
+  process.env.GRAPHWORK_TRUST ??= resolve(workspace, '.graphwork/trust.json');
   const policyPath = valueAfter('--policy');
-  if (policyPath) process.env.GRAPH_WORKBENCH_POLICY = resolve(policyPath);
-  process.env.GRAPH_WORKBENCH_OPEN = args.includes('--no-open') ? 'false' : 'true';
+  if (policyPath) process.env.GRAPHWORK_POLICY = resolve(policyPath);
+  process.env.GRAPHWORK_OPEN = args.includes('--no-open') ? 'false' : 'true';
   const server = packagedDistribution
     ? new URL('./workbench-server.mjs', import.meta.url)
     : new URL('../../workbench/src/server.ts', import.meta.url);

@@ -100,7 +100,7 @@ try {
   const health = await (await fetch(`${url}/api/health`)).json();
   if (health.status !== 'ok') throw new Error('Packaged Workbench health endpoint is not ready.');
   const html = await (await fetch(url)).text();
-  if (!html.includes('Graph Native Workbench')) throw new Error('Packaged Workbench client assets were not served.');
+  if (!html.includes('Graphwork')) throw new Error('Packaged Workbench client assets were not served.');
 
   console.log('Distribution smoke test passed: version, demo, standalone Pack, isolated install and Workbench.');
 } finally {

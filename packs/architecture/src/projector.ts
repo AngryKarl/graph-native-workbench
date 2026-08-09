@@ -1,5 +1,5 @@
-import type { ContextObject, ContextRelation } from '@graph-native/contracts';
-import type { ContextGraphStore, GraphState } from '@graph-native/core';
+import type { ContextObject, ContextRelation } from '@graphwork/contracts';
+import type { ContextGraphStore, GraphState } from '@graphwork/core';
 
 interface CompletedArchitectureRun {
   readonly runId: string;

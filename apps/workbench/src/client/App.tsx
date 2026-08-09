@@ -47,7 +47,7 @@ const navItems: Array<{ view: PrimaryView; label: string; icon: typeof LayoutDas
 ];
 
 function Logo() {
-  return <div className="brand-mark" aria-label="Graph Native Workbench"><i /><i /><i /><i /></div>;
+  return <div className="brand-mark" aria-label="Graphwork"><i /><i /><i /><i /></div>;
 }
 
 function sameEditor(left: EditorSnapshot, right: EditorSnapshot): boolean {
@@ -383,7 +383,7 @@ export function App() {
           <div className="editor-layout">
             <aside className="node-palette">
               <div className="palette-heading"><strong>Nodes</strong><span>Drag or click to add</span></div>
-              <div className="palette-list">{palette.map(({ kind, icon: Icon, description }) => <button key={kind} draggable onClick={() => addNode(kind)} onDragStart={(event) => { event.dataTransfer.setData('application/graph-native-node', kind); event.dataTransfer.effectAllowed = 'copy'; }}><span className={`palette-icon kind-${kind}`}><Icon size={15} /></span><span><strong>{nodeKindLabel[kind]}</strong><small>{description}</small></span></button>)}</div>
+              <div className="palette-list">{palette.map(({ kind, icon: Icon, description }) => <button key={kind} draggable onClick={() => addNode(kind)} onDragStart={(event) => { event.dataTransfer.setData('application/graphwork-node', kind); event.dataTransfer.effectAllowed = 'copy'; }}><span className={`palette-icon kind-${kind}`}><Icon size={15} /></span><span><strong>{nodeKindLabel[kind]}</strong><small>{description}</small></span></button>)}</div>
               <div className="palette-footer"><GitFork size={15} /><span><strong>{editor.graph.nodes.length} nodes</strong><small>{editor.graph.edges.length} connections</small></span></div>
             </aside>
             <section className="canvas-region">

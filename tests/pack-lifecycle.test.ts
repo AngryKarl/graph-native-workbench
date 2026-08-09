@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { GraphRuntime, compilePack } from '@graph-native/core';
+import { GraphRuntime, compilePack } from '@graphwork/core';
 import {
   activateInstalledPack,
   buildPackArtifact,
@@ -13,7 +13,7 @@ import {
   rollbackInstalledPack,
   scaffoldPack,
   uninstallInstalledPack,
-} from '@graph-native/pack-sdk';
+} from '@graphwork/pack-sdk';
 import {
   bundledPackCatalog,
   discoverInstalledPackRuntimes,

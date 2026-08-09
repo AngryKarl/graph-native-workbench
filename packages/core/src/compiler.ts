@@ -5,7 +5,7 @@ import {
   type GraphEdge,
   type GraphNode,
   type IndustryPackManifest,
-} from '@graph-native/contracts';
+} from '@graphwork/contracts';
 
 export class GraphCompileError extends Error {
   readonly issues: readonly string[];

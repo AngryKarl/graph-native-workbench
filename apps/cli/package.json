@@ -1,17 +1,16 @@
 {
-  "name": "@graph-native/cli",
+  "name": "@graphwork/cli",
   "version": "0.2.1",
   "private": true,
   "type": "module",
   "license": "MIT",
   "bin": {
-    "graphwork": "./src/main.ts",
-    "graph-native": "./src/main.ts"
+    "graphwork": "./src/main.ts"
   },
   "dependencies": {
-    "@graph-native/contracts": "workspace:*",
-    "@graph-native/core": "workspace:*",
-    "@graph-native/pack-research": "workspace:*",
-    "@graph-native/pack-sdk": "workspace:*"
+    "@graphwork/contracts": "workspace:*",
+    "@graphwork/core": "workspace:*",
+    "@graphwork/pack-research": "workspace:*",
+    "@graphwork/pack-sdk": "workspace:*"
   }
 }

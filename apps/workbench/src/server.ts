@@ -6,8 +6,8 @@ import { platform, tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { inspectPackArtifact, installPackArtifact } from '@graph-native/pack-sdk';
-import { defaultToolPolicy, parseToolPolicy, type ToolPolicy } from '@graph-native/core';
+import { inspectPackArtifact, installPackArtifact } from '@graphwork/pack-sdk';
+import { defaultToolPolicy, parseToolPolicy, type ToolPolicy } from '@graphwork/core';
 import { bundledPackCatalog, discoverInstalledPackRuntimes } from './catalog.js';
 import { WorkbenchService } from './service.js';
 import { WorkbenchRegistryService } from './registry-service.js';
@@ -21,17 +21,17 @@ import {
 
 const appDirectory = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const workspaceDirectory = resolve(appDirectory, '..', '..');
-const port = Number(process.env.GRAPH_WORKBENCH_PORT ?? 4310);
-const host = process.env.GRAPH_WORKBENCH_HOST ?? '127.0.0.1';
-const dataFile = process.env.GRAPH_WORKBENCH_DATA
+const port = Number(process.env.GRAPHWORK_PORT ?? 4310);
+const host = process.env.GRAPHWORK_HOST ?? '127.0.0.1';
+const dataFile = process.env.GRAPHWORK_DATA
   ?? resolve(workspaceDirectory, '.graphwork/workbench.json');
-const packRoot = process.env.GRAPH_WORKBENCH_PACKS
+const packRoot = process.env.GRAPHWORK_PACKS
   ?? resolve(workspaceDirectory, '.graphwork/packs');
-const trustFile = process.env.GRAPH_WORKBENCH_TRUST
+const trustFile = process.env.GRAPHWORK_TRUST
   ?? resolve(workspaceDirectory, '.graphwork/trust.json');
-const policyFile = process.env.GRAPH_WORKBENCH_POLICY
+const policyFile = process.env.GRAPHWORK_POLICY
   ?? resolve(workspaceDirectory, '.graphwork/policy.json');
-const httpSecurity = createWorkbenchHttpSecurity(host, process.env.GRAPH_WORKBENCH_AUTH_TOKEN);
+const httpSecurity = createWorkbenchHttpSecurity(host, process.env.GRAPHWORK_AUTH_TOKEN);
 const discovery = await discoverInstalledPackRuntimes(packRoot);
 const service = new WorkbenchService({ dataFile, toolPolicy: await loadToolPolicy(policyFile) });
 const registryService = await WorkbenchRegistryService.fromConfigFile(trustFile, packRoot);
@@ -345,8 +345,8 @@ server.requestTimeout = 30_000;
 server.maxHeadersCount = 100;
 server.listen(port, host, () => {
   const url = `http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`;
-  console.log(`Graph Native Workbench: ${url}`);
+  console.log(`Graphwork: ${url}`);
   if (discovery.loaded > 0) console.log(`Loaded ${discovery.loaded} trusted Pack(s) from ${packRoot}`);
   for (const error of discovery.errors) console.warn(`Skipped installed Pack: ${error}`);
-  if (process.env.GRAPH_WORKBENCH_OPEN === 'true') openWorkbench(url);
+  if (process.env.GRAPHWORK_OPEN === 'true') openWorkbench(url);
 });

@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { fork, spawn } from 'node:child_process';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import type { ContextObject, ContextRelation, GraphNode } from '@graph-native/contracts';
-import type { ContextGraphStore, GraphState, HandlerRegistry } from '@graph-native/core';
+import type { ContextObject, ContextRelation, GraphNode } from '@graphwork/contracts';
+import type { ContextGraphStore, GraphState, HandlerRegistry } from '@graphwork/core';
 import { inspectInstalledPack, type InstalledPackFiles } from './package.js';
 
 const workerPath = fileURLToPath(new URL('./isolated-worker.mjs', import.meta.url));

@@ -1,11 +1,11 @@
-import type { GraphDefinition } from '@graph-native/contracts';
+import type { GraphDefinition } from '@graphwork/contracts';
 import {
   createJsonModelAgent,
   ModelProviderClient,
   modelProviderPresets,
   type AgentAdapterRegistry,
   type ModelProviderPreset,
-} from '@graph-native/core';
+} from '@graphwork/core';
 import type { StoredModelProvider } from './workspace-store.js';
 
 export interface ModelProviderView {

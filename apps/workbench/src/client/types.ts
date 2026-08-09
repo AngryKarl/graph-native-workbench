@@ -6,7 +6,7 @@ import type {
   IndustryPackManifest,
   PackFixtureDefinition,
   StateField,
-} from '@graph-native/contracts';
+} from '@graphwork/contracts';
 
 export type {
   GraphDefinition,

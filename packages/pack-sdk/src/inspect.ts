@@ -1,4 +1,4 @@
-import { compilePack } from '@graph-native/core';
+import { compilePack } from '@graphwork/core';
 
 export interface PackInspection {
   readonly id: string;

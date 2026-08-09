@@ -1,10 +1,10 @@
-# Graph Native Workbench
+# Graphwork
 
 **把企业 SOP 变成可执行、可检查的工作图，再把证据、决策和交付物沉淀为组织上下文。**
 
 [English](README.md) · `0.2.1` 公开 Alpha · MIT
 
-Graph Native Workbench 是一个面向复杂行业工作的开源 Graph-native
+Graphwork 是一个面向复杂行业工作的开源 Graph-native
 Workbench。它把 Agent 执行图与组织上下文图连接起来，使企业能够把自己的
 SOP、角色、工具、知识、质量标准和交付物封装成可安装的 Industry Pack。
 
@@ -143,7 +143,7 @@ pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
 组织也可以通过 Ed25519 签名的 HTTPS Registry 发布 Pack。发布者公钥由使用方
 独立配置，签名索引会在下载前绑定 Pack 身份、校验和、兼容范围与权限：
 
-公开的 [Graphwork Reference Registry](https://angrykarl.github.io/graph-native-workbench/registry/registry.json)
+公开的 [Graphwork Reference Registry](https://angrykarl.github.io/graphwork/registry/registry.json)
 已经提供三个示例 Pack。仓库中的发布者公钥和指纹见
 [Registry 发布指南](docs/REGISTRY_PUBLISHING.md)。
 

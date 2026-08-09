@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
-import { evaluateEngineCompatibility, GRAPHWORK_ENGINE_VERSION } from '@graph-native/pack-sdk';
+import { evaluateEngineCompatibility, GRAPHWORK_ENGINE_VERSION } from '@graphwork/pack-sdk';
 import {
   migrateWorkbenchWorkspace,
   WorkbenchWorkspaceStore,

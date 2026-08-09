@@ -3,13 +3,13 @@ import {
   projectResearchRun,
   researchHandlers,
   researchPack,
-} from '@graph-native/pack-research';
+} from '@graphwork/pack-research';
 import {
   compilePack,
   GraphRuntime,
   InMemoryContextGraphStore,
   SQLiteContextGraphStore,
-} from '@graph-native/core';
+} from '@graphwork/core';
 
 function runtime(): GraphRuntime {
   const graph = compilePack(researchPack).graphs.get('research.workflow');

@@ -5,6 +5,13 @@ versioning once public packages begin publishing.
 
 ## Unreleased
 
+### Changed
+
+- Unified the public product, repository, CLI and internal package namespace
+  under the Graphwork name.
+- Renamed Workbench environment variables from `GRAPH_WORKBENCH_*` to
+  `GRAPHWORK_*` and removed the legacy `graph-native` CLI alias.
+
 ### Security
 
 - Reject oversized Pack archives before decompression and bound streamed

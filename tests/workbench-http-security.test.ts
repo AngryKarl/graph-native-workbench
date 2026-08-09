@@ -12,7 +12,7 @@ function request(headers: IncomingMessage['headers']): IncomingMessage {
 
 describe('Workbench HTTP security', () => {
   it('requires a long authentication token for non-loopback listeners', () => {
-    expect(() => createWorkbenchHttpSecurity('0.0.0.0')).toThrow(/require GRAPH_WORKBENCH_AUTH_TOKEN/);
+    expect(() => createWorkbenchHttpSecurity('0.0.0.0')).toThrow(/require GRAPHWORK_AUTH_TOKEN/);
     expect(() => createWorkbenchHttpSecurity('0.0.0.0', 'short')).toThrow(/at least 32 characters/);
     expect(createWorkbenchHttpSecurity('127.0.0.1')).toEqual({ listenHost: '127.0.0.1' });
   });

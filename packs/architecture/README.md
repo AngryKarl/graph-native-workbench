@@ -1,6 +1,6 @@
 # Architecture Pack
 
-An evidence-backed concept design workflow for Graph Native Workbench.
+An evidence-backed concept design workflow for Graphwork.
 
 The Pack turns a structured project intake into parallel site and program
 findings, two distinct concept directions, a quality-gated recommendation, a
