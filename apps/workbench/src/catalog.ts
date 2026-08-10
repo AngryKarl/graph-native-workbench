@@ -1,26 +1,26 @@
-import type { GraphEvent, IndustryPackManifest } from '@graphwork/contracts';
-import type { ContextGraphStore, GraphState, HandlerRegistry, ToolAdapterRegistry } from '@graphwork/core';
+import type { GraphEvent, IndustryPackManifest } from '@graph-workbench/contracts';
+import type { ContextGraphStore, GraphState, HandlerRegistry, ToolAdapterRegistry } from '@graph-workbench/core';
 import {
   listInstalledPacks,
   loadInstalledPackIsolated,
   type IsolatedPackPolicy,
-} from '@graphwork/pack-sdk';
+} from '@graph-workbench/pack-sdk';
 import {
   architectureHandlers,
   architecturePack,
   projectArchitectureRun,
-} from '@graphwork/pack-architecture';
+} from '@graph-workbench/pack-architecture';
 import {
   customerSuccessHandlers,
   customerSuccessPack,
   projectCustomerSuccessRun,
-} from '@graphwork/pack-customer-success';
+} from '@graph-workbench/pack-customer-success';
 import {
   projectResearchRun,
   researchHandlers,
   researchPack,
   researchTools,
-} from '@graphwork/pack-research';
+} from '@graph-workbench/pack-research';
 
 export interface PackRuntimeDefinition {
   readonly manifest: IndustryPackManifest;
@@ -79,7 +79,7 @@ export interface PackDiscoveryResult {
 }
 
 export async function discoverInstalledPackRuntimes(
-  root = '.graphwork/packs',
+  root = '.graph-workbench/packs',
   policy: IsolatedPackPolicy = { container: {} },
 ): Promise<PackDiscoveryResult> {
   const registry = listInstalledPacks(root);

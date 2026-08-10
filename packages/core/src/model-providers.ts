@@ -35,7 +35,7 @@ export const modelProviderPresets: readonly ModelProviderPreset[] = [
   { id: 'groq', label: 'Groq', protocol: 'openai-compatible', baseUrl: 'https://api.groq.com/openai/v1', apiKeyEnv: 'GROQ_API_KEY' },
   { id: 'openrouter', label: 'OpenRouter', protocol: 'openai-compatible', baseUrl: 'https://openrouter.ai/api/v1', apiKeyEnv: 'OPENROUTER_API_KEY' },
   { id: 'ollama', label: 'Ollama', protocol: 'openai-compatible', baseUrl: 'http://127.0.0.1:11434/v1', local: true, modelHint: 'qwen3:8b' },
-  { id: 'custom', label: 'Custom compatible endpoint', protocol: 'openai-compatible', baseUrl: '', apiKeyEnv: 'GRAPHWORK_MODEL_API_KEY', apiKeyOptional: true },
+  { id: 'custom', label: 'Custom compatible endpoint', protocol: 'openai-compatible', baseUrl: '', apiKeyEnv: 'GRAPH_WORKBENCH_MODEL_API_KEY', apiKeyOptional: true },
 ];
 
 export interface ModelProviderConfig {
@@ -203,7 +203,7 @@ function recordValue(value: unknown): Record<string, unknown> | undefined {
 }
 
 function providerToolName(index: number): string {
-  return `graphwork_tool_${index + 1}`;
+  return `graph_workbench_tool_${index + 1}`;
 }
 
 function toolByProviderName(
@@ -211,7 +211,7 @@ function toolByProviderName(
   name: string,
   provider: ModelProviderConfig,
 ): ModelToolDefinition {
-  const index = /^graphwork_tool_(\d+)$/.exec(name)?.[1];
+  const index = /^graph_workbench_tool_(\d+)$/.exec(name)?.[1];
   const tool = index ? input.tools?.[Number(index) - 1] : undefined;
   if (!tool) {
     throw new ModelProviderError(

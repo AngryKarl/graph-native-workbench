@@ -1,6 +1,6 @@
 # Extension points
 
-Graphwork keeps domain meaning in Industry Packs and exposes a small set of
+Graph Workbench keeps domain meaning in Industry Packs and exposes a small set of
 mechanism-level extension points. Choose the narrowest boundary that solves the
 problem; a new core abstraction should be the last option.
 
@@ -20,8 +20,8 @@ rules or deliverables. A Pack can provide:
 Start with:
 
 ```bash
-pnpm graphwork pack init claims_review
-pnpm graphwork pack test packs/claims_review/src/index.ts
+pnpm graph-workbench pack init claims_review
+pnpm graph-workbench pack test packs/claims_review/src/index.ts
 ```
 
 Use the [Customer Success Pack](../packs/customer-success/README.md) as the

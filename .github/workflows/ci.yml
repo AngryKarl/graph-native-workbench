@@ -35,9 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t graphwork:test .
-      - run: docker run --rm graphwork:test --version
-      - run: POSTGRES_PASSWORD=ci-test-password GRAPHWORK_AUTH_TOKEN=ci-test-auth-token-at-least-32-characters docker compose -f deploy/compose.yml config --quiet
+      - run: docker build -t graph-workbench:test .
+      - run: docker run --rm graph-workbench:test --version
+      - run: POSTGRES_PASSWORD=ci-test-password GRAPH_WORKBENCH_AUTH_TOKEN=ci-test-auth-token-at-least-32-characters docker compose -f deploy/compose.yml config --quiet
 
   browser-e2e:
     runs-on: ubuntu-latest

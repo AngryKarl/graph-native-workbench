@@ -4,6 +4,7 @@ coverage/
 *.log
 .env
 .DS_Store
+.graph-workbench/
 .graphwork/
 *.gpack
 release/

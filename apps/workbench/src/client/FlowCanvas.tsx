@@ -129,7 +129,7 @@ export function FlowCanvas({ graph, positions, run, selectedNodeId, onSelectNode
   };
   const drop = (event: DragEvent) => {
     event.preventDefault();
-    const kind = event.dataTransfer.getData('application/graphwork-node') as GraphNode['kind'];
+    const kind = event.dataTransfer.getData('application/graph-workbench-node') as GraphNode['kind'];
     if (!kind || !instance.current) return;
     const id = nextNodeId(graph, kind);
     const position = instance.current.screenToFlowPosition({ x: event.clientX, y: event.clientY });

@@ -1,5 +1,5 @@
 import { dirname, resolve } from 'node:path';
-import { identifierSchema, industryPackManifestSchema } from '@graphwork/contracts';
+import { identifierSchema, industryPackManifestSchema } from '@graph-workbench/contracts';
 import { z } from 'zod';
 import { loadPackModule } from './load.js';
 import { buildPackArtifact, type PackBuildResult } from './package.js';

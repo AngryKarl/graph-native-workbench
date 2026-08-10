@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { IndustryPackManifest } from '@graphwork/contracts';
+import type { IndustryPackManifest } from '@graph-workbench/contracts';
 import {
   compilePack,
   createJsonModelAgent,
@@ -7,7 +7,7 @@ import {
   ModelProviderClient,
   type AgentAdapter,
   type ToolAdapter,
-} from '@graphwork/core';
+} from '@graph-workbench/core';
 
 function governedPack(toolId: 'lookup' | 'publish'): IndustryPackManifest {
   return {
@@ -88,7 +88,7 @@ describe('Agent and tool adapters', () => {
       const payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
       if (round === 1) {
         expect(payload.tools).toEqual([expect.objectContaining({
-          function: expect.objectContaining({ name: 'graphwork_tool_1' }),
+          function: expect.objectContaining({ name: 'graph_workbench_tool_1' }),
         })]);
         return new Response(JSON.stringify({
           id: 'request-1',
@@ -96,7 +96,7 @@ describe('Agent and tool adapters', () => {
           choices: [{ message: { content: null, tool_calls: [{
             id: 'call-1',
             type: 'function',
-            function: { name: 'graphwork_tool_1', arguments: '{"query":"graph governance"}' },
+            function: { name: 'graph_workbench_tool_1', arguments: '{"query":"graph governance"}' },
           }] } }],
           usage: { prompt_tokens: 8, completion_tokens: 2, total_tokens: 10 },
         }));
@@ -149,7 +149,7 @@ describe('Agent and tool adapters', () => {
         choices: [{ message: { content: null, tool_calls: [{
           id: `call-${round}`,
           type: 'function',
-          function: { name: 'graphwork_tool_1', arguments: '{"query":"again"}' },
+          function: { name: 'graph_workbench_tool_1', arguments: '{"query":"again"}' },
         }] } }],
       }));
     };
@@ -184,7 +184,7 @@ describe('Agent and tool adapters', () => {
           choices: [{ message: { content: null, tool_calls: [{
             id: 'publish-call-1',
             type: 'function',
-            function: { name: 'graphwork_tool_1', arguments: '{"content":"approved draft"}' },
+            function: { name: 'graph_workbench_tool_1', arguments: '{"content":"approved draft"}' },
           }] } }],
           usage: { prompt_tokens: 8, completion_tokens: 2, total_tokens: 10 },
         }));

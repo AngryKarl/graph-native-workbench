@@ -39,10 +39,10 @@ export function createWorkbenchHttpSecurity(
 ): WorkbenchHttpSecurity {
   const authToken = rawAuthToken?.trim();
   if (authToken && authToken.length < 32) {
-    throw new Error('GRAPHWORK_AUTH_TOKEN must contain at least 32 characters.');
+    throw new Error('GRAPH_WORKBENCH_AUTH_TOKEN must contain at least 32 characters.');
   }
   if (!isLoopbackHost(listenHost) && !authToken) {
-    throw new Error('Non-loopback Workbench listeners require GRAPHWORK_AUTH_TOKEN.');
+    throw new Error('Non-loopback Workbench listeners require GRAPH_WORKBENCH_AUTH_TOKEN.');
   }
   return { listenHost, ...(authToken ? { authToken } : {}) };
 }

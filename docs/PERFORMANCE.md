@@ -1,6 +1,6 @@
 # Performance budgets
 
-Graphwork keeps a deterministic, zero-network baseline in CI so regressions in
+Graph Workbench keeps a deterministic, zero-network baseline in CI so regressions in
 the kernel remain visible without depending on a model provider or database.
 
 Run it with:

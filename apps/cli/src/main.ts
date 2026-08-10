@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve } from 'node:path';
-import { industryPackJsonSchema, type GraphEvent } from '@graphwork/contracts';
+import { industryPackJsonSchema, type GraphEvent } from '@graph-workbench/contracts';
 import {
   compilePack,
   createPolicyToolAuthorizer,
@@ -16,12 +16,12 @@ import {
   SQLiteRunStore,
   type RunStore,
   verifyRunAuditBundle,
-} from '@graphwork/core';
+} from '@graph-workbench/core';
 import {
   projectResearchRun,
   researchHandlers,
   researchPack,
-} from '@graphwork/pack-research';
+} from '@graph-workbench/pack-research';
 import {
   activateInstalledPack,
   buildPackArtifact,
@@ -29,7 +29,7 @@ import {
   formatArtifactInspection,
   formatFixtureResult,
   formatPackInspection,
-  GRAPHWORK_ENGINE_VERSION,
+  GRAPH_WORKBENCH_ENGINE_VERSION,
   inspectPack,
   inspectPackArtifact,
   installPackArtifact,
@@ -46,13 +46,18 @@ import {
   scaffoldPack,
   uninstallInstalledPack,
   type IsolatedPackPolicy,
-} from '@graphwork/pack-sdk';
+} from '@graph-workbench/pack-sdk';
+import {
+  applyLegacyWorkbenchEnvironment,
+  migrateLegacyWorkbenchDirectory,
+} from '../../workbench/src/environment.js';
 
 const args = process.argv.slice(2);
-declare const __GRAPHWORK_PACKAGED__: boolean;
-declare const __GRAPHWORK_VERSION__: string;
-const packagedDistribution = typeof __GRAPHWORK_PACKAGED__ !== 'undefined' && __GRAPHWORK_PACKAGED__;
-const graphworkVersion = typeof __GRAPHWORK_VERSION__ === 'undefined' ? 'development' : __GRAPHWORK_VERSION__;
+declare const __GRAPH_WORKBENCH_PACKAGED__: boolean;
+declare const __GRAPH_WORKBENCH_VERSION__: string;
+const packagedDistribution = typeof __GRAPH_WORKBENCH_PACKAGED__ !== 'undefined' && __GRAPH_WORKBENCH_PACKAGED__;
+const graphWorkbenchVersion = typeof __GRAPH_WORKBENCH_VERSION__ === 'undefined' ? 'development' : __GRAPH_WORKBENCH_VERSION__;
+applyLegacyWorkbenchEnvironment();
 
 function valueAfter(flag: string): string | undefined {
   const index = args.indexOf(flag);
@@ -118,43 +123,43 @@ function openRunStore(target: string): ClosableRunStore {
 }
 
 function postgresTarget(): string {
-  const target = valueAfter('--database') ?? process.env.GRAPHWORK_POSTGRES_URL;
+  const target = valueAfter('--database') ?? process.env.GRAPH_WORKBENCH_POSTGRES_URL;
   if (!target || !isPostgresTarget(target)) {
-    throw new Error('Distributed execution requires a PostgreSQL URL via --database or GRAPHWORK_POSTGRES_URL.');
+    throw new Error('Distributed execution requires a PostgreSQL URL via --database or GRAPH_WORKBENCH_POSTGRES_URL.');
   }
   return target;
 }
 
 function usage(): string {
   return [
-    'Graphwork',
+    'Graph Workbench',
     '',
     'Usage:',
-    '  graphwork workbench [--port 4311] [--policy .graphwork/policy.json] [--no-open]',
-    '  graphwork demo [--pause]',
-    '  graphwork audit export --database <runs.sqlite-or-postgres-url> --run <run-id> [--output run.audit.json]',
-    '  graphwork audit verify <run.audit.json>',
-    '  graphwork pack init <pack-id> [directory]',
-    '  graphwork pack validate [module-or-json]',
-    '  graphwork pack inspect [module-or-json-or-gpack]',
-    '  graphwork pack test [module] [--fixture fixture-id]',
-    '  graphwork pack demo [module] [--fixture fixture-id]',
-    `  graphwork pack build <module> [--output pack.gpack] [--engine ^${GRAPHWORK_ENGINE_VERSION}]`,
-    '  graphwork pack install <pack.gpack> --trust [--root .graphwork/packs]',
-    '  graphwork pack registry build <release.json> --artifact-base-url https://... [--output-dir registry-dist]',
-    '  graphwork pack registry sign <payload.json> --key-id publisher --private-key key.pem --output registry.json',
-    '  graphwork pack registry verify <registry.json-or-url> --key publisher=public.pem [--allow-http]',
-    '  graphwork pack registry install <pack-id>@<version> --registry https://... --key publisher=public.pem',
-    '  graphwork pack list [--root .graphwork/packs]',
-    '  graphwork pack activate <pack-id>@<version> [--root .graphwork/packs]',
-    '  graphwork pack rollback <pack-id> [--root .graphwork/packs]',
-    '  graphwork pack uninstall <pack-id> [--version 0.1.0] [--root .graphwork/packs]',
-    '  graphwork pack run <module> --set topic=hello [--decision approval=true] [--policy policy.json] [--database runs.sqlite]',
-    '  graphwork pack enqueue <module-or-pack-id> --database <postgres-url> --set topic=hello [--installed]',
-    '  graphwork pack run <pack-id> --installed --set topic=hello [--root .graphwork/packs]',
-    '  graphwork pack resume <module-or-pack-id> --run <run-id> --database runs.sqlite [--tool-approval id=true] [--installed]',
-    '  graphwork worker start <module-or-pack-id> --database <postgres-url> [--concurrency 4] [--installed] [--container]',
-    '  graphwork pack schema [output.json]',
+    '  graph-workbench workbench [--port 4311] [--policy .graph-workbench/policy.json] [--no-open]',
+    '  graph-workbench demo [--pause]',
+    '  graph-workbench audit export --database <runs.sqlite-or-postgres-url> --run <run-id> [--output run.audit.json]',
+    '  graph-workbench audit verify <run.audit.json>',
+    '  graph-workbench pack init <pack-id> [directory]',
+    '  graph-workbench pack validate [module-or-json]',
+    '  graph-workbench pack inspect [module-or-json-or-gpack]',
+    '  graph-workbench pack test [module] [--fixture fixture-id]',
+    '  graph-workbench pack demo [module] [--fixture fixture-id]',
+    `  graph-workbench pack build <module> [--output pack.gpack] [--engine ^${GRAPH_WORKBENCH_ENGINE_VERSION}]`,
+    '  graph-workbench pack install <pack.gpack> --trust [--root .graph-workbench/packs]',
+    '  graph-workbench pack registry build <release.json> --artifact-base-url https://... [--output-dir registry-dist]',
+    '  graph-workbench pack registry sign <payload.json> --key-id publisher --private-key key.pem --output registry.json',
+    '  graph-workbench pack registry verify <registry.json-or-url> --key publisher=public.pem [--allow-http]',
+    '  graph-workbench pack registry install <pack-id>@<version> --registry https://... --key publisher=public.pem',
+    '  graph-workbench pack list [--root .graph-workbench/packs]',
+    '  graph-workbench pack activate <pack-id>@<version> [--root .graph-workbench/packs]',
+    '  graph-workbench pack rollback <pack-id> [--root .graph-workbench/packs]',
+    '  graph-workbench pack uninstall <pack-id> [--version 0.1.0] [--root .graph-workbench/packs]',
+    '  graph-workbench pack run <module> --set topic=hello [--decision approval=true] [--policy policy.json] [--database runs.sqlite]',
+    '  graph-workbench pack enqueue <module-or-pack-id> --database <postgres-url> --set topic=hello [--installed]',
+    '  graph-workbench pack run <pack-id> --installed --set topic=hello [--root .graph-workbench/packs]',
+    '  graph-workbench pack resume <module-or-pack-id> --run <run-id> --database runs.sqlite [--tool-approval id=true] [--installed]',
+    '  graph-workbench worker start <module-or-pack-id> --database <postgres-url> [--concurrency 4] [--installed] [--container]',
+    '  graph-workbench pack schema [output.json]',
     '',
     'Repeat --set/--decision/--permission for more values. --input/--decisions also accept JSON or @file.json.',
     'Installed Pack execution uses a network-denied container by default. --unsafe-process-isolation is only for reviewed development fixtures.',
@@ -252,13 +257,14 @@ async function workbench(): Promise<void> {
   const port = Number(valueAfter('--port') ?? 4311);
   if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error('Workbench port must be an integer between 1 and 65535.');
   const workspace = process.cwd();
-  process.env.GRAPHWORK_PORT = String(port);
-  process.env.GRAPHWORK_DATA ??= resolve(workspace, '.graphwork/workbench.json');
-  process.env.GRAPHWORK_PACKS ??= resolve(workspace, '.graphwork/packs');
-  process.env.GRAPHWORK_TRUST ??= resolve(workspace, '.graphwork/trust.json');
+  await migrateLegacyWorkbenchDirectory(workspace);
+  process.env.GRAPH_WORKBENCH_PORT = String(port);
+  process.env.GRAPH_WORKBENCH_DATA ??= resolve(workspace, '.graph-workbench/workbench.json');
+  process.env.GRAPH_WORKBENCH_PACKS ??= resolve(workspace, '.graph-workbench/packs');
+  process.env.GRAPH_WORKBENCH_TRUST ??= resolve(workspace, '.graph-workbench/trust.json');
   const policyPath = valueAfter('--policy');
-  if (policyPath) process.env.GRAPHWORK_POLICY = resolve(policyPath);
-  process.env.GRAPHWORK_OPEN = args.includes('--no-open') ? 'false' : 'true';
+  if (policyPath) process.env.GRAPH_WORKBENCH_POLICY = resolve(policyPath);
+  process.env.GRAPH_WORKBENCH_OPEN = args.includes('--no-open') ? 'false' : 'true';
   const server = packagedDistribution
     ? new URL('./workbench-server.mjs', import.meta.url)
     : new URL('../../workbench/src/server.ts', import.meta.url);
@@ -444,14 +450,14 @@ async function packCommand(): Promise<void> {
     return;
   }
   if (action === 'init') {
-    if (!subject) throw new Error('Missing pack id. Example: graphwork pack init customer-success');
+    if (!subject) throw new Error('Missing pack id. Example: graph-workbench pack init customer-success');
     const directory = args[3] ?? resolve('packs', subject);
     const result = await scaffoldPack(subject, directory, { standalone: packagedDistribution });
     console.log(`✓ Created ${result.id} at ${result.directory}`);
     for (const file of result.files) console.log(`  ${file}`);
     const sourceFile = result.files.find((file) => file.startsWith('src/index.'))!;
     const modulePath = relative(process.cwd(), resolve(result.directory, sourceFile)).replaceAll('\\', '/');
-    console.log(`\nNext: pnpm graphwork pack validate ${modulePath}`);
+    console.log(`\nNext: pnpm graph-workbench pack validate ${modulePath}`);
     return;
   }
   if (action === 'schema') {
@@ -540,7 +546,7 @@ async function packCommand(): Promise<void> {
     const graph = graphId ? compiled.graphs.get(graphId) : undefined;
     if (!graph) throw new Error(`Graph "${graphId ?? ''}" does not exist in Pack "${compiled.manifest.id}".`);
     const queue = new PostgresRunQueue(postgresTarget(), {
-      queueName: valueAfter('--queue-name') ?? 'graphwork-runs',
+      queueName: valueAfter('--queue-name') ?? 'graph-workbench-runs',
     });
     const runId = valueAfter('--run-id') ?? `run-${randomUUID()}`;
     try {
@@ -651,7 +657,7 @@ async function workerCommand(): Promise<void> {
   }
   const store = new PostgresRunStore(database);
   const queue = new PostgresRunQueue(database, {
-    queueName: valueAfter('--queue-name') ?? 'graphwork-runs',
+    queueName: valueAfter('--queue-name') ?? 'graph-workbench-runs',
   });
   const authorizeTool = await toolAuthorizer();
   try {
@@ -700,7 +706,7 @@ async function main(): Promise<void> {
   if (command === 'pack') return packCommand();
   if (command === 'worker') return workerCommand();
   if (command === 'version' || command === '--version' || command === '-v') {
-    console.log(graphworkVersion);
+    console.log(graphWorkbenchVersion);
     return;
   }
   if (command === 'help' || command === '--help' || command === '-h') {

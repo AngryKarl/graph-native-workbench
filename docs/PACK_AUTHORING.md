@@ -45,20 +45,20 @@ domain boundary has leaked.
 
 ## Minimal workflow
 
-1. Run `pnpm graphwork pack init <pack-id>` or copy `packs/research`.
+1. Run `pnpm graph-workbench pack init <pack-id>` or copy `packs/research`.
 2. Define the ontology before prompts or UI.
 3. Declare graph state and each node's exact `reads` and `writes`.
-4. Run `pnpm graphwork pack validate <module>`; do not bypass compiler errors.
-5. Use `definePack` and `defineHandlers` from `@graphwork/pack-sdk`.
+4. Run `pnpm graph-workbench pack validate <module>`; do not bypass compiler errors.
+5. Use `definePack` and `defineHandlers` from `@graph-workbench/pack-sdk`.
 6. Implement deterministic handlers first, then add an Agent SDK adapter.
 7. Declare at least one deliverable and one zero-key fixture.
-8. Run `pnpm graphwork pack test <module>` and add one context-projection test.
+8. Run `pnpm graph-workbench pack test <module>` and add one context-projection test.
 9. Build and inspect the distributable artifact:
-   `pnpm graphwork pack build <module> --output dist/<id>-<version>.gpack`.
+   `pnpm graph-workbench pack build <module> --output dist/<id>-<version>.gpack`.
 10. Install it with explicit local trust, or publish it through a signed
     Registry, then run by Pack ID:
-    `pnpm graphwork pack install <artifact> --trust`, then
-    `pnpm graphwork pack run <id> --installed --set topic=hello`.
+    `pnpm graph-workbench pack install <artifact> --trust`, then
+    `pnpm graph-workbench pack run <id> --installed --set topic=hello`.
 11. Prove the Pack without changing `packages/core`.
 
 See [`.gpack` Package Format](PACK_FORMAT.md) for compatibility, integrity,

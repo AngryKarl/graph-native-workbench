@@ -12,7 +12,7 @@ function request(headers: IncomingMessage['headers']): IncomingMessage {
 
 describe('Workbench HTTP security', () => {
   it('requires a long authentication token for non-loopback listeners', () => {
-    expect(() => createWorkbenchHttpSecurity('0.0.0.0')).toThrow(/require GRAPHWORK_AUTH_TOKEN/);
+    expect(() => createWorkbenchHttpSecurity('0.0.0.0')).toThrow(/require GRAPH_WORKBENCH_AUTH_TOKEN/);
     expect(() => createWorkbenchHttpSecurity('0.0.0.0', 'short')).toThrow(/at least 32 characters/);
     expect(createWorkbenchHttpSecurity('127.0.0.1')).toEqual({ listenHost: '127.0.0.1' });
   });
@@ -54,7 +54,7 @@ describe('Workbench HTTP security', () => {
       '/api/workbench',
       security,
     )).not.toThrow();
-    const basic = Buffer.from(`graphwork:${token}`).toString('base64');
+    const basic = Buffer.from(`graph-workbench:${token}`).toString('base64');
     expect(() => enforceWorkbenchRequestSecurity(
       request({ host: 'workbench.example', authorization: `Basic ${basic}` }),
       '/',
@@ -75,8 +75,12 @@ describe('Workbench HTTP security', () => {
       ['application/json'],
     )).not.toThrow();
     expect(() => requireContentType(
+      request({ 'content-type': 'application/vnd.graph-workbench.gpack' }),
+      ['application/vnd.graph-workbench.gpack', 'application/octet-stream'],
+    )).not.toThrow();
+    expect(() => requireContentType(
       request({ 'content-type': 'application/vnd.graphwork.gpack' }),
-      ['application/vnd.graphwork.gpack', 'application/octet-stream'],
+      ['application/vnd.graph-workbench.gpack', 'application/vnd.graphwork.gpack'],
     )).not.toThrow();
   });
 });

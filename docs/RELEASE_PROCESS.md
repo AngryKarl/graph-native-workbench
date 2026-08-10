@@ -22,7 +22,7 @@ documented in the changelog with a migration note.
 Industry Packs declare their own semantic version and version each execution
 graph independently. Before 1.0, a Pack should pin compatible minor versions of
 the contracts, core and Pack SDK. `.gpack` inspection and signed Registry
-verification enforce the declared Graphwork engine range before installation.
+verification enforce the declared Graph Workbench engine range before installation.
 
 Compatibility is evaluated by the Pack SDK and exposed as a structured result:
 compatible, requires a newer engine, requires an older engine, or unsupported.
@@ -38,7 +38,7 @@ reactivated or rolled back.
 
 Workbench data has an independent integer `formatVersion`. The current format
 is version 2 and includes a stable workspace identity plus creation and update
-timestamps. When Graphwork opens a version 1 workspace it:
+timestamps. When Graph Workbench opens a version 1 workspace it:
 
 1. validates the legacy top-level structure;
 2. writes the untouched source to `workbench.json.v1.backup`;
@@ -60,7 +60,7 @@ non-publishing rehearsals, GitHub Pages deployment and key rotation.
 
 ## npm distribution
 
-The public `graphwork` package is built and smoke-tested independently of the
+The public `graph-workbench` package is built and smoke-tested independently of the
 workspace source layout. Follow the [npm distribution guide](NPM_DISTRIBUTION.md)
 for tarball inspection, the default dry-run workflow, provenance and immutable
 version checks.

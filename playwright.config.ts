@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
-const workspace = resolve('.graphwork/e2e');
+const workspace = resolve('.graph-workbench/e2e');
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -17,15 +17,15 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
   },
   webServer: {
-    command: 'pnpm graphwork workbench --port 4317 --no-open',
+    command: 'pnpm graph-workbench workbench --port 4317 --no-open',
     url: 'http://127.0.0.1:4317/api/health',
     reuseExistingServer: false,
     timeout: 30_000,
     env: {
-      GRAPHWORK_DATA: resolve(workspace, `workbench-${process.pid}.json`),
-      GRAPHWORK_PACKS: resolve(workspace, `packs-${process.pid}`),
-      GRAPHWORK_TRUST: resolve(workspace, `trust-${process.pid}.json`),
-      GRAPHWORK_POLICY: resolve(workspace, `policy-${process.pid}.json`),
+      GRAPH_WORKBENCH_DATA: resolve(workspace, `workbench-${process.pid}.json`),
+      GRAPH_WORKBENCH_PACKS: resolve(workspace, `packs-${process.pid}`),
+      GRAPH_WORKBENCH_TRUST: resolve(workspace, `trust-${process.pid}.json`),
+      GRAPH_WORKBENCH_POLICY: resolve(workspace, `policy-${process.pid}.json`),
     },
   },
 });

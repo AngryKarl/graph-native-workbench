@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { customerSuccessHandlers, customerSuccessPack, projectCustomerSuccessRun } from '@graphwork/pack-customer-success';
-import { compilePack, GraphRuntime, InMemoryContextGraphStore } from '@graphwork/core';
-import { runAllPackFixtures } from '@graphwork/pack-sdk';
+import { customerSuccessHandlers, customerSuccessPack, projectCustomerSuccessRun } from '@graph-workbench/pack-customer-success';
+import { compilePack, GraphRuntime, InMemoryContextGraphStore } from '@graph-workbench/core';
+import { runAllPackFixtures } from '@graph-workbench/pack-sdk';
 
 describe('Customer Success Industry Pack', () => {
   it('compiles as a domain-only Pack with two golden fixtures', () => {

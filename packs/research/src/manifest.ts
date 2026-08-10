@@ -1,8 +1,8 @@
-import type { IndustryPackManifest } from '@graphwork/contracts';
+import type { IndustryPackManifest } from '@graph-workbench/contracts';
 
 export const researchPack: IndustryPackManifest = {
   id: 'research',
-  version: '0.2.0',
+  version: '0.3.0',
   name: 'Cross-industry Research Pack',
   description:
     'A zero-key reference Pack that can optionally use a selected model for synthesis while preserving evidence, quality review, human approval, and a publishable deliverable.',

@@ -6,9 +6,9 @@ stakeholder evidence and renewal context into a reviewed renewal success plan.
 From the repository root:
 
 ```bash
-pnpm graphwork pack inspect packs/customer-success/src/index.ts
-pnpm graphwork pack test packs/customer-success/src/index.ts
-pnpm graphwork pack demo packs/customer-success/src/index.ts --fixture enterprise_renewal
+pnpm graph-workbench pack inspect packs/customer-success/src/index.ts
+pnpm graph-workbench pack test packs/customer-success/src/index.ts
+pnpm graph-workbench pack demo packs/customer-success/src/index.ts --fixture enterprise_renewal
 ```
 
 The Pack runs without a model key. It analyzes product and stakeholder signals

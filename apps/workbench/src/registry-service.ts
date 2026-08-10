@@ -3,11 +3,11 @@ import { dirname, isAbsolute, resolve } from 'node:path';
 import {
   evaluateEngineCompatibility,
   fetchSignedPackRegistry,
-  GRAPHWORK_ENGINE_VERSION,
+  GRAPH_WORKBENCH_ENGINE_VERSION,
   installPackFromSignedRegistry,
   listInstalledPacks,
   type RegistryInstallOptions,
-} from '@graphwork/pack-sdk';
+} from '@graph-workbench/pack-sdk';
 
 export interface RegistryTrustKeyConfig {
   readonly keyId: string;
@@ -62,6 +62,8 @@ export type RegistrySourceView = {
 
 const identifier = /^[a-z][a-z0-9_-]*$/;
 const keyIdentifier = /^[A-Za-z0-9._-]+$/;
+const legacyReferenceKeyId = 'graphwork.reference.v1';
+const referenceKeyId = 'graph-workbench.reference.v1';
 
 function object(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} must be an object.`);
@@ -112,6 +114,10 @@ function parseTrustConfig(input: unknown): RegistryTrustConfig {
         publicKeyPath: text(key.publicKeyPath, `registries[${index}].trustedKeys[${keyIndex}].publicKeyPath`),
       };
     });
+    const legacyReferenceKey = trustedKeys.find((key) => key.keyId === legacyReferenceKeyId);
+    if (legacyReferenceKey && !seenKeys.has(referenceKeyId)) {
+      trustedKeys.push({ ...legacyReferenceKey, keyId: referenceKeyId });
+    }
     const allowCrossOriginArtifacts = optionalBoolean(
       source.allowCrossOriginArtifacts,
       `registries[${index}].allowCrossOriginArtifacts`,
@@ -185,7 +191,7 @@ export class WorkbenchRegistryService {
           generatedAt: verified.payload.generatedAt,
           expiresAt: verified.payload.expiresAt,
           packs: verified.payload.packs.map((pack) => {
-            const compatibility = evaluateEngineCompatibility(pack.engineRange, GRAPHWORK_ENGINE_VERSION);
+            const compatibility = evaluateEngineCompatibility(pack.engineRange, GRAPH_WORKBENCH_ENGINE_VERSION);
             return {
               id: pack.id,
               name: pack.name ?? pack.id,

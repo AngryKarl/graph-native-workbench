@@ -25,8 +25,8 @@ async function artifactRequest<T>(path: string, file: File, trust = false): Prom
   const response = await fetch(path, {
     method: 'POST',
     headers: {
-      'content-type': 'application/vnd.graphwork.gpack',
-      ...(trust ? { 'x-graphwork-trust': 'true' } : {}),
+      'content-type': 'application/vnd.graph-workbench.gpack',
+      ...(trust ? { 'x-graph-workbench-trust': 'true' } : {}),
     },
     body: file,
   });

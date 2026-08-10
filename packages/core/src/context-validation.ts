@@ -2,7 +2,7 @@ import type {
   ContextObject,
   ContextRelation,
   IndustryPackManifest,
-} from '@graphwork/contracts';
+} from '@graph-workbench/contracts';
 import { assertValidState } from './state.js';
 
 export function assertPackObject(

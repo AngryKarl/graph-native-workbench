@@ -3,6 +3,7 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
+      # Stable persistence identifiers retained for existing Compose volumes.
       POSTGRES_DB: graphwork
       POSTGRES_USER: graphwork
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
@@ -20,24 +21,24 @@ services:
     restart: unless-stopped
     command: ["workbench", "--port", "4311", "--no-open"]
     environment:
-      GRAPHWORK_HOST: 0.0.0.0
-      GRAPHWORK_DATA: /data/workbench.json
-      GRAPHWORK_PACKS: /data/packs
-      GRAPHWORK_TRUST: /data/trust.json
-      GRAPHWORK_POLICY: /data/policy.json
-      GRAPHWORK_AUTH_TOKEN: ${GRAPHWORK_AUTH_TOKEN:?set GRAPHWORK_AUTH_TOKEN in deploy/.env}
+      GRAPH_WORKBENCH_HOST: 0.0.0.0
+      GRAPH_WORKBENCH_DATA: /data/workbench.json
+      GRAPH_WORKBENCH_PACKS: /data/packs
+      GRAPH_WORKBENCH_TRUST: /data/trust.json
+      GRAPH_WORKBENCH_POLICY: /data/policy.json
+      GRAPH_WORKBENCH_AUTH_TOKEN: ${GRAPH_WORKBENCH_AUTH_TOKEN:?set GRAPH_WORKBENCH_AUTH_TOKEN in deploy/.env}
     volumes:
       - workbench-data:/data
     ports:
-      - "127.0.0.1:${GRAPHWORK_PORT:-4311}:4311"
+      - "127.0.0.1:${GRAPH_WORKBENCH_PORT:-4311}:4311"
 
   worker:
     build:
       context: ..
     restart: unless-stopped
-    command: ["worker", "start", "research", "--concurrency", "${GRAPHWORK_WORKER_CONCURRENCY:-2}"]
+    command: ["worker", "start", "research", "--concurrency", "${GRAPH_WORKBENCH_WORKER_CONCURRENCY:-2}"]
     environment:
-      GRAPHWORK_POSTGRES_URL: postgresql://graphwork:${POSTGRES_PASSWORD}@postgres:5432/graphwork
+      GRAPH_WORKBENCH_POSTGRES_URL: postgresql://graphwork:${POSTGRES_PASSWORD}@postgres:5432/graphwork
     depends_on:
       postgres:
         condition: service_healthy

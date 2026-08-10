@@ -1,11 +1,11 @@
-# Graphwork
+# Graph Workbench
 
 **把企业 SOP 变成可执行、可检查的工作图，再把证据、决策和交付物沉淀为组织上下文。**
 
-[English](README.md) · `0.2.2` 公开 Alpha · MIT
+[English](README.md) · `0.3.0` 公开 Alpha · MIT
 
-Graphwork 是一个面向复杂行业工作的开源 Graph-native
-Workbench。它把 Agent 执行图与组织上下文图连接起来，使企业能够把自己的
+Graph Workbench 是一个面向复杂行业工作的开源 Graph Engineering
+框架。它把 Agent 执行图与组织上下文图连接起来，使企业能够把自己的
 SOP、角色、工具、知识、质量标准和交付物封装成可安装的 Industry Pack。
 
 ![Customer Success Renewal Pack 在 Workbench 中运行](docs/assets/customer-success-output.png)
@@ -22,15 +22,19 @@ SOP、角色、工具、知识、质量标准和交付物封装成可安装的 I
 需要 Node.js 24+ 和 pnpm，不需要账号、数据库或模型密钥：
 
 ```bash
-pnpm dlx graphwork
+pnpm dlx graph-workbench
 ```
 
 该命令会启动本地 Workbench、自动打开浏览器，并把工作区保存在当前目录的
-`.graphwork` 下。如果希望直接在终端体验完整的零密钥工作流：
+`.graph-workbench` 下。如果希望直接在终端体验完整的零密钥工作流：
 
 ```bash
-pnpm dlx graphwork demo
+pnpm dlx graph-workbench demo
 ```
+
+从 `graphwork@0.2.x` 升级时，第一次启动 `graph-workbench` 会把已有
+`.graphwork` 工作区复制到 `.graph-workbench`，且不会删除原目录。迁移期间仍
+兼容 `GRAPHWORK_*` 环境变量；新配置应使用 `GRAPH_WORKBENCH_*`。
 
 从源码参与开发：
 
@@ -45,7 +49,7 @@ Demo 会并行运行两条证据分支，在 Join 节点汇合，通过质量检
 测试人工暂停：
 
 ```bash
-pnpm dlx graphwork demo --pause
+pnpm dlx graph-workbench demo --pause
 ```
 
 ## 三个可安装示例
@@ -70,7 +74,7 @@ pnpm dlx graphwork demo --pause
 从源码运行客户成功案例：
 
 ```bash
-pnpm graphwork pack demo packs/customer-success/src/index.ts --fixture enterprise_renewal
+pnpm graph-workbench pack demo packs/customer-success/src/index.ts --fixture enterprise_renewal
 ```
 
 它会并行分析产品使用与利益相关方信号，评估续约风险，生成带负责人、
@@ -108,11 +112,11 @@ xAI Grok、Mistral AI、Groq、OpenRouter、Ollama 或自定义 OpenAI-compatibl
 节点范围、角色权限、风险授权和密钥隔离检查，并作为有序事件显示在运行控制台。
 
 图草稿、已安装 Pack、当前 Pack、运行记录和人工检查点会持久化到本地
-`.graphwork/workbench.json`。Architecture、Customer Success 与 Research 是内置 Pack；可信的
+`.graph-workbench/workbench.json`。Architecture、Customer Success 与 Research 是内置 Pack；可信的
 `.gpack` 可以直接从 Packs 页面导入，也可以通过 CLI 安装，并保存在
-`.graphwork/packs`。
+`.graph-workbench/packs`。
 
-可选的声明式工具策略位于 `.graphwork/policy.json`。暂停或完成的运行可以从控制台
+可选的声明式工具策略位于 `.graph-workbench/policy.json`。暂停或完成的运行可以从控制台
 导出为带完整性校验的可移植审计包，并在其他环境独立验证。
 
 Workbench 会自动、安全地升级工作区格式。打开旧版 v1 工作区时，会先保留未经修改的
@@ -121,20 +125,20 @@ Workbench 会自动、安全地升级工作区格式。打开旧版 v1 工作区
 ## 创建 Industry Pack
 
 ```bash
-pnpm graphwork pack init customer_success
-pnpm graphwork pack validate packs/customer_success/src/index.ts
-pnpm graphwork pack inspect packs/customer_success/src/index.ts
-pnpm graphwork pack test packs/customer_success/src/index.ts
-pnpm graphwork pack run packs/customer_success/src/index.ts --set "topic=renewal risk"
+pnpm graph-workbench pack init customer_success
+pnpm graph-workbench pack validate packs/customer_success/src/index.ts
+pnpm graph-workbench pack inspect packs/customer_success/src/index.ts
+pnpm graph-workbench pack test packs/customer_success/src/index.ts
+pnpm graph-workbench pack run packs/customer_success/src/index.ts --set "topic=renewal risk"
 ```
 
 把同一个 Pack 打包、安装并按 ID 运行：
 
 ```bash
-pnpm graphwork pack build packs/customer_success/src/index.ts --output customer_success-0.2.0.gpack
-pnpm graphwork pack inspect customer_success-0.2.0.gpack
-pnpm graphwork pack install customer_success-0.2.0.gpack --trust
-pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
+pnpm graph-workbench pack build packs/customer_success/src/index.ts --output customer_success-0.3.0.gpack
+pnpm graph-workbench pack inspect customer_success-0.3.0.gpack
+pnpm graph-workbench pack install customer_success-0.3.0.gpack --trust
+pnpm graph-workbench pack run customer_success --installed --set "topic=renewal risk"
 ```
 
 不同版本会并排保存，并支持激活、回滚和卸载。完整协议与安全边界见
@@ -143,14 +147,14 @@ pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
 组织也可以通过 Ed25519 签名的 HTTPS Registry 发布 Pack。发布者公钥由使用方
 独立配置，签名索引会在下载前绑定 Pack 身份、校验和、兼容范围与权限：
 
-公开的 [Graphwork Reference Registry](https://angrykarl.github.io/graphwork/registry/registry.json)
+公开的 [Graph Workbench Reference Registry](https://angrykarl.github.io/graph-workbench/registry/registry.json)
 已经提供三个示例 Pack。仓库中的发布者公钥和指纹见
 [Registry 发布指南](docs/REGISTRY_PUBLISHING.md)。
 
 ```bash
-pnpm graphwork pack registry verify https://packs.example.com/registry.json \
+pnpm graph-workbench pack registry verify https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
-pnpm graphwork pack registry install customer_success@0.2.0 \
+pnpm graph-workbench pack registry install customer_success@0.3.0 \
   --registry https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
 ```
@@ -159,7 +163,7 @@ pnpm graphwork pack registry install customer_success@0.2.0 \
 中执行，不会加载进 Workbench 主进程。详细边界见
 [Registry 信任与 Worker 隔离](docs/TRUST_AND_ISOLATION.md)。
 
-如需在界面中浏览已验签的目录，请在 `.graphwork/trust.json` 配置 Registry 地址
+如需在界面中浏览已验签的目录，请在 `.graph-workbench/trust.json` 配置 Registry 地址
 和发布者公钥路径，重启 Workbench 后打开 **Packs → Signed Registries**。具体格式见
 [Workbench Registry 配置](docs/TRUST_AND_ISOLATION.md#workbench-registry-catalog)。
 参考 Registry 的 Pack 构建、签名、验签与 GitHub Pages 发布流程见
@@ -172,8 +176,8 @@ pnpm graphwork pack registry install customer_success@0.2.0 \
 体验首个深度行业 Pack 及其两组零密钥黄金样例：
 
 ```bash
-pnpm graphwork pack inspect packs/architecture/src/index.ts
-pnpm graphwork pack test packs/architecture/src/index.ts
+pnpm graph-workbench pack inspect packs/architecture/src/index.ts
+pnpm graph-workbench pack test packs/architecture/src/index.ts
 pnpm demo:architecture
 ```
 
@@ -183,16 +187,16 @@ Architecture Pack 会把项目目标、场地条件、约束和来源证据推�
 需要保存并恢复人工审批流程时：
 
 ```bash
-pnpm graphwork pack run packs/research/src/index.ts --set "goal=Evaluate a workflow" --database runs.sqlite
-pnpm graphwork pack resume packs/research/src/index.ts --run <run-id> --database runs.sqlite --decision approval=true
+pnpm graph-workbench pack run packs/research/src/index.ts --set "goal=Evaluate a workflow" --database runs.sqlite
+pnpm graph-workbench pack resume packs/research/src/index.ts --run <run-id> --database runs.sqlite --decision approval=true
 ```
 
 团队部署可以让相同命令连接 PostgreSQL，并启动一个或多个 Worker。任务租约、心跳和
 重试由数据库持久化，图检查点仍是恢复执行的权威来源：
 
 ```bash
-graphwork worker start research --installed --database "$GRAPHWORK_POSTGRES_URL" --concurrency 4
-graphwork pack enqueue research --installed --database "$GRAPHWORK_POSTGRES_URL" --set "goal=Review a workflow"
+graph-workbench worker start research --installed --database "$GRAPH_WORKBENCH_POSTGRES_URL" --concurrency 4
+graph-workbench pack enqueue research --installed --database "$GRAPH_WORKBENCH_POSTGRES_URL" --set "goal=Review a workflow"
 ```
 
 零安装 npm 分发包的构建、完整烟测和发布门禁见

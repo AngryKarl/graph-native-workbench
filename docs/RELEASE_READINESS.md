@@ -1,6 +1,6 @@
 # Release readiness
 
-Graphwork has one local release gate:
+Graph Workbench has one local release gate:
 
 ```bash
 pnpm release:check

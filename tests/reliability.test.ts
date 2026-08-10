@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { GraphDefinition } from '@graphwork/contracts';
-import { compileGraph, GraphRuntime, SQLiteRunStore } from '@graphwork/core';
+import type { GraphDefinition } from '@graph-workbench/contracts';
+import { compileGraph, GraphRuntime, SQLiteRunStore } from '@graph-workbench/core';
 
 function graph(execution?: GraphDefinition['nodes'][number]['execution']): GraphDefinition {
   return {

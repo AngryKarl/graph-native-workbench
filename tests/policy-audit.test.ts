@@ -6,7 +6,7 @@ import {
   parseToolPolicy,
   verifyRunAuditBundle,
   type ToolAuthorizationRequest,
-} from '@graphwork/core';
+} from '@graph-workbench/core';
 
 const request = {
   runId: 'run-policy-test',

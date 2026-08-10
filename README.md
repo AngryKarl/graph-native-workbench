@@ -1,11 +1,11 @@
-# Graphwork
+# Graph Workbench
 
 **Turn an SOP into an executable, inspectable work graph — then preserve its
 evidence, decisions and deliverables as organizational context.**
 
-[中文说明](README.zh-CN.md) · `0.2.2` public alpha · MIT licensed
+[中文说明](README.zh-CN.md) · `0.3.0` public alpha · MIT licensed
 
-Graphwork is an open-source foundation for complex industry work.
+Graph Workbench is an open-source graph engineering framework for complex industry work.
 It connects an **execution graph** (agents, functions, tools, humans and quality
 gates) to a durable **context graph** (sources, evidence, artifacts, versions
 and decisions). Teams ship their own domain behavior as installable Industry
@@ -28,16 +28,21 @@ flowchart LR
 Requires Node.js 24+ and pnpm. No account, database or model key is required.
 
 ```bash
-pnpm dlx graphwork
+pnpm dlx graph-workbench
 ```
 
 This starts the local Workbench, opens it in your browser and stores the
-workspace under `.graphwork` in the current directory. Run the complete
+workspace under `.graph-workbench` in the current directory. Run the complete
 zero-key workflow in the terminal instead:
 
 ```bash
-pnpm dlx graphwork demo
+pnpm dlx graph-workbench demo
 ```
+
+Upgrading from `graphwork@0.2.x`? The first `graph-workbench` launch copies an
+existing `.graphwork` workspace to `.graph-workbench` without deleting the
+original. Legacy `GRAPHWORK_*` environment variables are accepted during the
+transition; new configuration should use `GRAPH_WORKBENCH_*`.
 
 For development from source:
 
@@ -53,7 +58,7 @@ into 7 typed context objects connected by 9 provenance-linked relations.
 Pause at the human gate instead:
 
 ```bash
-pnpm dlx graphwork demo --pause
+pnpm dlx graph-workbench demo --pause
 ```
 
 ## Three installable examples
@@ -78,7 +83,7 @@ inbox, deliverable console and context explorer:
 Run the customer-success case from source:
 
 ```bash
-pnpm graphwork pack demo packs/customer-success/src/index.ts --fixture enterprise_renewal
+pnpm graph-workbench pack demo packs/customer-success/src/index.ts --fixture enterprise_renewal
 ```
 
 It analyzes product and stakeholder signals in parallel, scores renewal risk,
@@ -118,11 +123,11 @@ stored in the workspace. Credentialed provider presets use locked official
 endpoints; only custom or keyless providers may use a reviewed compatible URL.
 
 Graph drafts, installed Packs, active Pack selection, runs and checkpoints are
-stored locally in `.graphwork/workbench.json`. Architecture, Customer Success
+stored locally in `.graph-workbench/workbench.json`. Architecture, Customer Success
 and Research are bundled; trusted `.gpack` artifacts can be imported from the
-Packs view or installed through the CLI and are stored under `.graphwork/packs`.
+Packs view or installed through the CLI and are stored under `.graph-workbench/packs`.
 
-Optional declarative tool policy lives at `.graphwork/policy.json`. Completed
+Optional declarative tool policy lives at `.graph-workbench/policy.json`. Completed
 or paused runs can be exported from the run console as portable, integrity-
 checked audit bundles for independent verification.
 
@@ -133,12 +138,12 @@ it to the current format with a stable workspace identity.
 ## Create an Industry Pack
 
 ```bash
-pnpm graphwork pack init customer_success
-pnpm graphwork pack validate packs/customer_success/src/index.ts
-pnpm graphwork pack inspect packs/customer_success/src/index.ts
-pnpm graphwork pack test packs/customer_success/src/index.ts
-pnpm graphwork pack run packs/customer_success/src/index.ts --set "topic=renewal risk"
-pnpm graphwork pack schema industry-pack.schema.json
+pnpm graph-workbench pack init customer_success
+pnpm graph-workbench pack validate packs/customer_success/src/index.ts
+pnpm graph-workbench pack inspect packs/customer_success/src/index.ts
+pnpm graph-workbench pack test packs/customer_success/src/index.ts
+pnpm graph-workbench pack run packs/customer_success/src/index.ts --set "topic=renewal risk"
+pnpm graph-workbench pack schema industry-pack.schema.json
 ```
 
 The generated Pack is executable immediately. It declares its ontology, state,
@@ -148,10 +153,10 @@ not edit the kernel.
 Package, install and run the same Pack as a versioned artifact:
 
 ```bash
-pnpm graphwork pack build packs/customer_success/src/index.ts --output customer_success-0.2.0.gpack
-pnpm graphwork pack inspect customer_success-0.2.0.gpack
-pnpm graphwork pack install customer_success-0.2.0.gpack --trust
-pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
+pnpm graph-workbench pack build packs/customer_success/src/index.ts --output customer_success-0.3.0.gpack
+pnpm graph-workbench pack inspect customer_success-0.3.0.gpack
+pnpm graph-workbench pack install customer_success-0.3.0.gpack --trust
+pnpm graph-workbench pack run customer_success --installed --set "topic=renewal risk"
 ```
 
 Installed versions live side by side and support explicit activation, rollback
@@ -161,14 +166,14 @@ Organizations can publish the same artifacts through an Ed25519-signed HTTPS
 Registry. Publisher keys are configured out of band; the signed index binds the
 Pack identity, checksum, compatibility and permissions before download:
 
-The public [Graphwork Reference Registry](https://angrykarl.github.io/graphwork/registry/registry.json)
+The public [Graph Workbench Reference Registry](https://angrykarl.github.io/graph-workbench/registry/registry.json)
 contains the three bundled examples. Its source-controlled publisher key and
 fingerprint are documented in the [Registry publishing guide](docs/REGISTRY_PUBLISHING.md).
 
 ```bash
-pnpm graphwork pack registry verify https://packs.example.com/registry.json \
+pnpm graph-workbench pack registry verify https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
-pnpm graphwork pack registry install customer_success@0.2.0 \
+pnpm graph-workbench pack registry install customer_success@0.3.0 \
   --registry https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
 ```
@@ -177,23 +182,23 @@ Installed third-party handlers and projectors execute in network-denied,
 read-only containers by default rather than in the Workbench process.
 
 To browse verified catalogs in the Workbench, configure Registry URLs and
-publisher public-key paths in `.graphwork/trust.json`, restart the Workbench,
+publisher public-key paths in `.graph-workbench/trust.json`, restart the Workbench,
 then open **Packs → Signed Registries**. See the
 [trust configuration and installation flow](docs/TRUST_AND_ISOLATION.md#workbench-registry-catalog).
 
 Run the first deep vertical Pack and its two zero-key golden fixtures:
 
 ```bash
-pnpm graphwork pack inspect packs/architecture/src/index.ts
-pnpm graphwork pack test packs/architecture/src/index.ts
+pnpm graph-workbench pack inspect packs/architecture/src/index.ts
+pnpm graph-workbench pack test packs/architecture/src/index.ts
 pnpm demo:architecture
 ```
 
 Persist and resume a human-gated run:
 
 ```bash
-pnpm graphwork pack run packs/research/src/index.ts --set "goal=Evaluate a workflow" --database runs.sqlite
-pnpm graphwork pack resume packs/research/src/index.ts --run <run-id> --database runs.sqlite --decision approval=true
+pnpm graph-workbench pack run packs/research/src/index.ts --set "goal=Evaluate a workflow" --database runs.sqlite
+pnpm graph-workbench pack resume packs/research/src/index.ts --run <run-id> --database runs.sqlite --decision approval=true
 ```
 
 For team execution, point the same commands at PostgreSQL and run one or more
@@ -201,8 +206,8 @@ workers. Queue leases, heartbeats and retries are durable; graph checkpoints
 remain the source of recovery:
 
 ```bash
-graphwork worker start research --installed --database "$GRAPHWORK_POSTGRES_URL" --concurrency 4
-graphwork pack enqueue research --installed --database "$GRAPHWORK_POSTGRES_URL" --set "goal=Review a workflow"
+graph-workbench worker start research --installed --database "$GRAPH_WORKBENCH_POSTGRES_URL" --concurrency 4
+graph-workbench pack enqueue research --installed --database "$GRAPH_WORKBENCH_POSTGRES_URL" --set "goal=Review a workflow"
 ```
 
 ## Why two graphs?
@@ -229,7 +234,7 @@ packages/pack-sdk    authoring, packaging, integrity and lifecycle SDK
 packs/architecture   Evidence-backed concept design Industry Pack
 packs/customer-success Evidence-based renewal workflow Industry Pack
 packs/research       Zero-key cross-industry reference Pack
-apps/cli             graphwork CLI
+apps/cli             graph-workbench CLI
 apps/workbench       Persistent local API and React graph editor
 tests                Contract and end-to-end behavior tests
 docs                 Charter, authoring guide, ADRs and roadmap
@@ -289,4 +294,4 @@ Early contributors can shape the public contract before 1.0. Start with
 Please also read the [Code of Conduct](CODE_OF_CONDUCT.md) and
 [Security Policy](SECURITY.md).
 
-Graphwork is available under the [MIT License](LICENSE).
+Graph Workbench is available under the [MIT License](LICENSE).

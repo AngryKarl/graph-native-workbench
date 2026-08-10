@@ -10,7 +10,7 @@ const expectedVersion = JSON.parse(
 ).version;
 const cli = process.argv[2]
   ? resolve(process.argv[2])
-  : resolve(root, 'apps/distribution/dist/graphwork.js');
+  : resolve(root, 'apps/distribution/dist/graph-workbench.js');
 
 function run(args, cwd) {
   return new Promise((resolveRun, reject) => {
@@ -22,7 +22,7 @@ function run(args, cwd) {
     child.once('error', reject);
     child.once('exit', (code) => code === 0
       ? resolveRun({ stdout, stderr })
-      : reject(new Error(`graphwork ${args.join(' ')} exited ${code}.\n${stdout}${stderr}`)));
+      : reject(new Error(`graph-workbench ${args.join(' ')} exited ${code}.\n${stdout}${stderr}`)));
   });
 }
 
@@ -53,7 +53,7 @@ async function waitForWorkbench(url, child, output) {
   throw new Error(`Packaged Workbench did not start within 15 seconds.\n${output()}`);
 }
 
-const workspace = await mkdtemp(join(tmpdir(), 'graphwork-distribution-'));
+const workspace = await mkdtemp(join(tmpdir(), 'graph-workbench-distribution-'));
 let serverChild;
 try {
   const version = await run(['--version'], workspace);
@@ -100,7 +100,7 @@ try {
   const health = await (await fetch(`${url}/api/health`)).json();
   if (health.status !== 'ok') throw new Error('Packaged Workbench health endpoint is not ready.');
   const html = await (await fetch(url)).text();
-  if (!html.includes('Graphwork')) throw new Error('Packaged Workbench client assets were not served.');
+  if (!html.includes('Graph Workbench')) throw new Error('Packaged Workbench client assets were not served.');
 
   console.log('Distribution smoke test passed: version, demo, standalone Pack, isolated install and Workbench.');
 } finally {

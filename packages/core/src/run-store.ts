@@ -3,7 +3,7 @@ import type {
   GraphEvent,
   GraphRunRecord,
   GraphRunStatus,
-} from '@graphwork/contracts';
+} from '@graph-workbench/contracts';
 import type { GraphState } from './state.js';
 
 export interface RunUpdate {

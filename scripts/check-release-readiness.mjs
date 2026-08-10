@@ -20,6 +20,7 @@ const requiredFiles = [
   'docs/THREAT_MODEL.md',
   'docs/WHY_TWO_GRAPHS.md',
   'docs/CUSTOMER_SUCCESS_CASE.md',
+  'docs/assets/graph-workbench-social-preview.jpg',
   'registry/reference-public.pem',
 ];
 await Promise.all(requiredFiles.map((file) => access(resolve(root, file))));
@@ -48,27 +49,27 @@ for (const { path, value } of manifests) {
 }
 
 const distribution = manifests.find((item) => item.path === 'apps/distribution/package.json')?.value;
-if (distribution?.name !== 'graphwork') {
-  throw new Error('Public package must use the Graphwork package name.');
+if (distribution?.name !== 'graph-workbench') {
+  throw new Error('Public package must use the Graph Workbench package name.');
 }
-if (JSON.stringify(distribution.bin) !== JSON.stringify({ graphwork: 'dist/graphwork.js' })) {
-  throw new Error('Public package must expose only the graphwork CLI command.');
+if (JSON.stringify(distribution.bin) !== JSON.stringify({ 'graph-workbench': 'dist/graph-workbench.js' })) {
+  throw new Error('Public package must expose only the graph-workbench CLI command.');
 }
 for (const dependency of ['esbuild', 'pg', 'pg-boss']) {
   if (!distribution?.dependencies?.[dependency]) {
-    throw new Error(`Public graphwork package is missing runtime dependency "${dependency}".`);
+    throw new Error(`Public graph-workbench package is missing runtime dependency "${dependency}".`);
   }
 }
 if (!distribution.repository?.url || !distribution.homepage || !distribution.bugs?.url) {
   throw new Error('Public package repository, homepage and issue metadata are required.');
 }
-const repositoryUrl = 'https://github.com/AngryKarl/graphwork';
+const repositoryUrl = 'https://github.com/AngryKarl/graph-workbench';
 if (
   distribution.repository.url !== `git+${repositoryUrl}.git`
   || distribution.homepage !== `${repositoryUrl}#readme`
   || distribution.bugs.url !== `${repositoryUrl}/issues`
 ) {
-  throw new Error('Public package metadata must point to the Graphwork repository.');
+  throw new Error('Public package metadata must point to the Graph Workbench repository.');
 }
 
 const referenceRegistry = JSON.parse(await readFile(resolve(root, 'registry/reference.json'), 'utf8'));

@@ -1,6 +1,6 @@
 # Threat Model
 
-This document describes the security boundaries of Graphwork 0.x.
+This document describes the security boundaries of Graph Workbench 0.x.
 It complements the concrete Registry and Worker controls in
 [Trust and isolation](TRUST_AND_ISOLATION.md).
 

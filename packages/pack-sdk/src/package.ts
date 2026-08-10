@@ -10,10 +10,10 @@ import {
 import { basename, dirname, isAbsolute, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
-import type { IndustryPackManifest } from '@graphwork/contracts';
-import { identifierSchema, industryPackManifestSchema } from '@graphwork/contracts';
-import type { HandlerRegistry } from '@graphwork/core';
-import { compilePack } from '@graphwork/core';
+import type { IndustryPackManifest } from '@graph-workbench/contracts';
+import { identifierSchema, industryPackManifestSchema } from '@graph-workbench/contracts';
+import type { HandlerRegistry } from '@graph-workbench/core';
+import { compilePack } from '@graph-workbench/core';
 import { build as bundle } from 'esbuild';
 import { unzipSync, zipSync, strFromU8, strToU8 } from 'fflate';
 import { valid, validRange } from 'semver';
@@ -23,8 +23,9 @@ import { loadPackModule } from './load.js';
 import packSdkManifest from '../package.json' with { type: 'json' };
 
 export const PACK_FORMAT_VERSION = 1 as const;
-export const GRAPHWORK_ENGINE_VERSION = packSdkManifest.version;
-const descriptorFile = 'graphwork.pack.json';
+export const GRAPH_WORKBENCH_ENGINE_VERSION = packSdkManifest.version;
+const descriptorFile = 'graph-workbench.pack.json';
+const legacyDescriptorFile = 'graphwork.pack.json';
 const manifestFile = 'manifest.json';
 const entryFile = 'dist/index.mjs';
 const maxArtifactBytes = 25 * 1024 * 1024;
@@ -32,7 +33,7 @@ const maxExpandedBytes = 50 * 1024 * 1024;
 
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
-export const packPackageDescriptorSchema = z.object({
+const descriptorFields = {
   formatVersion: z.literal(PACK_FORMAT_VERSION),
   pack: z.object({
     id: identifierSchema,
@@ -40,15 +41,33 @@ export const packPackageDescriptorSchema = z.object({
     manifest: z.literal(manifestFile),
     entry: z.literal(entryFile),
   }).strict(),
-  engine: z.object({
-    graphwork: z.string().refine((value) => Boolean(validRange(value)), 'Expected a semantic version range.'),
-  }).strict(),
   permissions: z.array(z.enum(['handlers.execute', 'context.write', 'network', 'filesystem'])),
   integrity: z.object({
     algorithm: z.literal('sha256'),
     files: z.record(z.string(), sha256Schema),
   }).strict(),
+};
+
+const engineRangeSchema = z.string().refine(
+  (value) => Boolean(validRange(value)),
+  'Expected a semantic version range.',
+);
+const currentPackPackageDescriptorSchema = z.object({
+  ...descriptorFields,
+  engine: z.object({ 'graph-workbench': engineRangeSchema }).strict(),
 }).strict();
+const legacyPackPackageDescriptorSchema = z.object({
+  ...descriptorFields,
+  engine: z.object({ graphwork: engineRangeSchema }).strict(),
+}).strict().transform(({ engine, ...descriptor }) => ({
+  ...descriptor,
+  engine: { 'graph-workbench': engine.graphwork },
+}));
+
+export const packPackageDescriptorSchema = z.union([
+  currentPackPackageDescriptorSchema,
+  legacyPackPackageDescriptorSchema,
+]);
 
 export type PackPackageDescriptor = z.infer<typeof packPackageDescriptorSchema>;
 
@@ -192,13 +211,14 @@ function writeRegistry(root: string, state: PackRegistryState): void {
 function decodeArtifact(artifact: string): {
   readonly raw: Uint8Array;
   readonly files: Record<string, Uint8Array>;
+  readonly descriptorName: string;
 } {
   const raw = readFileSync(artifact);
   if (raw.byteLength > maxArtifactBytes) {
     throw new Error(`Pack artifact exceeds the ${maxArtifactBytes / 1024 / 1024} MB limit.`);
   }
   let files: Record<string, Uint8Array>;
-  const allowed = new Set([descriptorFile, manifestFile, entryFile]);
+  const allowed = new Set([descriptorFile, legacyDescriptorFile, manifestFile, entryFile]);
   const seen = new Set<string>();
   let declaredExpandedBytes = 0;
   try {
@@ -230,12 +250,13 @@ function decodeArtifact(artifact: string): {
   if (names.some((name) => !allowed.has(name))) {
     throw new Error('Pack contains an unexpected file. Only declared v1 files are allowed.');
   }
-  if (![descriptorFile, manifestFile, entryFile].every((name) => files[name])) {
+  const descriptors = [descriptorFile, legacyDescriptorFile].filter((name) => files[name]);
+  if (descriptors.length !== 1 || ![manifestFile, entryFile].every((name) => files[name])) {
     throw new Error('Pack is missing its descriptor, manifest, or executable entry.');
   }
   const expandedBytes = Object.values(files).reduce((total, value) => total + value.byteLength, 0);
   if (expandedBytes > maxExpandedBytes) throw new Error('Expanded Pack exceeds the 50 MB safety limit.');
-  return { raw, files };
+  return { raw, files, descriptorName: descriptors[0]! };
 }
 
 export async function buildPackArtifact(options: PackBuildOptions): Promise<PackBuildResult> {
@@ -265,7 +286,7 @@ export async function buildPackArtifact(options: PackBuildOptions): Promise<Pack
   const descriptor = packPackageDescriptorSchema.parse({
     formatVersion: PACK_FORMAT_VERSION,
     pack: { id: manifest.id, version: manifest.version, manifest: manifestFile, entry: entryFile },
-    engine: { graphwork: options.engineRange ?? `^${GRAPHWORK_ENGINE_VERSION}` },
+    engine: { 'graph-workbench': options.engineRange ?? `^${GRAPH_WORKBENCH_ENGINE_VERSION}` },
     permissions,
     integrity: {
       algorithm: 'sha256',
@@ -292,9 +313,9 @@ export async function buildPackArtifact(options: PackBuildOptions): Promise<Pack
 
 export function inspectPackArtifact(filePath: string): PackArtifactInspection {
   const artifact = resolve(filePath);
-  const { raw, files } = decodeArtifact(artifact);
+  const { raw, files, descriptorName } = decodeArtifact(artifact);
   const descriptor = packPackageDescriptorSchema.parse(
-    JSON.parse(strFromU8(files[descriptorFile]!)) as unknown,
+    JSON.parse(strFromU8(files[descriptorName]!)) as unknown,
   );
   const hashedFiles = Object.keys(descriptor.integrity.files).sort();
   if (
@@ -316,8 +337,8 @@ export function inspectPackArtifact(filePath: string): PackArtifactInspection {
     throw new Error('Pack descriptor and manifest identity do not match.');
   }
   const compatibility = evaluateEngineCompatibility(
-    descriptor.engine.graphwork,
-    GRAPHWORK_ENGINE_VERSION,
+    descriptor.engine['graph-workbench'],
+    GRAPH_WORKBENCH_ENGINE_VERSION,
   );
   return {
     artifact,
@@ -334,7 +355,7 @@ export function installPackArtifact(
   filePath: string,
   options: PackInstallOptions = {},
 ): InstalledPackVersion {
-  const root = resolve(options.root ?? '.graphwork/packs');
+  const root = resolve(options.root ?? '.graph-workbench/packs');
   const inspection = inspectPackArtifact(filePath);
   if (!inspection.compatible) {
     throw new Error(inspection.compatibility.message);
@@ -349,7 +370,7 @@ export function installPackArtifact(
   const destination = resolve(root, id, version);
   const expectedParent = resolve(root, id);
   if (dirname(destination) !== expectedParent) throw new Error('Unsafe Pack installation path.');
-  const { files } = decodeArtifact(inspection.artifact);
+  const { files, descriptorName } = decodeArtifact(inspection.artifact);
   const temporary = resolve(root, '.tmp', randomUUID());
   try {
     for (const [name, contents] of Object.entries(files)) {
@@ -370,8 +391,8 @@ export function installPackArtifact(
       version,
       installedAt: new Date().toISOString(),
       artifactChecksum: inspection.checksum,
-      descriptorChecksum: sha256(files[descriptorFile]!),
-      engineRange: inspection.descriptor.engine.graphwork,
+      descriptorChecksum: sha256(files[descriptorName]!),
+      engineRange: inspection.descriptor.engine['graph-workbench'],
       trusted: true,
       directory: destination,
       trustSource: options.trustSource ?? { mode: 'local-explicit' },
@@ -398,11 +419,11 @@ export function installPackArtifact(
   }
 }
 
-export function listInstalledPacks(root = '.graphwork/packs'): PackRegistryState {
+export function listInstalledPacks(root = '.graph-workbench/packs'): PackRegistryState {
   return readRegistry(resolve(root));
 }
 
-export function activateInstalledPack(id: string, version: string, root = '.graphwork/packs'): InstalledPackVersion {
+export function activateInstalledPack(id: string, version: string, root = '.graph-workbench/packs'): InstalledPackVersion {
   const resolvedRoot = resolve(root);
   const registry = readRegistry(resolvedRoot);
   const record = registry.packs[id];
@@ -415,7 +436,7 @@ export function activateInstalledPack(id: string, version: string, root = '.grap
   return installation;
 }
 
-export function rollbackInstalledPack(id: string, root = '.graphwork/packs'): InstalledPackVersion {
+export function rollbackInstalledPack(id: string, root = '.graph-workbench/packs'): InstalledPackVersion {
   const resolvedRoot = resolve(root);
   const registry = readRegistry(resolvedRoot);
   const record = registry.packs[id];
@@ -431,7 +452,7 @@ export function rollbackInstalledPack(id: string, root = '.graphwork/packs'): In
 export function uninstallInstalledPack(
   id: string,
   version: string | undefined,
-  root = '.graphwork/packs',
+  root = '.graph-workbench/packs',
 ): void {
   const resolvedRoot = resolve(root);
   const registry = readRegistry(resolvedRoot);
@@ -466,7 +487,7 @@ export function uninstallInstalledPack(
 
 export async function inspectInstalledPack(
   id: string,
-  root = '.graphwork/packs',
+  root = '.graph-workbench/packs',
 ): Promise<InstalledPackFiles> {
   const resolvedRoot = resolve(root);
   const registry = readRegistry(resolvedRoot);
@@ -479,7 +500,10 @@ export async function inspectInstalledPack(
   if (resolve(installation.directory) !== expectedDirectory) {
     throw new Error(`Pack "${id}@${record.activeVersion}" has an unsafe registry path.`);
   }
-  const descriptorBytes = await readFile(resolve(installation.directory, descriptorFile));
+  const descriptorBytes = await readFile(resolve(installation.directory, descriptorFile)).catch(async (error) => {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    return readFile(resolve(installation.directory, legacyDescriptorFile));
+  });
   if (installation.descriptorChecksum && sha256(descriptorBytes) !== installation.descriptorChecksum) {
     throw new Error('Installed Pack descriptor integrity check failed.');
   }
@@ -511,7 +535,7 @@ export async function inspectInstalledPack(
 
 export async function loadInstalledPack(
   id: string,
-  root = '.graphwork/packs',
+  root = '.graph-workbench/packs',
 ): Promise<InstalledPackModule> {
   const inspected = await inspectInstalledPack(id, root);
   const { source: entry, descriptor, installation, pack: installedManifest } = inspected;
@@ -535,7 +559,7 @@ export async function loadInstalledPack(
   };
 }
 
-export async function loadAllInstalledPacks(root = '.graphwork/packs'): Promise<readonly InstalledPackModule[]> {
+export async function loadAllInstalledPacks(root = '.graph-workbench/packs'): Promise<readonly InstalledPackModule[]> {
   const registry = readRegistry(resolve(root));
   const results: InstalledPackModule[] = [];
   for (const id of Object.keys(registry.packs).sort()) results.push(await loadInstalledPack(id, root));
@@ -548,7 +572,7 @@ export function formatArtifactInspection(inspection: PackArtifactInspection): st
     `${inspection.manifest.name} (${inspection.manifest.id}@${inspection.manifest.version})`,
     `Artifact: ${basename(inspection.artifact)} (${inspection.bytes} bytes)`,
     `SHA-256: ${inspection.checksum}`,
-    `Engine: ${inspection.descriptor.engine.graphwork} (${inspection.compatibility.message})`,
+    `Engine: ${inspection.descriptor.engine['graph-workbench']} (${inspection.compatibility.message})`,
     `Permissions: ${trust}`,
   ].join('\n');
 }

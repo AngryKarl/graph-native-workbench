@@ -1,7 +1,7 @@
 import {
   distributedRunRequestSchema,
   type DistributedRunRequest,
-} from '@graphwork/contracts';
+} from '@graph-workbench/contracts';
 import {
   PgBoss,
   type ConstructorOptions as PgBossOptions,
@@ -50,9 +50,10 @@ export class PostgresRunQueue {
       : typeof connection === 'string'
         ? new PgBoss(connection)
         : new PgBoss(connection);
+    // Stable queue identity preserves pending work created by Graphwork 0.2.x.
     this.queueName = options.queueName ?? 'graphwork-runs';
     this.queueOptions = { ...defaultQueueOptions, ...options.queue };
-    this.boss.on('error', (error) => process.emitWarning(error, { code: 'GRAPHWORK_RUN_QUEUE' }));
+    this.boss.on('error', (error) => process.emitWarning(error, { code: 'GRAPH_WORKBENCH_RUN_QUEUE' }));
   }
 
   async start(): Promise<void> {

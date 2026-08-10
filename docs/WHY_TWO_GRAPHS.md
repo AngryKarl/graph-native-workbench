@@ -39,7 +39,7 @@ flowchart LR
 
 ## The projection boundary
 
-Graphwork does not copy every runtime value into organizational memory. A Pack
+Graph Workbench does not copy every runtime value into organizational memory. A Pack
 declares a projector that runs only after the workflow reaches an approved
 state. The projector converts run state into typed, versioned context objects
 and relations. Every confirmed object records the run, node, actor, timestamp

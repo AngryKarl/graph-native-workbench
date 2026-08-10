@@ -11,7 +11,7 @@ import {
   type GraphEvent,
   type GraphRunRecord,
   type IndustryPackManifest,
-} from '@graphwork/contracts';
+} from '@graph-workbench/contracts';
 import type { ContextGraphStore } from './context-store.js';
 import { assertPackObject, assertPackRelation } from './context-validation.js';
 import type { RunStore, RunUpdate } from './run-store.js';
@@ -75,6 +75,7 @@ interface RelationRow extends Record<string, unknown> {
 }
 
 const schemaStatements = [
+  // Stable table identity preserves migration history from Graphwork 0.2.x.
   `CREATE TABLE IF NOT EXISTS graphwork_schema_migrations (
     version INTEGER PRIMARY KEY,
     applied_at TIMESTAMPTZ NOT NULL
@@ -146,7 +147,7 @@ function nullableTimestamp(value: string | Date | null): string | null {
 
 function ownedPool(connectionString: string): PostgresQueryable {
   const pool = new Pool({ connectionString });
-  pool.on('error', (error) => process.emitWarning(error, { code: 'GRAPHWORK_POSTGRES_IDLE_CLIENT' }));
+  pool.on('error', (error) => process.emitWarning(error, { code: 'GRAPH_WORKBENCH_POSTGRES_IDLE_CLIENT' }));
   return pool as unknown as PostgresQueryable;
 }
 

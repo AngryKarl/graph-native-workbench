@@ -4,7 +4,7 @@ import {
   type ContextObject,
   type ContextRelation,
   type IndustryPackManifest,
-} from '@graphwork/contracts';
+} from '@graph-workbench/contracts';
 import { assertPackObject, assertPackRelation } from './context-validation.js';
 
 export interface ContextGraphStore {

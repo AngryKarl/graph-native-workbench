@@ -22,8 +22,8 @@ const shared = {
   sourcemap: false,
   legalComments: 'none',
   define: {
-    __GRAPHWORK_PACKAGED__: 'true',
-    __GRAPHWORK_VERSION__: JSON.stringify(manifest.version),
+    __GRAPH_WORKBENCH_PACKAGED__: 'true',
+    __GRAPH_WORKBENCH_VERSION__: JSON.stringify(manifest.version),
   },
 };
 
@@ -31,7 +31,7 @@ await Promise.all([
   build({
     ...shared,
     entryPoints: [resolve(root, 'apps/cli/src/main.ts')],
-    outfile: resolve(output, 'graphwork.js'),
+    outfile: resolve(output, 'graph-workbench.js'),
   }),
   build({
     ...shared,
@@ -45,11 +45,11 @@ await Promise.all([
   copyFile(resolve(root, 'packages/pack-sdk/src/isolated-worker.mjs'), resolve(output, 'isolated-worker.mjs')),
 ]);
 
-const entry = await readFile(resolve(output, 'graphwork.js'), 'utf8');
+const entry = await readFile(resolve(output, 'graph-workbench.js'), 'utf8');
 if (!entry.startsWith('#!/usr/bin/env node')) throw new Error('Distribution entrypoint is missing its Node.js shebang.');
-const files = await Promise.all(['graphwork.js', 'workbench-server.mjs', 'isolated-worker.mjs'].map(async (file) => ({
+const files = await Promise.all(['graph-workbench.js', 'workbench-server.mjs', 'isolated-worker.mjs'].map(async (file) => ({
   file,
   bytes: (await stat(resolve(output, file))).size,
 })));
-console.log(`Built graphwork@${manifest.version}`);
+console.log(`Built graph-workbench@${manifest.version}`);
 for (const file of files) console.log(`  ${file.file} (${file.bytes} bytes)`);

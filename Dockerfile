@@ -17,4 +17,4 @@ WORKDIR /data
 EXPOSE 4311
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:4311/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
-ENTRYPOINT ["node", "/app/dist/graphwork.js"]
+ENTRYPOINT ["node", "/app/dist/graph-workbench.js"]

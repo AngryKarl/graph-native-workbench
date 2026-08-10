@@ -14,8 +14,8 @@ import type {
   GraphCheckpoint,
   GraphDefinition,
   GraphEvent,
-} from '@graphwork/contracts';
-import type { GraphState } from '@graphwork/core';
+} from '@graph-workbench/contracts';
+import type { GraphState } from '@graph-workbench/core';
 
 export interface StoredGraphDraft {
   readonly graph: GraphDefinition;
@@ -111,7 +111,7 @@ export function migrateWorkbenchWorkspace(
     };
   }
   if (root.version !== 1) {
-    throw new Error('Unsupported workspace data format. This Graphwork release can migrate version 1 or open formatVersion 2.');
+    throw new Error('Unsupported workspace data format. This Graph Workbench release can migrate version 1 or open formatVersion 2.');
   }
   const now = (options.now ?? new Date()).toISOString();
   return {

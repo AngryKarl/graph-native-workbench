@@ -47,7 +47,7 @@ const navItems: Array<{ view: PrimaryView; label: string; icon: typeof LayoutDas
 ];
 
 function Logo() {
-  return <div className="brand-mark" aria-label="Graphwork"><i /><i /><i /><i /></div>;
+  return <div className="brand-mark" aria-label="Graph Workbench"><i /><i /><i /><i /></div>;
 }
 
 function sameEditor(left: EditorSnapshot, right: EditorSnapshot): boolean {
@@ -366,7 +366,7 @@ export function App() {
       </aside>
 
       <header className="topbar">
-        <div className="workspace-name"><Box size={16} /><span><small>Local workspace</small><strong>Graph Native</strong></span></div>
+        <div className="workspace-name"><Box size={16} /><span><small>Local workspace</small><strong>Graph Workbench</strong></span></div>
         <div className="pack-switcher"><PackageOpen size={15} /><select value={pack.id} disabled={busyPackId !== null} onChange={(event) => { void mutatePack(event.target.value, 'activate'); }}>{bootstrap.catalog.filter((item) => bootstrap.installedPackIds.includes(item.id)).map((item) => <option key={item.id} value={item.id}>{item.name} · v{item.version}</option>)}</select></div>
         {view === 'editor' ? <div className="topbar-actions">
           <span className={`save-state state-${saveState}`}>{saveState === 'saving' ? <LoaderCircle className="spin" size={13} /> : saveState === 'saved' ? <Check size={13} /> : <CircleDot size={13} />}{saveState}</span>
@@ -383,7 +383,7 @@ export function App() {
           <div className="editor-layout">
             <aside className="node-palette">
               <div className="palette-heading"><strong>Nodes</strong><span>Drag or click to add</span></div>
-              <div className="palette-list">{palette.map(({ kind, icon: Icon, description }) => <button key={kind} draggable onClick={() => addNode(kind)} onDragStart={(event) => { event.dataTransfer.setData('application/graphwork-node', kind); event.dataTransfer.effectAllowed = 'copy'; }}><span className={`palette-icon kind-${kind}`}><Icon size={15} /></span><span><strong>{nodeKindLabel[kind]}</strong><small>{description}</small></span></button>)}</div>
+              <div className="palette-list">{palette.map(({ kind, icon: Icon, description }) => <button key={kind} draggable onClick={() => addNode(kind)} onDragStart={(event) => { event.dataTransfer.setData('application/graph-workbench-node', kind); event.dataTransfer.effectAllowed = 'copy'; }}><span className={`palette-icon kind-${kind}`}><Icon size={15} /></span><span><strong>{nodeKindLabel[kind]}</strong><small>{description}</small></span></button>)}</div>
               <div className="palette-footer"><GitFork size={15} /><span><strong>{editor.graph.nodes.length} nodes</strong><small>{editor.graph.edges.length} connections</small></span></div>
             </aside>
             <section className="canvas-region">

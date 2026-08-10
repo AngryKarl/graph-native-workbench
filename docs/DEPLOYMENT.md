@@ -11,11 +11,11 @@ docker compose --env-file deploy/.env -f deploy/compose.yml up --build -d
 ```
 
 Open `http://127.0.0.1:4311`. The browser prompts for HTTP Basic authentication;
-use any username and `GRAPHWORK_AUTH_TOKEN` as the password. The port remains
+use any username and `GRAPH_WORKBENCH_AUTH_TOKEN` as the password. The port remains
 bound to loopback by default. Put an HTTPS reverse proxy in front before exposing
 it to a network because Basic credentials must not cross an unencrypted network.
 
-The server rejects non-loopback listeners unless `GRAPHWORK_AUTH_TOKEN`
+The server rejects non-loopback listeners unless `GRAPH_WORKBENCH_AUTH_TOKEN`
 contains at least 32 characters. It also rejects cross-origin requests and Host
 headers that do not belong to a loopback listener. API clients may send the same
 token as `Authorization: Bearer <token>`.
@@ -40,7 +40,7 @@ volumes and is intentionally not part of the normal shutdown path.
 ## Production boundary
 
 - Use a managed PostgreSQL service with TLS, backups and least-privilege
-  credentials; keep `GRAPHWORK_POSTGRES_URL` in a secret manager.
+  credentials; keep `GRAPH_WORKBENCH_POSTGRES_URL` in a secret manager.
 - Run multiple identical Worker replicas for capacity. pg-boss coordinates
   leases, heartbeats and retry recovery in PostgreSQL.
 - Keep Registry signing keys outside the runtime. Mount only public trust keys.

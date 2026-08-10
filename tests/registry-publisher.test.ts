@@ -7,7 +7,7 @@ import {
   inspectPackArtifact,
   signPackRegistry,
   verifySignedPackRegistry,
-} from '@graphwork/pack-sdk';
+} from '@graph-workbench/pack-sdk';
 
 const temporaryDirectories: string[] = [];
 
@@ -26,20 +26,20 @@ describe('Registry release publisher', () => {
       {
         configDirectory: resolve('registry'),
         outputDirectory,
-        artifactBaseUrl: 'https://github.com/example/project/releases/download/packs-v0.2.0',
+        artifactBaseUrl: 'https://github.com/example/project/releases/download/packs-v0.3.0',
         expiresInDays: 30,
         now,
       },
     );
 
     expect(release.payload).toMatchObject({
-      registry: { id: 'graphwork_reference', name: 'Graphwork Reference Registry' },
+      registry: { id: 'graph_workbench_reference', name: 'Graph Workbench Reference Registry' },
       generatedAt: now.toISOString(),
       expiresAt: '2026-09-03T12:00:00.000Z',
       packs: [
-        { id: 'research', version: '0.2.0', engineRange: '^0.2.2' },
-        { id: 'architecture', version: '0.2.0', engineRange: '^0.2.2' },
-        { id: 'customer_success', version: '0.2.0', engineRange: '^0.2.2' },
+        { id: 'research', version: '0.3.0', engineRange: '^0.3.0' },
+        { id: 'architecture', version: '0.3.0', engineRange: '^0.3.0' },
+        { id: 'customer_success', version: '0.3.0', engineRange: '^0.3.0' },
       ],
     });
     expect(release.artifacts).toHaveLength(3);
@@ -48,13 +48,13 @@ describe('Registry release publisher', () => {
       expect(release.payload.packs.some((pack) => pack.artifactChecksum === artifact.checksum)).toBe(true);
     }
     expect(release.payload.packs[0]?.artifact).toBe(
-      'https://github.com/example/project/releases/download/packs-v0.2.0/packs/research-0.2.0.gpack',
+      'https://github.com/example/project/releases/download/packs-v0.3.0/packs/research-0.3.0.gpack',
     );
 
     const { privateKey, publicKey } = generateKeyPairSync('ed25519');
-    const signed = signPackRegistry(release.payload, 'graphwork.reference.v1', privateKey);
+    const signed = signPackRegistry(release.payload, 'graph-workbench.reference.v1', privateKey);
     expect(verifySignedPackRegistry(signed, {
-      trustedKeys: { 'graphwork.reference.v1': publicKey },
+      trustedKeys: { 'graph-workbench.reference.v1': publicKey },
       now,
     }).payload.packs).toHaveLength(3);
   });
@@ -85,6 +85,6 @@ describe('Registry release publisher', () => {
       outputDirectory: resolve('tests', '.unused-release'),
       artifactBaseUrl: 'https://example.com/releases/',
       expiresInDays: 30,
-    })).rejects.toThrow(/duplicate Pack "research@0.2.0"/);
+    })).rejects.toThrow(/duplicate Pack "research@0.3.0"/);
   });
 });

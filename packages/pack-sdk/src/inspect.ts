@@ -1,4 +1,4 @@
-import { compilePack } from '@graphwork/core';
+import { compilePack } from '@graph-workbench/core';
 
 export interface PackInspection {
   readonly id: string;

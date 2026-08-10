@@ -1,6 +1,6 @@
 # Roadmap
 
-Graphwork's first public alpha is available. The roadmap separates what ships
+Graph Workbench's first public alpha is available. The roadmap separates what ships
 today from the evidence still required before a stable 1.0 release.
 
 ## Public-alpha release candidate

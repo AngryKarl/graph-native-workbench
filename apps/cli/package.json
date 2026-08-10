@@ -1,16 +1,16 @@
 {
-  "name": "@graphwork/cli",
-  "version": "0.2.2",
+  "name": "@graph-workbench/cli",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "license": "MIT",
   "bin": {
-    "graphwork": "./src/main.ts"
+    "graph-workbench": "./src/main.ts"
   },
   "dependencies": {
-    "@graphwork/contracts": "workspace:*",
-    "@graphwork/core": "workspace:*",
-    "@graphwork/pack-research": "workspace:*",
-    "@graphwork/pack-sdk": "workspace:*"
+    "@graph-workbench/contracts": "workspace:*",
+    "@graph-workbench/core": "workspace:*",
+    "@graph-workbench/pack-research": "workspace:*",
+    "@graph-workbench/pack-sdk": "workspace:*"
   }
 }
