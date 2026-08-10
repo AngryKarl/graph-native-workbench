@@ -64,6 +64,8 @@ const identifier = /^[a-z][a-z0-9_-]*$/;
 const keyIdentifier = /^[A-Za-z0-9._-]+$/;
 const legacyReferenceKeyId = 'graphwork.reference.v1';
 const referenceKeyId = 'graph-workbench.reference.v1';
+const legacyReferenceRegistryUrl = 'https://angrykarl.github.io/graphwork/registry/registry.json';
+const referenceRegistryUrl = 'https://angrykarl.github.io/graph-workbench/registry/registry.json';
 
 function object(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} must be an object.`);
@@ -92,7 +94,8 @@ function parseTrustConfig(input: unknown): RegistryTrustConfig {
     if (!identifier.test(id)) throw new Error(`Registry id "${id}" is invalid.`);
     if (seen.has(id)) throw new Error(`Registry id "${id}" is duplicated.`);
     seen.add(id);
-    const url = text(source.url, `registries[${index}].url`);
+    const configuredUrl = text(source.url, `registries[${index}].url`);
+    const url = configuredUrl === legacyReferenceRegistryUrl ? referenceRegistryUrl : configuredUrl;
     const parsedUrl = new URL(url);
     const allowInsecureHttp = optionalBoolean(source.allowInsecureHttp, `registries[${index}].allowInsecureHttp`);
     if (parsedUrl.protocol === 'http:' && (!allowInsecureHttp || !['127.0.0.1', 'localhost', '::1'].includes(parsedUrl.hostname))) {
