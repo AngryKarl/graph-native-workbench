@@ -1,6 +1,6 @@
 import { performance } from 'node:perf_hooks';
-import { compilePack, GraphRuntime, InMemoryContextGraphStore } from '@graphwork/core';
-import { projectResearchRun, researchHandlers, researchPack } from '@graphwork/pack-research';
+import { compilePack, GraphRuntime, InMemoryContextGraphStore } from '@graph-workbench/core';
+import { projectResearchRun, researchHandlers, researchPack } from '@graph-workbench/pack-research';
 
 interface Measurement {
   readonly name: string;

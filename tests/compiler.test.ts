@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { researchPack } from '@graphwork/pack-research';
-import { compileGraph, compilePack, GraphCompileError } from '@graphwork/core';
+import { researchPack } from '@graph-workbench/pack-research';
+import { compileGraph, compilePack, GraphCompileError } from '@graph-workbench/core';
 
 describe('graph compiler', () => {
   it('compiles a valid Industry Pack and its execution graph', () => {

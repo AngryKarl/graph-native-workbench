@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { verifyRunAuditBundle } from '@graphwork/core';
-import { researchPack } from '@graphwork/pack-research';
+import { verifyRunAuditBundle } from '@graph-workbench/core';
+import { researchPack } from '@graph-workbench/pack-research';
 import { bundledPackCatalog } from '../apps/workbench/src/catalog.js';
 import { WorkbenchService } from '../apps/workbench/src/service.js';
 
@@ -89,7 +89,7 @@ describe('Workbench service', () => {
             id: 'read-1',
             type: 'function',
             function: {
-              name: 'graphwork_tool_2',
+              name: 'graph_workbench_tool_2',
               arguments: '{"locator":"reference://technology/runtime-test"}',
             },
           }] } }],
@@ -111,7 +111,7 @@ describe('Workbench service', () => {
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     };
     const service = new WorkbenchService({
-      modelEnvironment: { GRAPHWORK_MODEL_API_KEY: secret },
+      modelEnvironment: { GRAPH_WORKBENCH_MODEL_API_KEY: secret },
       modelFetch: request,
     });
     service.install('research');
@@ -168,7 +168,7 @@ describe('Workbench service', () => {
           id: 'governed-read-1',
           type: 'function',
           function: {
-            name: 'graphwork_tool_2',
+            name: 'graph_workbench_tool_2',
             arguments: '{"locator":"reference://technology/runtime-test"}',
           },
         }] } }],
@@ -256,7 +256,7 @@ describe('Workbench service', () => {
   });
 
   it('persists installed Packs, the active Pack, drafts and runs across service restarts', async () => {
-    const directory = await mkdtemp(join(tmpdir(), 'graphwork-'));
+    const directory = await mkdtemp(join(tmpdir(), 'graph-workbench-'));
     const dataFile = join(directory, 'workbench.json');
     try {
       const first = new WorkbenchService({ dataFile });

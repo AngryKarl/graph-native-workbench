@@ -100,7 +100,7 @@ export function PackManager({
           <div className="registry-empty"><LoaderCircle className="spin" size={20} /><strong>Verifying registries</strong><p>Checking publisher signatures and catalog expiry.</p></div>
         ) : null}
         {!registriesLoading && registries.length === 0 ? (
-          <div className="registry-empty"><KeyRound size={20} /><strong>No trusted Registry configured</strong><p>Add publisher public keys to <code>.graphwork/trust.json</code> to browse signed Packs.</p></div>
+          <div className="registry-empty"><KeyRound size={20} /><strong>No trusted Registry configured</strong><p>Add publisher public keys to <code>.graph-workbench/trust.json</code> to browse signed Packs.</p></div>
         ) : null}
         {registries.map((registry) => (
           <div className={`registry-card ${registry.status}`} key={registry.id}>

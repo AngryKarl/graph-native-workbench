@@ -50,12 +50,12 @@ jobs:
         if: ${{ inputs.publish }}
         run: |
           version="$(node -p "require('./apps/distribution/package.json').version")"
-          if npm view "graphwork@${version}" version >/dev/null 2>&1; then
-            echo "graphwork@${version} already exists; published versions are immutable." >&2
+          if npm view "graph-workbench@${version}" version >/dev/null 2>&1; then
+            echo "graph-workbench@${version} already exists; published versions are immutable." >&2
             exit 1
           fi
 
-      - name: Publish graphwork
+      - name: Publish graph-workbench
         if: ${{ inputs.publish }}
         working-directory: apps/distribution
         env:

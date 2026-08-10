@@ -1,8 +1,8 @@
-import type { IndustryPackManifest } from '@graphwork/contracts';
+import type { IndustryPackManifest } from '@graph-workbench/contracts';
 
 export const customerSuccessPack: IndustryPackManifest = {
   id: 'customer_success',
-  version: '0.2.0',
+  version: '0.3.0',
   name: 'Customer Success Renewal Pack',
   description:
     'Turn product-health signals, stakeholder evidence and commercial context into a governed renewal-risk assessment and approved success plan.',

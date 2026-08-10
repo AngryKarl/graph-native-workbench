@@ -1,5 +1,5 @@
-import type { ContextObject, ContextRelation, GraphEvent } from '@graphwork/contracts';
-import type { ContextGraphStore, GraphState } from '@graphwork/core';
+import type { ContextObject, ContextRelation, GraphEvent } from '@graph-workbench/contracts';
+import type { ContextGraphStore, GraphState } from '@graph-workbench/core';
 
 interface CompletedRun {
   readonly runId: string;

@@ -1,4 +1,4 @@
-import type { HandlerRegistry } from '@graphwork/core';
+import type { HandlerRegistry } from '@graph-workbench/core';
 
 interface EvidenceItem {
   source: string;

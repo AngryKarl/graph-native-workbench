@@ -3,7 +3,7 @@ import type {
   IndustryPackManifest,
   RoleDefinition,
   ToolDefinition,
-} from '@graphwork/contracts';
+} from '@graph-workbench/contracts';
 import type { GraphState } from './state.js';
 
 export interface HandlerContext {

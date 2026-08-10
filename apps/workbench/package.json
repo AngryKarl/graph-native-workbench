@@ -1,6 +1,6 @@
 {
-  "name": "@graphwork/workbench",
-  "version": "0.2.2",
+  "name": "@graph-workbench/workbench",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -11,12 +11,12 @@
     "start": "tsx src/server.ts"
   },
   "dependencies": {
-    "@graphwork/contracts": "workspace:*",
-    "@graphwork/core": "workspace:*",
-    "@graphwork/pack-sdk": "workspace:*",
-    "@graphwork/pack-architecture": "workspace:*",
-    "@graphwork/pack-customer-success": "workspace:*",
-    "@graphwork/pack-research": "workspace:*",
+    "@graph-workbench/contracts": "workspace:*",
+    "@graph-workbench/core": "workspace:*",
+    "@graph-workbench/pack-sdk": "workspace:*",
+    "@graph-workbench/pack-architecture": "workspace:*",
+    "@graph-workbench/pack-customer-success": "workspace:*",
+    "@graph-workbench/pack-research": "workspace:*",
     "@xyflow/react": "^12.11.2",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",

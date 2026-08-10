@@ -24,7 +24,7 @@ export function evaluateEngineCompatibility(
       code: 'unsupported-engine-range',
       engineVersion,
       requiredRange,
-      message: `Graphwork ${engineVersion} cannot evaluate engine range ${requiredRange}.`,
+      message: `Graph Workbench ${engineVersion} cannot evaluate engine range ${requiredRange}.`,
     };
   }
   if (satisfies(engineVersion, requiredRange)) {
@@ -33,7 +33,7 @@ export function evaluateEngineCompatibility(
       code: 'compatible',
       engineVersion,
       requiredRange,
-      message: `Compatible with Graphwork ${engineVersion}.`,
+      message: `Compatible with Graph Workbench ${engineVersion}.`,
     };
   }
   const code: EngineCompatibilityCode = ltr(engineVersion, requiredRange)
@@ -42,15 +42,15 @@ export function evaluateEngineCompatibility(
       ? 'requires-older-engine'
       : 'unsupported-engine-range';
   const action = code === 'requires-newer-engine'
-    ? 'Upgrade Graphwork before installing this Pack.'
+    ? 'Upgrade Graph Workbench before installing this Pack.'
     : code === 'requires-older-engine'
-      ? 'Use an older compatible Graphwork release or upgrade the Pack.'
-      : 'Use a Pack release whose engine range includes this Graphwork version.';
+      ? 'Use an older compatible Graph Workbench release or upgrade the Pack.'
+      : 'Use a Pack release whose engine range includes this Graph Workbench version.';
   return {
     compatible: false,
     code,
     engineVersion,
     requiredRange,
-    message: `Pack requires Graphwork ${requiredRange}; current engine is ${engineVersion}. ${action}`,
+    message: `Pack requires Graph Workbench ${requiredRange}; current engine is ${engineVersion}. ${action}`,
   };
 }

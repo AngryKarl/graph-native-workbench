@@ -1,6 +1,6 @@
 {
-  "name": "@graphwork/contracts",
-  "version": "0.2.2",
+  "name": "@graph-workbench/contracts",
+  "version": "0.3.0",
   "type": "module",
   "license": "MIT",
   "exports": {

@@ -1,6 +1,6 @@
 # Registry trust and Worker isolation
 
-Graphwork treats publisher identity and code execution as separate
+Graph Workbench treats publisher identity and code execution as separate
 security boundaries.
 
 ## Signed Registry v1
@@ -9,7 +9,7 @@ A Registry document contains a versioned payload and a detached Ed25519
 signature. The payload binds every Pack identity and version to:
 
 - the artifact URL and SHA-256 checksum;
-- the required Graphwork engine range;
+- the required Graph Workbench engine range;
 - the declared executable permissions;
 - a generation time and mandatory expiry time.
 
@@ -32,18 +32,18 @@ Create a payload containing the Registry metadata and Pack entries, then sign
 and verify it:
 
 ```bash
-pnpm graphwork pack registry sign registry-payload.json \
+pnpm graph-workbench pack registry sign registry-payload.json \
   --key-id acme.release --private-key registry-private.pem \
   --output registry.json
 
-pnpm graphwork pack registry verify registry.json \
+pnpm graph-workbench pack registry verify registry.json \
   --key acme.release=registry-public.pem
 ```
 
 Install a Pack from an HTTPS Registry:
 
 ```bash
-pnpm graphwork pack registry install support_ops@0.1.0 \
+pnpm graph-workbench pack registry install support_ops@0.1.0 \
   --registry https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
 ```
@@ -54,8 +54,8 @@ metadata.
 
 ### Workbench Registry catalog
 
-The Workbench reads trusted Registry sources from `.graphwork/trust.json` by
-default. Set `GRAPHWORK_TRUST` to use a different file. Public-key paths
+The Workbench reads trusted Registry sources from `.graph-workbench/trust.json` by
+default. Set `GRAPH_WORKBENCH_TRUST` to use a different file. Public-key paths
 are resolved relative to the trust file:
 
 ```json
@@ -122,8 +122,8 @@ values are passed by name so their contents do not appear on the command line.
 The CLI uses the same mode for installed Pack workers:
 
 ```bash
-graphwork worker start customer_success --installed \
-  --database "$GRAPHWORK_POSTGRES_URL"
+graph-workbench worker start customer_success --installed \
+  --database "$GRAPH_WORKBENCH_POSTGRES_URL"
 ```
 
 Use `--container-network <network> --allow-network` only after reviewing a Pack

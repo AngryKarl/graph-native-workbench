@@ -13,7 +13,7 @@ local workbench rather than a one-off prompt.
 ## Run the verified fixture
 
 ```bash
-pnpm graphwork pack demo packs/customer-success/src/index.ts \
+pnpm graph-workbench pack demo packs/customer-success/src/index.ts \
   --fixture enterprise_renewal
 ```
 
@@ -36,11 +36,11 @@ The zero-key workflow:
 ## Package and install the same workflow
 
 ```bash
-pnpm graphwork pack build packs/customer-success/src/index.ts \
-  --output customer_success-0.2.0.gpack
-pnpm graphwork pack inspect customer_success-0.2.0.gpack
-pnpm graphwork pack install customer_success-0.2.0.gpack --trust
-pnpm graphwork workbench
+pnpm graph-workbench pack build packs/customer-success/src/index.ts \
+  --output customer_success-0.3.0.gpack
+pnpm graph-workbench pack inspect customer_success-0.3.0.gpack
+pnpm graph-workbench pack install customer_success-0.3.0.gpack --trust
+pnpm graph-workbench workbench
 ```
 
 Open **Packs**, choose **Customer Success Renewal Pack**, load the

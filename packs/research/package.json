@@ -1,12 +1,12 @@
 {
-  "name": "@graphwork/pack-research",
-  "version": "0.2.2",
+  "name": "@graph-workbench/pack-research",
+  "version": "0.3.0",
   "private": false,
   "type": "module",
   "license": "MIT",
   "exports": "./src/index.ts",
   "dependencies": {
-    "@graphwork/contracts": "workspace:*",
-    "@graphwork/core": "workspace:*"
+    "@graph-workbench/contracts": "workspace:*",
+    "@graph-workbench/core": "workspace:*"
   }
 }

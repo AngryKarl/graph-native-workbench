@@ -3,9 +3,9 @@ import {
   architectureHandlers,
   architecturePack,
   projectArchitectureRun,
-} from '@graphwork/pack-architecture';
-import { compilePack, GraphRuntime, InMemoryContextGraphStore } from '@graphwork/core';
-import { runAllPackFixtures } from '@graphwork/pack-sdk';
+} from '@graph-workbench/pack-architecture';
+import { compilePack, GraphRuntime, InMemoryContextGraphStore } from '@graph-workbench/core';
+import { runAllPackFixtures } from '@graph-workbench/pack-sdk';
 
 describe('Architecture Industry Pack', () => {
   it('compiles as a domain-only Pack with a declared deliverable and golden fixtures', () => {

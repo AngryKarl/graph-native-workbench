@@ -6,7 +6,7 @@ import {
   type GraphCheckpoint,
   type GraphEvent,
   type GraphRunRecord,
-} from '@graphwork/contracts';
+} from '@graph-workbench/contracts';
 import type { RunStore, RunUpdate } from './run-store.js';
 
 interface RunRow {

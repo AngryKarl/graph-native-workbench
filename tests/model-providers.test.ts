@@ -5,7 +5,7 @@ import {
   ModelProviderClient,
   ModelProviderError,
   type ModelProtocol,
-} from '@graphwork/core';
+} from '@graph-workbench/core';
 
 const servers: ReturnType<typeof createServer>[] = [];
 
@@ -77,14 +77,14 @@ describe('model provider protocols', () => {
       const messages = payload.messages as Array<Record<string, unknown>>;
       if (round === 1) {
         expect(payload.tools).toEqual([expect.objectContaining({
-          function: expect.objectContaining({ name: 'graphwork_tool_1' }),
+          function: expect.objectContaining({ name: 'graph_workbench_tool_1' }),
         })]);
         response.end(JSON.stringify({
           id: 'chat-tool-1',
           choices: [{ message: { content: null, tool_calls: [{
             id: 'call-1',
             type: 'function',
-            function: { name: 'graphwork_tool_1', arguments: '{"query":"graphs"}' },
+            function: { name: 'graph_workbench_tool_1', arguments: '{"query":"graphs"}' },
           }] } }],
         }));
         return;
@@ -141,10 +141,10 @@ describe('model provider protocols', () => {
       round += 1;
       const messages = payload.messages as Array<Record<string, unknown>>;
       if (round === 1) {
-        expect(payload.tools).toEqual([expect.objectContaining({ name: 'graphwork_tool_1' })]);
+        expect(payload.tools).toEqual([expect.objectContaining({ name: 'graph_workbench_tool_1' })]);
         response.end(JSON.stringify({
           id: 'message-tool-1',
-          content: [{ type: 'tool_use', id: 'use-1', name: 'graphwork_tool_1', input: { query: 'graphs' } }],
+          content: [{ type: 'tool_use', id: 'use-1', name: 'graph_workbench_tool_1', input: { query: 'graphs' } }],
           usage: { input_tokens: 4, output_tokens: 2 },
         }));
         return;
@@ -196,10 +196,10 @@ describe('model provider protocols', () => {
       round += 1;
       const contents = payload.contents as Array<Record<string, unknown>>;
       if (round === 1) {
-        expect(payload.tools).toEqual([{ functionDeclarations: [expect.objectContaining({ name: 'graphwork_tool_1' })] }]);
+        expect(payload.tools).toEqual([{ functionDeclarations: [expect.objectContaining({ name: 'graph_workbench_tool_1' })] }]);
         response.end(JSON.stringify({
           responseId: 'gemini-tool-1',
-          candidates: [{ content: { parts: [{ functionCall: { name: 'graphwork_tool_1', args: { query: 'graphs' } } }] } }],
+          candidates: [{ content: { parts: [{ functionCall: { name: 'graph_workbench_tool_1', args: { query: 'graphs' } } }] } }],
         }));
         return;
       }

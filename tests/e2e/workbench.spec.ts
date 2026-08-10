@@ -46,8 +46,8 @@ test('runs, approves and preserves the default Industry Pack in a fresh Workbenc
   page.on('pageerror', (error) => browserErrors.push(error.message));
 
   await page.goto('/');
-  await expect(page).toHaveTitle('Graphwork');
-  await expect(page.getByLabel('Graphwork')).toBeVisible();
+  await expect(page).toHaveTitle('Graph Workbench');
+  await expect(page.getByLabel('Graph Workbench')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run graph' })).toBeEnabled();
 
   await page.getByRole('button', { name: 'Run graph' }).click();

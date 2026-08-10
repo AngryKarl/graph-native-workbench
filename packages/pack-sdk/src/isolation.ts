@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { fork, spawn } from 'node:child_process';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import type { ContextObject, ContextRelation, GraphNode } from '@graphwork/contracts';
-import type { ContextGraphStore, GraphState, HandlerRegistry } from '@graphwork/core';
+import type { ContextObject, ContextRelation, GraphNode } from '@graph-workbench/contracts';
+import type { ContextGraphStore, GraphState, HandlerRegistry } from '@graph-workbench/core';
 import { inspectInstalledPack, type InstalledPackFiles } from './package.js';
 
 const workerPath = fileURLToPath(new URL('./isolated-worker.mjs', import.meta.url));
@@ -102,7 +102,7 @@ export function createContainerIsolationCommand(
   const packDirectory = dirname(resolve(entry));
   const args = [
     'run', '--rm', '--interactive',
-    `--name=graphwork-pack-${nonce}`,
+    `--name=graph-workbench-pack-${nonce}`,
     `--network=${network}`,
     '--read-only',
     '--cap-drop=ALL',
@@ -112,13 +112,13 @@ export function createContainerIsolationCommand(
     `--cpus=${cpus}`,
     `--pids-limit=${pidsLimit}`,
     '--tmpfs=/tmp:rw,noexec,nosuid,size=16m',
-    `--volume=${resolve(workerPath)}:/graphwork/isolated-worker.mjs:ro`,
-    `--volume=${packDirectory}:/graphwork/pack:ro`,
+    `--volume=${resolve(workerPath)}:/graph-workbench/isolated-worker.mjs:ro`,
+    `--volume=${packDirectory}:/graph-workbench/pack:ro`,
     ...environmentKeys.flatMap((key) => ['--env', key]),
     image,
     'node', '--permission',
-    '--allow-fs-read=/graphwork',
-    '/graphwork/isolated-worker.mjs',
+    '--allow-fs-read=/graph-workbench',
+    '/graph-workbench/isolated-worker.mjs',
   ];
   return { command: container.runtime ?? 'docker', args, environmentKeys };
 }
@@ -139,7 +139,7 @@ function runContainerWorker(
 ): Promise<unknown> {
   const invocation = createContainerIsolationCommand(entry, policy);
   const maximum = executionLimit(policy);
-  const containerEntry = `/graphwork/pack/${basename(entry)}`;
+  const containerEntry = `/graph-workbench/pack/${basename(entry)}`;
   const payload = JSON.stringify({ ...request, entry: `file://${containerEntry}`, nonce: randomUUID() });
   return new Promise((resolvePromise, reject) => {
     let settled = false;
@@ -277,7 +277,7 @@ function assertPolicy(inspected: InstalledPackFiles, policy: IsolatedPackPolicy)
 
 export async function loadInstalledPackIsolated(
   id: string,
-  root = '.graphwork/packs',
+  root = '.graph-workbench/packs',
   policy: IsolatedPackPolicy = { container: {} },
 ): Promise<IsolatedInstalledPack> {
   const effectivePolicy = policy.container || policy.unsafeProcessIsolation

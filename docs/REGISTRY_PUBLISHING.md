@@ -7,14 +7,14 @@ private key never belongs in the repository or a `.gpack` artifact.
 ## Release definition
 
 [`registry/reference.json`](../registry/reference.json) is the release
-definition for the Graphwork Reference Registry. Paths are relative to the
-definition file. Each Pack may optionally override its Graphwork engine range
+definition for the Graph Workbench Reference Registry. Paths are relative to the
+definition file. Each Pack may optionally override its Graph Workbench engine range
 and declared permissions.
 
 Build the same static bundle locally:
 
 ```bash
-pnpm graphwork pack registry build registry/reference.json \
+pnpm graph-workbench pack registry build registry/reference.json \
   --artifact-base-url https://packs.example.com/registry/ \
   --expires-in-days 30 \
   --output-dir registry-dist
@@ -42,9 +42,10 @@ independent of the Registry endpoint. A public key downloaded from the same
 site as the signed Registry is convenient key material, but is not by itself a
 trust root.
 
-The reference workflow signs with key id `graphwork.reference.v1`. Changing
-that id is a trust migration and requires consumers to configure the new public
-key before the old catalog expires.
+The reference workflow signs with key id `graph-workbench.reference.v1`.
+Workbench `0.3.x` aliases the former `graphwork.reference.v1` trust entry to
+the new id when loading a migrated trust file; both ids resolve to the same
+committed public key during this transition.
 
 The current reference publisher key is committed at
 [`registry/reference-public.pem`](../registry/reference-public.pem). Its SPKI
@@ -55,7 +56,7 @@ SHA-256 fingerprint is:
 ```
 
 Consumers should verify this value through the source repository before adding
-the key to `.graphwork/trust.json`. The Registry deployment publishes the same
+the key to `.graph-workbench/trust.json`. The Registry deployment publishes the same
 public key beside the signed catalog so automated checks can detect a mismatch.
 
 ## GitHub Pages workflow
@@ -91,16 +92,16 @@ gh workflow run publish-registry.yml \
 For this repository the resulting endpoint will be:
 
 ```text
-https://angrykarl.github.io/graphwork/registry/registry.json
+https://angrykarl.github.io/graph-workbench/registry/registry.json
 ```
 
 The endpoint was activated on 2026-08-08. Verify the live catalog against the
 repository trust key with:
 
 ```bash
-pnpm graphwork pack registry verify \
-  https://angrykarl.github.io/graphwork/registry/registry.json \
-  --key graphwork.reference.v1=registry/reference-public.pem
+pnpm graph-workbench pack registry verify \
+  https://angrykarl.github.io/graph-workbench/registry/registry.json \
+  --key graph-workbench.reference.v1=registry/reference-public.pem
 ```
 
 Do not advertise that endpoint while the repository or Pages site is private.

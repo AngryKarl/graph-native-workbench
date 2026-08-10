@@ -1,6 +1,6 @@
 # Governance
 
-Graphwork is currently maintainer-led and evidence-driven.
+Graph Workbench is currently maintainer-led and evidence-driven.
 Maintainers merge changes, publish releases and protect the Product Charter.
 
 Public contract changes require an issue or RFC describing the user problem,

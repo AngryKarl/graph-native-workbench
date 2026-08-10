@@ -34,8 +34,8 @@ credentials are read from the Workbench server environment (`OPENAI_API_KEY`,
 `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`,
 `DASHSCOPE_API_KEY`, `MOONSHOT_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`,
 `GROQ_API_KEY` or `OPENROUTER_API_KEY`). They are not returned to the browser or
-persisted in `.graphwork/workbench.json`. Custom compatible endpoints may use
-`GRAPHWORK_MODEL_API_KEY`; Ollama and other local endpoints can run without a
+persisted in `.graph-workbench/workbench.json`. Custom compatible endpoints may use
+`GRAPH_WORKBENCH_MODEL_API_KEY`; Ollama and other local endpoints can run without a
 credential.
 
 A Pack opts into model execution by adding `config.modelInstructions` to an
@@ -80,8 +80,8 @@ The default policy allows `read` tools and checkpoints `draft`, `write` and
 started, completed, denied and failed tool calls produce ordered events. Each
 approval is bound to the run, node, role, tool and a SHA-256 digest of its input.
 
-Workbench reads an optional `.graphwork/policy.json` file. Set
-`GRAPHWORK_POLICY` or pass `graphwork workbench --policy <file>` to use a
+Workbench reads an optional `.graph-workbench/policy.json` file. Set
+`GRAPH_WORKBENCH_POLICY` or pass `graph-workbench workbench --policy <file>` to use a
 different path:
 
 ```json
@@ -126,7 +126,7 @@ access appropriately.
 `SQLiteRunStore` provides zero-setup local persistence. `PostgresRunStore`
 implements the same interface for shared deployments; `PostgresContextGraphStore`
 does the same for typed context objects and relations. Both PostgreSQL stores
-initialize the versioned Graphwork schema and preserve the contract validation
+initialize the versioned Graph Workbench schema and preserve the contract validation
 used by the in-memory and SQLite adapters.
 
 The runtime updates the checkpoint after each completed scheduling batch. A new
@@ -136,10 +136,10 @@ completion clears the checkpoint while retaining the final run and event trace.
 The CLI exposes this through `pack run --database` and `pack resume`.
 
 ```bash
-graphwork pack run packs/research/src/index.ts \
-  --database "$GRAPHWORK_POSTGRES_URL" --set "goal=Durable team workflow"
-graphwork pack resume packs/research/src/index.ts \
-  --database "$GRAPHWORK_POSTGRES_URL" --run <run-id> --decision approval=true
+graph-workbench pack run packs/research/src/index.ts \
+  --database "$GRAPH_WORKBENCH_POSTGRES_URL" --set "goal=Durable team workflow"
+graph-workbench pack resume packs/research/src/index.ts \
+  --database "$GRAPH_WORKBENCH_POSTGRES_URL" --run <run-id> --decision approval=true
 ```
 
 ## Distributed PostgreSQL workers
@@ -152,15 +152,15 @@ input. Workers reject requests for a different Pack or graph version.
 Start one or more workers with the same installed Pack and PostgreSQL database:
 
 ```bash
-graphwork worker start research --installed \
-  --database "$GRAPHWORK_POSTGRES_URL" --concurrency 4
+graph-workbench worker start research --installed \
+  --database "$GRAPH_WORKBENCH_POSTGRES_URL" --concurrency 4
 ```
 
 Then enqueue work from any machine that has the same Pack contract:
 
 ```bash
-graphwork pack enqueue research --installed \
-  --database "$GRAPHWORK_POSTGRES_URL" --set "goal=Review the operating model"
+graph-workbench pack enqueue research --installed \
+  --database "$GRAPH_WORKBENCH_POSTGRES_URL" --set "goal=Review the operating model"
 ```
 
 Workers persist checkpoints through `PostgresRunStore`. A failed job is retried
@@ -179,8 +179,8 @@ outside the bundle.
 SQLite- and PostgreSQL-backed CLI runs use the same format:
 
 ```bash
-graphwork audit export --database runs.sqlite --run <run-id> --output run.audit.json
-graphwork audit verify run.audit.json
+graph-workbench audit export --database runs.sqlite --run <run-id> --output run.audit.json
+graph-workbench audit verify run.audit.json
 ```
 
 Verification checks the digest, run identity, event ordering, checkpoint and

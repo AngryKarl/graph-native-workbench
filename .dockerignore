@@ -1,5 +1,6 @@
 .git
 .github
+.graph-workbench
 .graphwork
 node_modules
 **/node_modules

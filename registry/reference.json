@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "registry": {
-    "id": "graphwork_reference",
-    "name": "Graphwork Reference Registry"
+    "id": "graph_workbench_reference",
+    "name": "Graph Workbench Reference Registry"
   },
   "packs": [
     {

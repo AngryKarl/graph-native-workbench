@@ -1,7 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { PgBoss, fromPglite } from 'pg-boss';
 import { afterEach, describe, expect, it } from 'vitest';
-import { researchHandlers, researchPack, projectResearchRun } from '@graphwork/pack-research';
+import { researchHandlers, researchPack, projectResearchRun } from '@graph-workbench/pack-research';
 import {
   compilePack,
   GraphRuntime,
@@ -9,7 +9,7 @@ import {
   PostgresRunQueue,
   PostgresRunStore,
   type PostgresQueryable,
-} from '@graphwork/core';
+} from '@graph-workbench/core';
 
 const databases: PGlite[] = [];
 
@@ -74,7 +74,7 @@ describe('PostgreSQL team execution adapters', () => {
       schedule: false,
     });
     const queue = new PostgresRunQueue(boss, {
-      queueName: 'graphwork-test-runs',
+      queueName: 'graph-workbench-test-runs',
       queue: { heartbeatSeconds: 10, expireInSeconds: 30, retryLimit: 1, retryDelay: 0 },
     });
     let attempts = 0;

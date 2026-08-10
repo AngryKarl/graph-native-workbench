@@ -4,7 +4,7 @@ import type {
   GraphCheckpoint,
   GraphEvent,
   GraphNode,
-} from '@graphwork/contracts';
+} from '@graph-workbench/contracts';
 import type { CompiledGraph } from './compiler.js';
 import {
   AgentSuspensionError,

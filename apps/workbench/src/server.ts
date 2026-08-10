@@ -6,8 +6,8 @@ import { platform, tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { inspectPackArtifact, installPackArtifact } from '@graphwork/pack-sdk';
-import { defaultToolPolicy, parseToolPolicy, type ToolPolicy } from '@graphwork/core';
+import { inspectPackArtifact, installPackArtifact } from '@graph-workbench/pack-sdk';
+import { defaultToolPolicy, parseToolPolicy, type ToolPolicy } from '@graph-workbench/core';
 import { bundledPackCatalog, discoverInstalledPackRuntimes } from './catalog.js';
 import { WorkbenchService } from './service.js';
 import { WorkbenchRegistryService } from './registry-service.js';
@@ -18,20 +18,26 @@ import {
   HttpSecurityError,
   requireContentType,
 } from './http-security.js';
+import {
+  applyLegacyWorkbenchEnvironment,
+  migrateLegacyWorkbenchDirectory,
+} from './environment.js';
 
 const appDirectory = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const workspaceDirectory = resolve(appDirectory, '..', '..');
-const port = Number(process.env.GRAPHWORK_PORT ?? 4310);
-const host = process.env.GRAPHWORK_HOST ?? '127.0.0.1';
-const dataFile = process.env.GRAPHWORK_DATA
-  ?? resolve(workspaceDirectory, '.graphwork/workbench.json');
-const packRoot = process.env.GRAPHWORK_PACKS
-  ?? resolve(workspaceDirectory, '.graphwork/packs');
-const trustFile = process.env.GRAPHWORK_TRUST
-  ?? resolve(workspaceDirectory, '.graphwork/trust.json');
-const policyFile = process.env.GRAPHWORK_POLICY
-  ?? resolve(workspaceDirectory, '.graphwork/policy.json');
-const httpSecurity = createWorkbenchHttpSecurity(host, process.env.GRAPHWORK_AUTH_TOKEN);
+applyLegacyWorkbenchEnvironment();
+await migrateLegacyWorkbenchDirectory(workspaceDirectory);
+const port = Number(process.env.GRAPH_WORKBENCH_PORT ?? 4310);
+const host = process.env.GRAPH_WORKBENCH_HOST ?? '127.0.0.1';
+const dataFile = process.env.GRAPH_WORKBENCH_DATA
+  ?? resolve(workspaceDirectory, '.graph-workbench/workbench.json');
+const packRoot = process.env.GRAPH_WORKBENCH_PACKS
+  ?? resolve(workspaceDirectory, '.graph-workbench/packs');
+const trustFile = process.env.GRAPH_WORKBENCH_TRUST
+  ?? resolve(workspaceDirectory, '.graph-workbench/trust.json');
+const policyFile = process.env.GRAPH_WORKBENCH_POLICY
+  ?? resolve(workspaceDirectory, '.graph-workbench/policy.json');
+const httpSecurity = createWorkbenchHttpSecurity(host, process.env.GRAPH_WORKBENCH_AUTH_TOKEN);
 const discovery = await discoverInstalledPackRuntimes(packRoot);
 const service = new WorkbenchService({ dataFile, toolPolicy: await loadToolPolicy(policyFile) });
 const registryService = await WorkbenchRegistryService.fromConfigFile(trustFile, packRoot);
@@ -77,7 +83,11 @@ async function body(request: IncomingMessage): Promise<unknown> {
 }
 
 async function artifactBody(request: IncomingMessage): Promise<Buffer> {
-  requireContentType(request, ['application/vnd.graphwork.gpack', 'application/octet-stream']);
+  requireContentType(request, [
+    'application/vnd.graph-workbench.gpack',
+    'application/vnd.graphwork.gpack',
+    'application/octet-stream',
+  ]);
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of request) {
@@ -91,7 +101,7 @@ async function artifactBody(request: IncomingMessage): Promise<Buffer> {
 }
 
 async function withTemporaryArtifact<T>(request: IncomingMessage, operation: (path: string) => Promise<T> | T): Promise<T> {
-  const temporary = resolve(tmpdir(), `graphwork-${randomUUID()}.gpack`);
+  const temporary = resolve(tmpdir(), `graph-workbench-${randomUUID()}.gpack`);
   await writeFile(temporary, await artifactBody(request));
   try {
     return await operation(temporary);
@@ -113,7 +123,7 @@ function artifactPreview(filePath: string) {
     compatible: inspection.compatible,
     compatibilityCode: inspection.compatibility.code,
     compatibilityMessage: inspection.compatibility.message,
-    engineRange: inspection.descriptor.engine.graphwork,
+    engineRange: inspection.descriptor.engine['graph-workbench'],
     permissions: inspection.descriptor.permissions,
   };
 }
@@ -174,12 +184,15 @@ async function api(request: IncomingMessage, response: ServerResponse, pathname:
     return true;
   }
   if (request.method === 'POST' && pathname === '/api/packs/artifact/install') {
-    if (request.headers['x-graphwork-trust'] !== 'true') {
+    if (
+      request.headers['x-graph-workbench-trust'] !== 'true'
+      && request.headers['x-graphwork-trust'] !== 'true'
+    ) {
       throw new Error('Executable Pack installation requires explicit trust confirmation.');
     }
     const next = await withTemporaryArtifact(request, async (filePath) => {
       const preview = artifactPreview(filePath);
-      if (!preview.compatible) throw new Error(`Pack requires Graphwork ${preview.engineRange}.`);
+      if (!preview.compatible) throw new Error(`Pack requires Graph Workbench ${preview.engineRange}.`);
       installPackArtifact(filePath, { root: packRoot, trust: true });
       const refreshed = await discoverInstalledPackRuntimes(packRoot);
       const runtime = bundledPackCatalog.get(preview.id);
@@ -268,7 +281,7 @@ async function api(request: IncomingMessage, response: ServerResponse, pathname:
     const runId = decodeURIComponent(audit[1]!);
     const bundle = service.exportAudit(runId);
     response.writeHead(200, {
-      'content-type': 'application/vnd.graphwork.audit+json; charset=utf-8',
+      'content-type': 'application/vnd.graph-workbench.audit+json; charset=utf-8',
       'content-disposition': `attachment; filename="${runId}.audit.json"`,
       'cache-control': 'no-store',
     });
@@ -335,7 +348,7 @@ const server = createServer(async (request, response) => {
   } catch (error) {
     const resolved = error instanceof Error ? error : new Error(String(error));
     if (resolved instanceof HttpSecurityError && resolved.challenge) {
-      response.setHeader('www-authenticate', 'Basic realm="Graphwork", charset="UTF-8"');
+      response.setHeader('www-authenticate', 'Basic realm="Graph Workbench", charset="UTF-8"');
     }
     json(response, resolved instanceof HttpSecurityError ? resolved.status : 400, { error: resolved.message });
   }
@@ -345,8 +358,8 @@ server.requestTimeout = 30_000;
 server.maxHeadersCount = 100;
 server.listen(port, host, () => {
   const url = `http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`;
-  console.log(`Graphwork: ${url}`);
+  console.log(`Graph Workbench: ${url}`);
   if (discovery.loaded > 0) console.log(`Loaded ${discovery.loaded} trusted Pack(s) from ${packRoot}`);
   for (const error of discovery.errors) console.warn(`Skipped installed Pack: ${error}`);
-  if (process.env.GRAPHWORK_OPEN === 'true') openWorkbench(url);
+  if (process.env.GRAPH_WORKBENCH_OPEN === 'true') openWorkbench(url);
 });

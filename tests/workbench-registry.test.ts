@@ -9,7 +9,7 @@ import {
   registryPayloadFromArtifacts,
   scaffoldPack,
   signPackRegistry,
-} from '@graphwork/pack-sdk';
+} from '@graph-workbench/pack-sdk';
 import { loadRegistryTrustConfig, WorkbenchRegistryService } from '../apps/workbench/src/registry-service.js';
 
 const temporaryDirectories: string[] = [];
@@ -27,6 +27,29 @@ describe('Workbench Registry catalog', () => {
     await expect(loadRegistryTrustConfig(resolve('tests', '.missing-trust.json'))).resolves.toEqual({
       formatVersion: 1,
       registries: [],
+    });
+  });
+
+  it('aliases the legacy reference Registry key id during migration', async () => {
+    const directory = await mkdtemp(resolve('tests', '.tmp-workbench-trust-migration-'));
+    temporaryDirectories.push(directory);
+    const configPath = resolve(directory, 'trust.json');
+    await writeFile(configPath, JSON.stringify({
+      formatVersion: 1,
+      registries: [{
+        id: 'reference',
+        url: 'https://angrykarl.github.io/graphwork/registry/registry.json',
+        trustedKeys: [{ keyId: 'graphwork.reference.v1', publicKeyPath: 'publisher-public.pem' }],
+      }],
+    }));
+
+    await expect(loadRegistryTrustConfig(configPath)).resolves.toMatchObject({
+      registries: [{
+        trustedKeys: [
+          { keyId: 'graphwork.reference.v1' },
+          { keyId: 'graph-workbench.reference.v1' },
+        ],
+      }],
     });
   });
 
@@ -56,7 +79,7 @@ describe('Workbench Registry catalog', () => {
         response.writeHead(200, { 'content-type': 'application/json' });
         response.end(JSON.stringify(signed));
       } else if (request.url === '/catalog_pack.gpack') {
-        response.writeHead(200, { 'content-type': 'application/vnd.graphwork.gpack' });
+        response.writeHead(200, { 'content-type': 'application/vnd.graph-workbench.gpack' });
         response.end(artifactBytes);
       } else {
         response.writeHead(404).end();
@@ -89,7 +112,7 @@ describe('Workbench Registry catalog', () => {
         name: 'Catalog Pack Pack',
         installed: false,
         compatible: true,
-        compatibilityMessage: 'Compatible with Graphwork 0.2.2.',
+        compatibilityMessage: 'Compatible with Graph Workbench 0.3.0.',
       }],
     });
 

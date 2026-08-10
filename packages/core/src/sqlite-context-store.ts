@@ -5,7 +5,7 @@ import {
   type ContextObject,
   type ContextRelation,
   type IndustryPackManifest,
-} from '@graphwork/contracts';
+} from '@graph-workbench/contracts';
 import type { ContextGraphStore } from './context-store.js';
 import { assertPackObject, assertPackRelation } from './context-validation.js';
 

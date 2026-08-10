@@ -13,7 +13,7 @@ exercise at least one medium-risk path and assert a visible deliverable detail.
 Acceptance:
 
 - only `packs/customer-success` and its tests change;
-- `pnpm graphwork pack test packs/customer-success/src/index.ts` passes;
+- `pnpm graph-workbench pack test packs/customer-success/src/index.ts` passes;
 - the fixture documents why it represents a realistic renewal workflow.
 
 ## Improve one validation error with an actionable path

@@ -1,11 +1,11 @@
 import { createPrivateKey, createPublicKey, KeyObject, randomUUID, sign, verify } from 'node:crypto';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { identifierSchema } from '@graphwork/contracts';
+import { identifierSchema } from '@graph-workbench/contracts';
 import { valid, validRange } from 'semver';
 import { z } from 'zod';
 import {
-  GRAPHWORK_ENGINE_VERSION,
+  GRAPH_WORKBENCH_ENGINE_VERSION,
   inspectPackArtifact,
   installPackArtifact,
   type InstalledPackVersion,
@@ -203,7 +203,7 @@ function assertEntryMatchesArtifact(
   if (inspection.checksum !== entry.artifactChecksum) {
     throw new Error('Downloaded Pack checksum does not match signed registry metadata.');
   }
-  if (inspection.descriptor.engine.graphwork !== entry.engineRange) {
+  if (inspection.descriptor.engine['graph-workbench'] !== entry.engineRange) {
     throw new Error('Downloaded Pack engine range does not match signed registry metadata.');
   }
   const declaredPermissions = [...inspection.descriptor.permissions].sort();
@@ -223,7 +223,7 @@ export async function installPackFromSignedRegistry(
   const verified = await fetchSignedPackRegistry(registryUrl, options);
   const entry = verified.payload.packs.find((item) => item.id === packId && item.version === version);
   if (!entry) throw new Error(`Signed registry does not contain Pack "${packId}@${version}".`);
-  const compatibility = evaluateEngineCompatibility(entry.engineRange, GRAPHWORK_ENGINE_VERSION);
+  const compatibility = evaluateEngineCompatibility(entry.engineRange, GRAPH_WORKBENCH_ENGINE_VERSION);
   if (!compatibility.compatible) throw new Error(compatibility.message);
   const artifactUrl = new URL(entry.artifact, registryUrl);
   assertRegistryUrl(artifactUrl, options.allowInsecureHttp);
@@ -236,7 +236,7 @@ export async function installPackFromSignedRegistry(
     options.allowInsecureHttp,
     options.allowCrossOriginArtifacts ? undefined : registryUrl.origin,
   );
-  const root = resolve(options.root ?? '.graphwork/packs');
+  const root = resolve(options.root ?? '.graph-workbench/packs');
   const temporary = resolve(root, '.registry-downloads', `${randomUUID()}.gpack`);
   if (dirname(temporary) !== resolve(root, '.registry-downloads')) throw new Error('Unsafe registry download path.');
   mkdirSync(dirname(temporary), { recursive: true });
@@ -281,7 +281,7 @@ export function registryPayloadFromArtifacts(input: {
         version: inspection.manifest.version,
         artifact: url,
         artifactChecksum: inspection.checksum,
-        engineRange: inspection.descriptor.engine.graphwork,
+        engineRange: inspection.descriptor.engine['graph-workbench'],
         permissions: inspection.descriptor.permissions,
       } satisfies SignedPackRegistryEntry;
     }),

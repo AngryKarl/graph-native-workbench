@@ -1,4 +1,4 @@
-import type { HandlerRegistry } from '@graphwork/core';
+import type { HandlerRegistry } from '@graph-workbench/core';
 
 function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';

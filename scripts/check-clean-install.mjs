@@ -5,8 +5,8 @@ import { dirname, join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const manifest = JSON.parse(await readFile(resolve(root, 'apps/distribution/package.json'), 'utf8'));
-const tarball = resolve(root, `release/npm/graphwork-${manifest.version}.tgz`);
-const installation = await mkdtemp(join(tmpdir(), 'graphwork-clean-install-'));
+const tarball = resolve(root, `release/npm/graph-workbench-${manifest.version}.tgz`);
+const installation = await mkdtemp(join(tmpdir(), 'graph-workbench-clean-install-'));
 
 function run(command, args, cwd = installation) {
   return new Promise((resolveRun, reject) => {
@@ -24,9 +24,9 @@ function run(command, args, cwd = installation) {
 
 try {
   await run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball]);
-  const installedCli = resolve(installation, 'node_modules/graphwork/dist/graphwork.js');
+  const installedCli = resolve(installation, 'node_modules/graph-workbench/dist/graph-workbench.js');
   await run(process.execPath, [resolve(root, 'scripts/check-distribution.mjs'), installedCli], root);
-  console.log(`Clean-install smoke test passed for graphwork@${manifest.version}.`);
+  console.log(`Clean-install smoke test passed for graph-workbench@${manifest.version}.`);
 } finally {
   await rm(installation, { recursive: true, force: true });
 }

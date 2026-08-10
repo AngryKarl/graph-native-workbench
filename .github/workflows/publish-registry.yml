@@ -44,7 +44,7 @@ jobs:
           owner="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
           repository="${GITHUB_REPOSITORY#*/}"
           artifact_base_url="https://${owner}.github.io/${repository}/registry/"
-          pnpm graphwork pack registry build registry/reference.json \
+          pnpm graph-workbench pack registry build registry/reference.json \
             --artifact-base-url "$artifact_base_url" \
             --expires-in-days "$EXPIRES_IN_DAYS" \
             --output-dir registry-site/registry
@@ -61,12 +61,12 @@ jobs:
           trap 'rm -rf "$secret_dir"' EXIT
           printf '%s' "$REGISTRY_PRIVATE_KEY" > "$secret_dir/private.pem"
           openssl pkey -in "$secret_dir/private.pem" -pubout -out registry-site/registry/publisher-public.pem
-          pnpm graphwork pack registry sign registry-site/registry/registry-payload.json \
-            --key-id graphwork.reference.v1 \
+          pnpm graph-workbench pack registry sign registry-site/registry/registry-payload.json \
+            --key-id graph-workbench.reference.v1 \
             --private-key "$secret_dir/private.pem" \
             --output registry-site/registry/registry.json
-          pnpm graphwork pack registry verify registry-site/registry/registry.json \
-            --key graphwork.reference.v1=registry-site/registry/publisher-public.pem
+          pnpm graph-workbench pack registry verify registry-site/registry/registry.json \
+            --key graph-workbench.reference.v1=registry-site/registry/publisher-public.pem
           (cd registry-site/registry && sha256sum registry.json publisher-public.pem packs/*.gpack > SHA256SUMS)
 
       - name: Upload verified release bundle

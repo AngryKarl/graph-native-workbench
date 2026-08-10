@@ -1,4 +1,4 @@
-import type { GraphStateDefinition, StateValueType } from '@graphwork/contracts';
+import type { GraphStateDefinition, StateValueType } from '@graph-workbench/contracts';
 
 export type GraphState = Record<string, unknown>;
 

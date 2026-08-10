@@ -5,6 +5,27 @@ versioning once public packages begin publishing.
 
 ## Unreleased
 
+## 0.3.0 - 2026-08-10
+
+### Changed
+
+- Renamed the product, repository, npm package, CLI and internal package scope
+  to Graph Workbench and `graph-workbench`.
+- Renamed the default workspace directory to `.graph-workbench`, environment
+  variables to `GRAPH_WORKBENCH_*` and new Pack descriptors to
+  `graph-workbench.pack.json` with the `graph-workbench` engine key.
+- Promoted all bundled reference Packs to version `0.3.0` so published
+  artifacts remain immutable across the engine transition.
+
+### Compatibility
+
+- Copy an existing `.graphwork` workspace on first launch without deleting the
+  source directory.
+- Accept legacy `GRAPHWORK_*` environment variables and legacy Graphwork Pack
+  descriptors while emitting only the new public identifiers.
+- Move new installations to the `graph-workbench` npm package; the former
+  `graphwork` package remains available only as a deprecated migration path.
+
 ## 0.2.2 - 2026-08-09
 
 ### Changed

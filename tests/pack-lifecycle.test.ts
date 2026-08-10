@@ -1,7 +1,8 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { GraphRuntime, compilePack } from '@graphwork/core';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
+import { GraphRuntime, compilePack } from '@graph-workbench/core';
 import {
   activateInstalledPack,
   buildPackArtifact,
@@ -13,7 +14,7 @@ import {
   rollbackInstalledPack,
   scaffoldPack,
   uninstallInstalledPack,
-} from '@graphwork/pack-sdk';
+} from '@graph-workbench/pack-sdk';
 import {
   bundledPackCatalog,
   discoverInstalledPackRuntimes,
@@ -87,6 +88,32 @@ describe('Pack lifecycle', () => {
     await expect(loadInstalledPack('support_ops', paths.registry)).rejects.toThrow(/integrity check failed/);
   });
 
+  it('installs a legacy Graphwork artifact through the canonical descriptor model', async () => {
+    const paths = await fixture();
+    const currentArtifact = resolve(paths.directory, 'current.gpack');
+    const legacyArtifact = resolve(paths.directory, 'legacy.gpack');
+    await buildPackArtifact({ source: paths.source, output: currentArtifact, engineRange: '>=0.2.0' });
+    const files = unzipSync(await readFile(currentArtifact));
+    const currentDescriptor = JSON.parse(strFromU8(files['graph-workbench.pack.json']!)) as {
+      engine: { 'graph-workbench': string };
+    } & Record<string, unknown>;
+    const { engine, ...descriptor } = currentDescriptor;
+    delete files['graph-workbench.pack.json'];
+    files['graphwork.pack.json'] = strToU8(`${JSON.stringify({
+      ...descriptor,
+      engine: { graphwork: engine['graph-workbench'] },
+    }, null, 2)}\n`);
+    await writeFile(legacyArtifact, zipSync(files, { level: 9 }));
+
+    expect(inspectPackArtifact(legacyArtifact).descriptor.engine).toEqual({
+      'graph-workbench': '>=0.2.0',
+    });
+    installPackArtifact(legacyArtifact, { root: paths.registry, trust: true });
+    await expect(loadInstalledPack('support_ops', paths.registry)).resolves.toMatchObject({
+      descriptor: { engine: { 'graph-workbench': '>=0.2.0' } },
+    });
+  });
+
   it('installs side-by-side versions and supports activate and rollback', async () => {
     const paths = await fixture();
     const firstArtifact = resolve(paths.directory, 'support-ops-0.1.0.gpack');
@@ -127,7 +154,7 @@ describe('Pack lifecycle', () => {
     expect(() => installPackArtifact(artifact, {
       root: paths.registry,
       trust: true,
-    })).toThrow(/current engine is 0.2.2/);
+    })).toThrow(/current engine is 0.3.0/);
   });
 
   it('rejects an oversized expanded artifact before decompression', async () => {

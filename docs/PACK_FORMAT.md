@@ -4,7 +4,7 @@
 archive with three allowed files:
 
 ```text
-graphwork.pack.json   Package identity, compatibility, permissions and hashes
+graph-workbench.pack.json   Package identity, compatibility, permissions and hashes
 manifest.json         Serializable Industry Pack manifest
 dist/index.mjs        Bundled ESM handlers and optional runtime exports
 ```
@@ -15,18 +15,18 @@ installation.
 
 ## Descriptor
 
-`graphwork.pack.json` uses this shape:
+`graph-workbench.pack.json` uses this shape:
 
 ```json
 {
   "formatVersion": 1,
   "pack": {
     "id": "customer_success",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "manifest": "manifest.json",
     "entry": "dist/index.mjs"
   },
-  "engine": { "graphwork": "^0.2.0" },
+  "engine": { "graph-workbench": "^0.3.0" },
   "permissions": ["handlers.execute"],
   "integrity": {
     "algorithm": "sha256",
@@ -43,12 +43,16 @@ vocabulary is `handlers.execute`, `context.write`, `network` and `filesystem`.
 Permissions are review metadata in format v1; process-level enforcement is a
 separate runtime milestone and must not be assumed.
 
+Graph Workbench `0.3.x` also reads legacy `graphwork.pack.json` descriptors
+whose engine key is `graphwork`. New builds always emit the canonical filename
+and `graph-workbench` engine key.
+
 ## Build and inspect
 
 ```bash
-pnpm graphwork pack build packs/customer_success/src/index.ts \
-  --output dist/customer_success-0.2.0.gpack
-pnpm graphwork pack inspect dist/customer_success-0.2.0.gpack
+pnpm graph-workbench pack build packs/customer_success/src/index.ts \
+  --output dist/customer_success-0.3.0.gpack
+pnpm graph-workbench pack inspect dist/customer_success-0.3.0.gpack
 ```
 
 Building executes the local source module to validate its manifest, then
@@ -58,19 +62,19 @@ the `context.write` permission. Build only source you trust.
 ## Install and run
 
 ```bash
-pnpm graphwork pack install dist/customer_success-0.2.0.gpack --trust
-pnpm graphwork pack list
-pnpm graphwork pack run customer_success --installed --set "topic=renewal risk"
+pnpm graph-workbench pack install dist/customer_success-0.3.0.gpack --trust
+pnpm graph-workbench pack list
+pnpm graph-workbench pack run customer_success --installed --set "topic=renewal risk"
 ```
 
 Installation verifies the format, file whitelist, expanded size, semantic
 identity, engine range and every declared SHA-256 digest before writing into
-`.graphwork/packs/<id>/<version>`. Executable handlers are rejected unless the
+`.graph-workbench/packs/<id>/<version>`. Executable handlers are rejected unless the
 operator supplies `--trust`. The local installation record also pins the
 descriptor digest so permission metadata cannot be changed after installation
 without detection.
 
-The Workbench discovers trusted active versions from `.graphwork/packs` when it
+The Workbench discovers trusted active versions from `.graph-workbench/packs` when it
 starts. You can also open the **Packs** view, choose **Import .gpack**, review
 the compatibility range, permissions and SHA-256 fingerprint, then select
 **Trust & install**. The newly imported Pack opens immediately.
@@ -81,9 +85,9 @@ Versions are stored side by side. A newly installed version becomes active by
 default; use `--no-activate` to stage it.
 
 ```bash
-pnpm graphwork pack activate customer_success@0.2.0
-pnpm graphwork pack rollback customer_success
-pnpm graphwork pack uninstall customer_success --version 0.2.0
+pnpm graph-workbench pack activate customer_success@0.3.0
+pnpm graph-workbench pack rollback customer_success
+pnpm graph-workbench pack uninstall customer_success --version 0.2.0
 ```
 
 `rollback` selects the most recently installed non-active version. The active

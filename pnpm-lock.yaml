@@ -11,22 +11,22 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.5.4
         version: 0.5.4
-      '@graphwork/contracts':
+      '@graph-workbench/contracts':
         specifier: workspace:*
         version: link:packages/contracts
-      '@graphwork/core':
+      '@graph-workbench/core':
         specifier: workspace:*
         version: link:packages/core
-      '@graphwork/pack-architecture':
+      '@graph-workbench/pack-architecture':
         specifier: workspace:*
         version: link:packs/architecture
-      '@graphwork/pack-customer-success':
+      '@graph-workbench/pack-customer-success':
         specifier: workspace:*
         version: link:packs/customer-success
-      '@graphwork/pack-research':
+      '@graph-workbench/pack-research':
         specifier: workspace:*
         version: link:packs/research
-      '@graphwork/pack-sdk':
+      '@graph-workbench/pack-sdk':
         specifier: workspace:*
         version: link:packages/pack-sdk
       '@playwright/test':
@@ -44,6 +44,9 @@ importers:
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.3
       pg-boss:
         specifier: ^12.27.0
         version: 12.27.0
@@ -59,16 +62,16 @@ importers:
 
   apps/cli:
     dependencies:
-      '@graphwork/contracts':
+      '@graph-workbench/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@graphwork/core':
+      '@graph-workbench/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@graphwork/pack-research':
+      '@graph-workbench/pack-research':
         specifier: workspace:*
         version: link:../../packs/research
-      '@graphwork/pack-sdk':
+      '@graph-workbench/pack-sdk':
         specifier: workspace:*
         version: link:../../packages/pack-sdk
 
@@ -86,22 +89,22 @@ importers:
 
   apps/workbench:
     dependencies:
-      '@graphwork/contracts':
+      '@graph-workbench/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@graphwork/core':
+      '@graph-workbench/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@graphwork/pack-architecture':
+      '@graph-workbench/pack-architecture':
         specifier: workspace:*
         version: link:../../packs/architecture
-      '@graphwork/pack-customer-success':
+      '@graph-workbench/pack-customer-success':
         specifier: workspace:*
         version: link:../../packs/customer-success
-      '@graphwork/pack-research':
+      '@graph-workbench/pack-research':
         specifier: workspace:*
         version: link:../../packs/research
-      '@graphwork/pack-sdk':
+      '@graph-workbench/pack-sdk':
         specifier: workspace:*
         version: link:../../packages/pack-sdk
       '@xyflow/react':
@@ -141,7 +144,7 @@ importers:
 
   packages/core:
     dependencies:
-      '@graphwork/contracts':
+      '@graph-workbench/contracts':
         specifier: workspace:*
         version: link:../contracts
       pg:
@@ -153,10 +156,10 @@ importers:
 
   packages/pack-sdk:
     dependencies:
-      '@graphwork/contracts':
+      '@graph-workbench/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@graphwork/core':
+      '@graph-workbench/core':
         specifier: workspace:*
         version: link:../core
       esbuild:
@@ -178,28 +181,28 @@ importers:
 
   packs/architecture:
     dependencies:
-      '@graphwork/contracts':
+      '@graph-workbench/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@graphwork/core':
+      '@graph-workbench/core':
         specifier: workspace:*
         version: link:../../packages/core
 
   packs/customer-success:
     dependencies:
-      '@graphwork/contracts':
+      '@graph-workbench/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@graphwork/core':
+      '@graph-workbench/core':
         specifier: workspace:*
         version: link:../../packages/core
 
   packs/research:
     dependencies:
-      '@graphwork/contracts':
+      '@graph-workbench/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@graphwork/core':
+      '@graph-workbench/core':
         specifier: workspace:*
         version: link:../../packages/core
 

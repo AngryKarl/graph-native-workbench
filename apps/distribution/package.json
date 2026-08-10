@@ -1,11 +1,11 @@
 {
-  "name": "graphwork",
-  "version": "0.2.2",
-  "description": "Graph-native workbench and Industry Pack toolkit for executable organizational workflows.",
+  "name": "graph-workbench",
+  "version": "0.3.0",
+  "description": "Open-source graph engineering workbench for executable agent workflows and installable Industry Packs.",
   "type": "module",
   "license": "MIT",
   "bin": {
-    "graphwork": "dist/graphwork.js"
+    "graph-workbench": "dist/graph-workbench.js"
   },
   "files": [
     "dist",
@@ -17,19 +17,21 @@
   },
   "keywords": [
     "agents",
+    "agent-workflow",
     "workflow",
     "graph",
+    "graph-engineering",
     "industry-pack",
     "workbench",
     "ai"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AngryKarl/graphwork.git"
+    "url": "git+https://github.com/AngryKarl/graph-workbench.git"
   },
-  "homepage": "https://github.com/AngryKarl/graphwork#readme",
+  "homepage": "https://github.com/AngryKarl/graph-workbench#readme",
   "bugs": {
-    "url": "https://github.com/AngryKarl/graphwork/issues"
+    "url": "https://github.com/AngryKarl/graph-workbench/issues"
   },
   "publishConfig": {
     "access": "public"

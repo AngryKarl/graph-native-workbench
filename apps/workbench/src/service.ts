@@ -3,8 +3,8 @@ import type {
   ContextRelation,
   GraphDefinition,
   GraphEvent,
-} from '@graphwork/contracts';
-import { graphDefinitionSchema } from '@graphwork/contracts';
+} from '@graph-workbench/contracts';
+import { graphDefinitionSchema } from '@graph-workbench/contracts';
 import {
   compilePack,
   createRunAuditBundle,
@@ -15,7 +15,7 @@ import {
   type GraphState,
   type ToolAuthorizer,
   type ToolPolicy,
-} from '@graphwork/core';
+} from '@graph-workbench/core';
 import { bundledPackCatalog, requirePackRuntime } from './catalog.js';
 import { WorkbenchModelService } from './model-service.js';
 import {
