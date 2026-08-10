@@ -45,6 +45,7 @@ describe('Workbench Registry catalog', () => {
 
     await expect(loadRegistryTrustConfig(configPath)).resolves.toMatchObject({
       registries: [{
+        url: 'https://angrykarl.github.io/graph-workbench/registry/registry.json',
         trustedKeys: [
           { keyId: 'graphwork.reference.v1' },
           { keyId: 'graph-workbench.reference.v1' },
