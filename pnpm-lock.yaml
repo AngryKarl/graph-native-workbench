@@ -23,6 +23,9 @@ importers:
       '@graph-workbench/pack-customer-success':
         specifier: workspace:*
         version: link:packs/customer-success
+      '@graph-workbench/pack-cybersecurity-response':
+        specifier: workspace:*
+        version: link:packs/cybersecurity-response
       '@graph-workbench/pack-data-mlops':
         specifier: workspace:*
         version: link:packs/data-mlops
@@ -107,6 +110,9 @@ importers:
       '@graph-workbench/pack-customer-success':
         specifier: workspace:*
         version: link:../../packs/customer-success
+      '@graph-workbench/pack-cybersecurity-response':
+        specifier: workspace:*
+        version: link:../../packs/cybersecurity-response
       '@graph-workbench/pack-data-mlops':
         specifier: workspace:*
         version: link:../../packs/data-mlops
@@ -201,6 +207,15 @@ importers:
         version: link:../../packages/core
 
   packs/customer-success:
+    dependencies:
+      '@graph-workbench/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@graph-workbench/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
+  packs/cybersecurity-response:
     dependencies:
       '@graph-workbench/contracts':
         specifier: workspace:*

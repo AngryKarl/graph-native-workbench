@@ -14,7 +14,7 @@ today from the evidence still required before a stable 1.0 release.
 - [x] Visual graph authoring, run history, approvals and context exploration
 - [x] Portable `.gpack` lifecycle with compatibility and integrity checks
 - [x] Signed Registry verification and isolated third-party Pack execution
-- [x] Software Delivery, Data and MLOps, Research, Architecture and Customer Success reference Packs
+- [x] Software Delivery, Data and MLOps, Cybersecurity Incident Response, Research, Architecture and Customer Success reference Packs
 - [x] Clean-install, browser E2E, performance and release-readiness gates
 
 ## Public launch
@@ -51,7 +51,7 @@ are recorded in the [industry workflow analysis](docs/INDUSTRY_WORKFLOW_ANALYSIS
 
 - [x] Professional Software Delivery — issue-to-release governance and deployment recovery
 - [x] Data and MLOps — asset release, lineage, quality gates and backfill control
-- [ ] Cybersecurity Operations — signal-to-recovery incident response
+- [x] Cybersecurity Operations — signal-to-recovery incident response
 - [ ] Quantitative Finance — research-to-reconciled execution governance
 - [ ] Healthcare Diagnostics — consent-aware request-to-report coordination
 - [ ] Robotics and Fleet Operations — request-to-dispatch, replanning and maintenance

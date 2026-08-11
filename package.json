@@ -31,6 +31,7 @@
     "@electric-sql/pglite": "^0.5.4",
     "@graph-workbench/contracts": "workspace:*",
     "@graph-workbench/core": "workspace:*",
+    "@graph-workbench/pack-cybersecurity-response": "workspace:*",
     "@graph-workbench/pack-data-mlops": "workspace:*",
     "@graph-workbench/pack-architecture": "workspace:*",
     "@graph-workbench/pack-customer-success": "workspace:*",

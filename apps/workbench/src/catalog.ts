@@ -16,6 +16,12 @@ import {
   projectCustomerSuccessRun,
 } from '@graph-workbench/pack-customer-success';
 import {
+  cybersecurityResponseHandlers,
+  cybersecurityResponsePack,
+  cybersecurityResponseTools,
+  projectCybersecurityResponseRun,
+} from '@graph-workbench/pack-cybersecurity-response';
+import {
   dataMlopsHandlers,
   dataMlopsPack,
   dataMlopsTools,
@@ -52,6 +58,17 @@ export interface PackRuntimeDefinition {
 }
 
 export const bundledPackCatalog = new Map<string, PackRuntimeDefinition>([
+  [
+    cybersecurityResponsePack.id,
+    {
+      manifest: cybersecurityResponsePack,
+      handlers: cybersecurityResponseHandlers,
+      tools: cybersecurityResponseTools,
+      projector: projectCybersecurityResponseRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
   [
     dataMlopsPack.id,
     {

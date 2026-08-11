@@ -96,7 +96,7 @@ try {
   serverChild.stderr.setEncoding('utf8').on('data', (chunk) => { serverOutput += chunk; });
   const url = `http://127.0.0.1:${port}`;
   const bootstrap = await waitForWorkbench(url, serverChild, () => serverOutput);
-  if (!Array.isArray(bootstrap.catalog) || bootstrap.catalog.length < 5) throw new Error('Packaged Workbench catalog is incomplete.');
+  if (!Array.isArray(bootstrap.catalog) || bootstrap.catalog.length < 6) throw new Error('Packaged Workbench catalog is incomplete.');
   const health = await (await fetch(`${url}/api/health`)).json();
   if (health.status !== 'ok') throw new Error('Packaged Workbench health endpoint is not ready.');
   const html = await (await fetch(url)).text();

@@ -52,7 +52,7 @@ Demo 会并行运行两条证据分支，在 Join 节点汇合，通过质量检
 pnpm dlx graph-workbench demo --pause
 ```
 
-## 五个可安装示例
+## 六个可安装示例
 
 在 **Packs** 中安装后，同一个 Industry Pack 会立即获得图编辑器、运行时、
 审批入口、交付物控制台和上下文浏览器：
@@ -63,6 +63,7 @@ pnpm dlx graph-workbench demo --pause
 | --- | --- | --- |
 | Professional Software Delivery | 需求到发布的可追溯记录，以及部署健康或回滚证据 | 连接需求、代码、CI/CD 与运维系统，同时不替代这些专业系统 |
 | Data and MLOps Asset Release | 经审批的数据/模型注册发布、受控回填记录与质量恢复证据 | 连接编排、目录、血缘和注册系统，同时保留专业系统的执行权威 |
+| Cybersecurity Incident Response | 可追溯的信号关闭记录，或经审批的事件响应与恢复记录 | 连接 SIEM、EDR、身份、证据和遏制系统，并明确治理高影响动作 |
 | Customer Success Renewal | 经审批的续约风险评估与责任明确的成功计划 | 常见企业 SOP 无需修改内核即可得到完整工作台 |
 | Architecture Concept Design | 证据可追溯、经过评审的概念设计简报 | 深度垂直行业的约束、证据和决策能够保持关联 |
 | Cross-industry Research | 经审批的证据综合报告 | 零密钥完成第一次运行并检查全过程 |
@@ -114,7 +115,7 @@ xAI Grok、Mistral AI、Groq、OpenRouter、Ollama 或自定义 OpenAI-compatibl
 节点范围、角色权限、风险授权和密钥隔离检查，并作为有序事件显示在运行控制台。
 
 图草稿、已安装 Pack、当前 Pack、运行记录和人工检查点会持久化到本地
-`.graph-workbench/workbench.json`。Software Delivery、Data and MLOps、Architecture、Customer Success 与 Research 是内置 Pack；可信的
+`.graph-workbench/workbench.json`。Software Delivery、Data and MLOps、Cybersecurity Incident Response、Architecture、Customer Success 与 Research 是内置 Pack；可信的
 `.gpack` 可以直接从 Packs 页面导入，也可以通过 CLI 安装，并保存在
 `.graph-workbench/packs`。
 
@@ -150,7 +151,7 @@ pnpm graph-workbench pack run customer_success --installed --set "topic=renewal 
 独立配置，签名索引会在下载前绑定 Pack 身份、校验和、兼容范围与权限：
 
 公开的 [Graph Workbench Reference Registry](https://angrykarl.github.io/graph-workbench/registry/registry.json)
-已经提供五个示例 Pack。仓库中的发布者公钥和指纹见
+已经提供六个示例 Pack。仓库中的发布者公钥和指纹见
 [Registry 发布指南](docs/REGISTRY_PUBLISHING.md)。
 
 ```bash

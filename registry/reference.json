@@ -6,6 +6,9 @@
   },
   "packs": [
     {
+      "source": "../packs/cybersecurity-response/src/index.ts"
+    },
+    {
       "source": "../packs/data-mlops/src/index.ts"
     },
     {

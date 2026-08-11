@@ -47,9 +47,11 @@ experience without modifying the kernel.
    verification, independent approvals, deployment observation and rollback.
 2. Data and MLOps Asset Release: governed partition quality, lineage, registry
    publication, bounded backfill and post-release recovery.
-3. Evidence Research: a cross-industry demonstration of parallel research,
+3. Cybersecurity Incident Response: attributable evidence, incident declaration,
+   approved containment, verified recovery and post-incident improvement.
+4. Evidence Research: a cross-industry demonstration of parallel research,
    synthesis, independent verification, approval and publication.
-4. Architecture: the first deep vertical Pack for requirements, evidence,
+5. Architecture: the first deep vertical Pack for requirements, evidence,
    design decisions, review and deliverable production.
-5. Customer Success Renewal: an enterprise operating workflow for attributable
+6. Customer Success Renewal: an enterprise operating workflow for attributable
    account evidence, renewal-risk decisions, owned interventions and approval.

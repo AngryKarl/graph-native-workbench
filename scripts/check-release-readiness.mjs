@@ -33,6 +33,7 @@ const manifestPaths = [
   'packages/contracts/package.json',
   'packages/core/package.json',
   'packages/pack-sdk/package.json',
+  'packs/cybersecurity-response/package.json',
   'packs/data-mlops/package.json',
   'packs/software-delivery/package.json',
   'packs/architecture/package.json',
@@ -77,6 +78,7 @@ if (
 const referenceRegistry = JSON.parse(await readFile(resolve(root, 'registry/reference.json'), 'utf8'));
 const referenceSources = referenceRegistry.packs?.map((pack) => pack.source).sort() ?? [];
 for (const source of [
+  '../packs/cybersecurity-response/src/index.ts',
   '../packs/data-mlops/src/index.ts',
   '../packs/software-delivery/src/index.ts',
   '../packs/architecture/src/index.ts',

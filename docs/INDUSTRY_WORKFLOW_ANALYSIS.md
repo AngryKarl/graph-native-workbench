@@ -112,7 +112,7 @@ Workbench replaces the industry's specialist execution or record system.
 | --- | --- | --- | --- |
 | Software delivery | Typed issue/repository/CI connectors, parallel checks, two human gates, release artifacts, deployment events and rollback | Pass; first standard Pack implemented | Git hosting, CI runners, artifact registry, deployment platform and observability |
 | Data and MLOps | Schedule/event ingress, partition Map, bounded backfill, lineage context, quality gate and publication | Pass; second standard Pack implemented | Airflow/Dagster execution, warehouse, feature/model registry and compute plane |
-| Cybersecurity operations | Alert correlation, evidence, severity routing, containment approval, escalation and compensation | Pass for a standard Pack | SIEM/EDR, identity authority, forensic store and containment system |
+| Cybersecurity operations | Alert correlation, evidence, severity routing, containment approval, escalation and compensation | Pass; third standard Pack implemented | SIEM/EDR, identity authority, forensic store and containment system |
 | Quantitative finance | Research subgraphs, dynamic instrument Map, risk/compliance gates, execution events and reconciliation | Pass for a governance Pack | Market data, backtest engine, OMS/EMS, broker and books-and-records system |
 | Healthcare diagnostics | Identity-attributed work, consent gate, parallel analysis, specialist approval, FHIR-shaped context and follow-up | Pass for a non-clinical reference Pack; production requires regulated auth and validation | EHR/FHIR server, PACS/LIS, scheduling, clinical decision authority and regulated identity |
 | Robotics and fleet operations | Task events, bid Map, bounded replanning, resource decisions, telemetry correlation, escalation and maintenance | Pass for a coordination Pack | ROS 2/OpenRMF, real-time control, safety controller, resource locks and telemetry bus |
@@ -207,7 +207,8 @@ kernel state.
    controlled backfill. Implemented with dataset and model release fixtures,
    post-release quality recovery and typed context projection.
 3. **Security Incident Response Pack** — evidence, approval, containment,
-   escalation and recovery.
+   escalation and recovery. Implemented with credential-compromise, ransomware,
+   non-incident closure and failed-recovery fixtures.
 4. **Quantitative Finance Pack** — governed research, risk, execution and
    reconciliation.
 5. **Healthcare Diagnostics Pack** — consent-aware request, analysis, specialist
