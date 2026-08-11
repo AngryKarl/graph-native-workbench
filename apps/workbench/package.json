@@ -17,6 +17,7 @@
     "@graph-workbench/pack-architecture": "workspace:*",
     "@graph-workbench/pack-customer-success": "workspace:*",
     "@graph-workbench/pack-research": "workspace:*",
+    "@graph-workbench/pack-software-delivery": "workspace:*",
     "@xyflow/react": "^12.11.2",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",

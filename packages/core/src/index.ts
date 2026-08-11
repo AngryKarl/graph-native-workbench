@@ -1,4 +1,5 @@
 export * from './adapters.js';
+export * from './artifact.js';
 export * from './audit.js';
 export * from './distributed-worker.js';
 export * from './integrity.js';
@@ -6,7 +7,9 @@ export * from './model-providers.js';
 export * from './policy.js';
 export * from './postgres-stores.js';
 export * from './compiler.js';
+export * from './context-query.js';
 export * from './context-store.js';
+export * from './triggers.js';
 export * from './runtime.js';
 export * from './run-store.js';
 export * from './sqlite-context-store.js';

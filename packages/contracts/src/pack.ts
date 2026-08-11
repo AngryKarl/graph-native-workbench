@@ -1,5 +1,9 @@
 import { z } from 'zod';
 import { graphDefinitionSchema, identifierSchema, stateFieldSchema } from './graph.js';
+import { jsonSchemaDefinitionSchema } from './json-schema-definition.js';
+
+export { jsonSchemaDefinitionSchema, parseJsonSchemaValue } from './json-schema-definition.js';
+export type { JsonSchemaDefinition } from './json-schema-definition.js';
 
 export const objectTypeDefinitionSchema = z
   .object({
@@ -36,8 +40,34 @@ export const toolDefinitionSchema = z
     label: z.string().trim().min(1).max(160),
     risk: z.enum(['read', 'draft', 'write', 'external']),
     description: z.string().trim().min(1).max(800),
+    operation: z.enum(['query', 'command']).optional(),
+    inputSchema: jsonSchemaDefinitionSchema.optional(),
+    outputSchema: jsonSchemaDefinitionSchema.optional(),
+    idempotency: z.enum(['intrinsic', 'keyed', 'none']).optional(),
+    idempotencyKeyField: identifierSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((tool, context) => {
+    const typedFields = [tool.operation, tool.inputSchema, tool.outputSchema, tool.idempotency];
+    if (typedFields.some((value) => value !== undefined) && typedFields.some((value) => value === undefined)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Typed tools must declare operation, inputSchema, outputSchema and idempotency together.',
+      });
+    }
+    if (tool.inputSchema && tool.inputSchema.type !== 'object') {
+      context.addIssue({ code: 'custom', path: ['inputSchema'], message: 'Tool inputSchema must describe an object.' });
+    }
+    if (tool.operation === 'query' && tool.idempotency !== 'intrinsic') {
+      context.addIssue({ code: 'custom', path: ['idempotency'], message: 'Query tools must be intrinsically idempotent.' });
+    }
+    if (tool.idempotency === 'keyed' && !tool.idempotencyKeyField) {
+      context.addIssue({ code: 'custom', path: ['idempotencyKeyField'], message: 'Keyed tools require idempotencyKeyField.' });
+    }
+    if (tool.idempotency !== 'keyed' && tool.idempotencyKeyField) {
+      context.addIssue({ code: 'custom', path: ['idempotencyKeyField'], message: 'Only keyed tools may declare idempotencyKeyField.' });
+    }
+  });
 
 export const evaluationDefinitionSchema = z
   .object({
@@ -56,6 +86,9 @@ export const deliverableDefinitionSchema = z
     graphId: identifierSchema,
     stateField: identifierSchema,
     mediaType: z.string().trim().min(1).max(160),
+    artifactType: identifierSchema.optional(),
+    evidenceFields: z.array(identifierSchema).optional(),
+    approvalField: identifierSchema.optional(),
   })
   .strict();
 

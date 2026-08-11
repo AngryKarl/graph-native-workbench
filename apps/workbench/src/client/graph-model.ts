@@ -7,6 +7,12 @@ export const nodeKindLabel: Record<GraphNode['kind'], string> = {
   join: 'Join',
   human: 'Human',
   router: 'Router',
+  wait: 'Wait',
+  subgraph: 'Subgraph',
+  loop: 'Loop',
+  map: 'Map',
+  escalation: 'Escalation',
+  compensation: 'Compensation',
 };
 
 export type NodeRunStatus = 'idle' | 'running' | 'complete' | 'waiting' | 'failed';
@@ -17,6 +23,8 @@ export function nodeRunStatus(run: RunSnapshot | null, nodeId: string): NodeRunS
   if (events.some((event) => event.type === 'node.failed' || event.type === 'node.timed_out')) return 'failed';
   if (events.some((event) => event.type === 'human.requested')
     && !events.some((event) => event.type === 'human.resolved')) return 'waiting';
+  if (events.some((event) => event.type === 'wait.scheduled' || event.type === 'event.waiting')
+    && !events.some((event) => event.type === 'wait.resumed' || event.type === 'event.received')) return 'waiting';
   if (events.some((event) => event.type === 'node.completed')) return 'complete';
   if (events.some((event) => event.type === 'node.started')) return 'running';
   return 'idle';

@@ -117,12 +117,35 @@ describe('compatibility and workspace migration', () => {
 
     expect(migrated.migratedFrom).toBe(1);
     expect(migrated.state).toMatchObject({
-      formatVersion: 2,
+      formatVersion: 3,
       workspaceId: 'workspace-test',
       createdAt: '2026-01-02T03:04:05.000Z',
       activePackId: 'research',
       installedPackIds: ['architecture', 'research'],
       modelProvider: { providerId: 'deterministic' },
+      currentActorId: 'local.user',
+    });
+    expect(migrated.state.actors['local.user']).toMatchObject({ workspaceRole: 'owner' });
+  });
+
+  it('migrates a v2 workspace to persistent local-owner identity', () => {
+    const migrated = migrateWorkbenchWorkspace({
+      formatVersion: 2,
+      workspaceId: 'workspace-v2',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+      installedPackIds: ['architecture'],
+      activePackId: 'architecture',
+      drafts: {},
+      runs: {},
+    });
+
+    expect(migrated.migratedFrom).toBe(2);
+    expect(migrated.state).toMatchObject({
+      formatVersion: 3,
+      workspaceId: 'workspace-v2',
+      currentActorId: 'local.user',
+      actors: { 'local.user': { workspaceRole: 'owner' } },
     });
   });
 
@@ -138,8 +161,8 @@ describe('compatibility and workspace migration', () => {
     const backup = await readFile(`${dataFile}.v1.backup`, 'utf8');
     const second = new WorkbenchWorkspaceStore(dataFile).snapshot();
 
-    expect(first.formatVersion).toBe(2);
-    expect(persisted.formatVersion).toBe(2);
+    expect(first.formatVersion).toBe(3);
+    expect(persisted.formatVersion).toBe(3);
     expect(persisted.version).toBeUndefined();
     expect(backup).toBe(original);
     expect(second.workspaceId).toBe(first.workspaceId);
@@ -152,7 +175,7 @@ describe('compatibility and workspace migration', () => {
     const future = '{"formatVersion":99,"future":true}\n';
     await writeFile(dataFile, future, 'utf8');
 
-    expect(() => new WorkbenchWorkspaceStore(dataFile)).toThrow(/can migrate version 1 or open formatVersion 2/);
+    expect(() => new WorkbenchWorkspaceStore(dataFile)).toThrow(/can migrate version 1\/2 or open formatVersion 3/);
     expect(await readFile(dataFile, 'utf8')).toBe(future);
   });
 });

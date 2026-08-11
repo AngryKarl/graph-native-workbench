@@ -735,6 +735,7 @@ export function createJsonModelAgent(
       const tools = context.tools.map((tool) => ({
         id: tool.id,
         description: `${tool.label}: ${tool.description} Risk: ${tool.risk}.`,
+        ...(tool.inputSchema ? { inputSchema: tool.inputSchema } : {}),
       }));
       const resumed = resumeModelAgent(context.resumeState, client.config.id);
       const exchanges: ModelToolExchange[] = [...(resumed?.exchanges ?? [])];

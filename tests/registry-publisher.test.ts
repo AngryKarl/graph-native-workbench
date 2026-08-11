@@ -37,18 +37,19 @@ describe('Registry release publisher', () => {
       generatedAt: now.toISOString(),
       expiresAt: '2026-09-03T12:00:00.000Z',
       packs: [
+        { id: 'software_delivery', version: '0.3.0', engineRange: '^0.3.0' },
         { id: 'research', version: '0.3.0', engineRange: '^0.3.0' },
         { id: 'architecture', version: '0.3.0', engineRange: '^0.3.0' },
         { id: 'customer_success', version: '0.3.0', engineRange: '^0.3.0' },
       ],
     });
-    expect(release.artifacts).toHaveLength(3);
+    expect(release.artifacts).toHaveLength(4);
     for (const artifact of release.artifacts) {
       expect(inspectPackArtifact(artifact.artifact).checksum).toBe(artifact.checksum);
       expect(release.payload.packs.some((pack) => pack.artifactChecksum === artifact.checksum)).toBe(true);
     }
     expect(release.payload.packs[0]?.artifact).toBe(
-      'https://github.com/example/project/releases/download/packs-v0.3.0/packs/research-0.3.0.gpack',
+      'https://github.com/example/project/releases/download/packs-v0.3.0/packs/software_delivery-0.3.0.gpack',
     );
 
     const { privateKey, publicKey } = generateKeyPairSync('ed25519');
@@ -56,7 +57,7 @@ describe('Registry release publisher', () => {
     expect(verifySignedPackRegistry(signed, {
       trustedKeys: { 'graph-workbench.reference.v1': publicKey },
       now,
-    }).payload.packs).toHaveLength(3);
+    }).payload.packs).toHaveLength(4);
   });
 
   it('rejects insecure publishing URLs and excessive catalog lifetimes', async () => {

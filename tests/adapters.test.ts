@@ -27,8 +27,36 @@ function governedPack(toolId: 'lookup' | 'publish'): IndustryPackManifest {
       },
     ],
     tools: [
-      { id: 'lookup', label: 'Lookup', risk: 'read', description: 'Read a governed source.' },
-      { id: 'publish', label: 'Publish', risk: 'external', description: 'Publish outside the runtime.' },
+      {
+        id: 'lookup',
+        label: 'Lookup',
+        risk: 'read',
+        description: 'Read a governed source.',
+        operation: 'query',
+        inputSchema: {
+          type: 'object',
+          properties: { query: { type: 'string' } },
+          required: ['query'],
+          additionalProperties: false,
+        },
+        outputSchema: { type: 'string' },
+        idempotency: 'intrinsic',
+      },
+      {
+        id: 'publish',
+        label: 'Publish',
+        risk: 'external',
+        description: 'Publish outside the runtime.',
+        operation: 'command',
+        inputSchema: {
+          type: 'object',
+          properties: { content: { type: 'string' } },
+          required: ['content'],
+          additionalProperties: false,
+        },
+        outputSchema: { type: 'string' },
+        idempotency: 'none',
+      },
     ],
     evaluations: [],
     deliverables: [],
@@ -88,7 +116,10 @@ describe('Agent and tool adapters', () => {
       const payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
       if (round === 1) {
         expect(payload.tools).toEqual([expect.objectContaining({
-          function: expect.objectContaining({ name: 'graph_workbench_tool_1' }),
+          function: expect.objectContaining({
+            name: 'graph_workbench_tool_1',
+            parameters: expect.objectContaining({ required: ['query'] }),
+          }),
         })]);
         return new Response(JSON.stringify({
           id: 'request-1',
@@ -135,6 +166,12 @@ describe('Agent and tool adapters', () => {
     expect(result.events.map((event) => event.type)).toEqual(
       expect.arrayContaining(['tool.requested', 'tool.started', 'tool.completed']),
     );
+    expect(result.events.find((event) => event.type === 'tool.started')).toMatchObject({
+      detail: { operation: 'query', idempotency: 'intrinsic' },
+    });
+    expect(result.events.find((event) => event.type === 'tool.completed')).toMatchObject({
+      detail: { outputSchemaValidated: true },
+    });
     expect(result.events.find((event) => event.type === 'node.completed' && event.nodeId === 'analyze'))
       .toMatchObject({ detail: { usage: { inputTokens: 20, outputTokens: 5, totalTokens: 25 } } });
   });
@@ -169,6 +206,41 @@ describe('Agent and tool adapters', () => {
     if (result.status !== 'failed') throw new Error('Expected a failed run.');
     expect(result.error.message).toContain('1-round tool-call limit');
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects connector input and output that violate the declared schemas', async () => {
+    const pack = governedPack('lookup');
+    const execute = vi.fn(() => 'unused');
+    const invalidInput = await new GraphRuntime(graph(pack), {
+      pack,
+      agents: {
+        'adapter_test.agent': {
+          run: async (context) => ({
+            patch: { answer: String(await context.invokeTool('lookup', { wrong: 'shape' })) },
+          }),
+        },
+      },
+      tools: { lookup: { execute } },
+    }).run({ query: 'invalid input' });
+    expect(invalidInput.status).toBe('failed');
+    expect(execute).not.toHaveBeenCalled();
+    expect(invalidInput.events.find((event) => event.type === 'tool.denied')).toMatchObject({
+      detail: { reason: 'input does not match the declared schema' },
+    });
+
+    const invalidOutput = await new GraphRuntime(graph(pack), {
+      pack,
+      agents: {
+        'adapter_test.agent': {
+          run: async (context) => ({
+            patch: { answer: String(await context.invokeTool('lookup', { query: 'valid' })) },
+          }),
+        },
+      },
+      tools: { lookup: { execute: () => 42 } },
+    }).run({ query: 'invalid output' });
+    expect(invalidOutput.status).toBe('failed');
+    expect(invalidOutput.events.some((event) => event.type === 'tool.failed')).toBe(true);
   });
 
   it('resumes an approved model tool call without repeating the provider request', async () => {
@@ -289,6 +361,20 @@ describe('Agent and tool adapters', () => {
     if (paused.status !== 'paused' || typeof request?.detail.approvalId !== 'string') {
       throw new Error('Expected a tool approval checkpoint.');
     }
+
+    const unauthorized = await runtime.resume(paused.checkpoint, {
+      actor: {
+        id: 'member.observer',
+        kind: 'human',
+        displayName: 'Observer',
+        workspaceRole: 'member',
+        roleIds: ['observer'],
+      },
+      toolApprovals: { [request.detail.approvalId]: true },
+    });
+    expect(unauthorized.status).toBe('paused');
+    expect(unauthorized.events.find((event) => event.type === 'tool.denied')?.detail.reason)
+      .toContain('role "analyst" is required');
 
     const resumed = await runtime.resume(paused.checkpoint, {
       toolApprovals: { [request.detail.approvalId]: true },

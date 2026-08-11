@@ -151,4 +151,20 @@ export const customerSuccessHandlers: HandlerRegistry = {
   'customer_success.record_rejection': ({ state }) => ({
     rejection_reason: `Revenue owner rejected the plan after ${stringValue(state.review_status)}.`,
   }),
+
+  'customer_success.advance_scan': ({ state }) => {
+    const scanAttempt = numberValue(state.scan_attempt) + 1;
+    return { scan_attempt: scanAttempt, continue_scan: scanAttempt < 2 };
+  },
+
+  'customer_success.score_scheduled_account': ({ state }) => ({
+    result: { account: state.item, scored_at: 'scheduled-scan' },
+  }),
+
+  'customer_success.sync_health_alert': ({ state }) => {
+    if (state.simulate_failure === true) throw new Error('Health alert sync failed.');
+    return { recovered: false };
+  },
+
+  'customer_success.compensate_health_alert': () => ({ recovered: true }),
 };

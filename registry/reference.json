@@ -6,6 +6,9 @@
   },
   "packs": [
     {
+      "source": "../packs/software-delivery/src/index.ts"
+    },
+    {
       "source": "../packs/research/src/index.ts"
     },
     {

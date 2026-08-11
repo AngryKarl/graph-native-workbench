@@ -1,11 +1,18 @@
 import {
   graphDefinitionSchema,
   industryPackManifestSchema,
+  compensationNodeConfigSchema,
+  escalationNodeConfigSchema,
+  loopNodeConfigSchema,
+  mapNodeConfigSchema,
+  subgraphNodeConfigSchema,
+  waitNodeConfigSchema,
   type GraphDefinition,
   type GraphEdge,
   type GraphNode,
   type IndustryPackManifest,
 } from '@graph-workbench/contracts';
+import { assertValidState } from './state.js';
 
 export class GraphCompileError extends Error {
   readonly issues: readonly string[];
@@ -55,6 +62,22 @@ export function compileGraph(input: unknown): CompiledGraph {
   const nodeById = new Map(definition.nodes.map((node) => [node.id, node]));
   const fieldIds = new Set(Object.keys(definition.state.fields));
 
+  if (definition.trigger?.type === 'event' && definition.trigger.correlationField
+    && !fieldIds.has(definition.trigger.correlationField)) {
+    issues.push(`Event trigger references undeclared correlation field "${definition.trigger.correlationField}".`);
+  }
+  if ((definition.trigger?.type === 'event' || definition.trigger?.type === 'webhook')
+    && definition.trigger.inputSchema && definition.trigger.inputSchema.type !== 'object') {
+    issues.push(`${definition.trigger.type} trigger inputSchema must describe an object.`);
+  }
+  if (definition.trigger?.type === 'schedule') {
+    try {
+      assertValidState(definition.state, definition.trigger.input, { requireAllRequired: true });
+    } catch (error) {
+      issues.push(`Schedule trigger input is invalid: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   for (const id of duplicates(nodeIds)) issues.push(`Duplicate node id "${id}".`);
   for (const id of duplicates(edgeIds)) issues.push(`Duplicate edge id "${id}".`);
 
@@ -85,7 +108,7 @@ export function compileGraph(input: unknown): CompiledGraph {
     for (const field of [...node.reads, ...node.writes]) {
       if (!fieldIds.has(field)) issues.push(`Node "${node.id}" references undeclared state field "${field}".`);
     }
-    if ((node.kind === 'agent' || node.kind === 'function') && !node.handler) {
+    if ((node.kind === 'agent' || node.kind === 'function' || node.kind === 'compensation') && !node.handler) {
       issues.push(`Node "${node.id}" (${node.kind}) requires a handler.`);
     }
     if (node.kind === 'human') {
@@ -98,6 +121,44 @@ export function compileGraph(input: unknown): CompiledGraph {
     }
     if (node.kind === 'join' && (incoming.get(node.id)?.length ?? 0) < 2) {
       issues.push(`Join node "${node.id}" requires at least two incoming edges.`);
+    }
+    if (node.kind === 'wait') {
+      const config = waitNodeConfigSchema.safeParse(node.config);
+      if (!config.success) {
+        issues.push(`Wait node "${node.id}" has invalid config: ${config.error.issues[0]?.message ?? 'unknown error'}.`);
+      } else if (config.data.mode === 'event') {
+        if (!node.reads.includes(config.data.correlationField)) {
+          issues.push(`Wait node "${node.id}" must declare correlationField "${config.data.correlationField}" in reads.`);
+        }
+        if (config.data.payloadField && !node.writes.includes(config.data.payloadField)) {
+          issues.push(`Wait node "${node.id}" must declare payloadField "${config.data.payloadField}" in writes.`);
+        }
+      }
+    }
+    for (const [kind, schema] of [
+      ['subgraph', subgraphNodeConfigSchema],
+      ['loop', loopNodeConfigSchema],
+      ['map', mapNodeConfigSchema],
+    ] as const) {
+      if (node.kind !== kind) continue;
+      const config = schema.safeParse(node.config);
+      if (!config.success) {
+        issues.push(`${kind[0]!.toUpperCase()}${kind.slice(1)} node "${node.id}" has invalid config: ${config.error.issues[0]?.message ?? 'unknown error'}.`);
+      }
+    }
+    if (node.kind === 'escalation') {
+      const config = escalationNodeConfigSchema.safeParse(node.config);
+      if (!config.success) issues.push(`Escalation node "${node.id}" has invalid config: ${config.error.issues[0]?.message ?? 'unknown error'}.`);
+    }
+    if (node.kind === 'compensation') {
+      const config = compensationNodeConfigSchema.safeParse(node.config);
+      if (!config.success) {
+        issues.push(`Compensation node "${node.id}" has invalid config: ${config.error.issues[0]?.message ?? 'unknown error'}.`);
+      } else {
+        for (const compensated of config.data.compensates) {
+          if (!nodeById.has(compensated)) issues.push(`Compensation node "${node.id}" references unknown compensated node "${compensated}".`);
+        }
+      }
     }
   }
 
@@ -124,7 +185,7 @@ export function compileGraph(input: unknown): CompiledGraph {
     };
 
     visit(triggerId);
-    if (hasCycle) issues.push('Version 0.1 execution graphs must be acyclic.');
+    if (hasCycle) issues.push('Top-level execution edges must be acyclic; use a bounded loop node for repetition.');
     for (const node of definition.nodes) {
       if (!reachable.has(node.id)) issues.push(`Node "${node.id}" is unreachable from the trigger.`);
     }
@@ -180,6 +241,23 @@ export function compilePack(input: unknown): CompiledPack {
       issues.push(
         `Deliverable "${deliverable.id}" references unknown state field "${deliverable.stateField}".`,
       );
+    } else {
+      if ((deliverable.evidenceFields?.length || deliverable.approvalField) && !deliverable.artifactType) {
+        issues.push(`Deliverable "${deliverable.id}" must declare artifactType before evidenceFields or approvalField.`);
+      }
+      for (const field of deliverable.evidenceFields ?? []) {
+        if (!(field in graph.state.fields)) {
+          issues.push(`Deliverable "${deliverable.id}" references unknown evidence field "${field}".`);
+        }
+      }
+      if (deliverable.approvalField && !(deliverable.approvalField in graph.state.fields)) {
+        issues.push(
+          `Deliverable "${deliverable.id}" references unknown approval field "${deliverable.approvalField}".`,
+        );
+      }
+      for (const field of duplicates(deliverable.evidenceFields ?? [])) {
+        issues.push(`Deliverable "${deliverable.id}" repeats evidence field "${field}".`);
+      }
     }
   }
   for (const fixture of manifest.fixtures) {
@@ -260,8 +338,96 @@ export function compilePack(input: unknown): CompiledPack {
           `Graph "${graph.id}" node "${node.id}" references unknown evaluation "${String(evaluationId)}".`,
         );
       }
+
+      const validateCall = (
+        config: { graphId: string; inputMapping: Record<string, string> },
+        validateSpecific: (child: GraphDefinition) => void,
+      ) => {
+        const child = manifest.graphs.find((item) => item.id === config.graphId);
+        if (!child) {
+          issues.push(`Graph "${graph.id}" node "${node.id}" references unknown subgraph "${config.graphId}".`);
+          return;
+        }
+        const parentFields = graph.state.fields;
+        const childFields = child.state.fields;
+        for (const [childField, parentField] of Object.entries(config.inputMapping)) {
+          if (!(childField in childFields)) issues.push(`Graph "${graph.id}" node "${node.id}" maps unknown child input "${childField}".`);
+          if (!(parentField in parentFields)) issues.push(`Graph "${graph.id}" node "${node.id}" maps unknown parent input "${parentField}".`);
+          if (!node.reads.includes(parentField)) issues.push(`Graph "${graph.id}" node "${node.id}" must declare mapped input "${parentField}" in reads.`);
+        }
+        validateSpecific(child);
+      };
+      if (node.kind === 'subgraph') {
+        const parsed = subgraphNodeConfigSchema.safeParse(node.config);
+        if (parsed.success) validateCall(parsed.data, (child) => {
+          for (const [parentField, childField] of Object.entries(parsed.data.outputMapping)) {
+            if (!(parentField in graph.state.fields)) issues.push(`Graph "${graph.id}" node "${node.id}" maps unknown parent output "${parentField}".`);
+            if (!(childField in child.state.fields)) issues.push(`Graph "${graph.id}" node "${node.id}" maps unknown child output "${childField}".`);
+            if (!node.writes.includes(parentField)) issues.push(`Graph "${graph.id}" node "${node.id}" must declare mapped output "${parentField}" in writes.`);
+          }
+        });
+      }
+      if (node.kind === 'loop') {
+        const parsed = loopNodeConfigSchema.safeParse(node.config);
+        if (parsed.success) validateCall(parsed.data, (child) => {
+          for (const [parentField, childField] of Object.entries(parsed.data.outputMapping)) {
+            if (!(parentField in graph.state.fields)) issues.push(`Graph "${graph.id}" node "${node.id}" maps unknown parent output "${parentField}".`);
+            if (!(childField in child.state.fields)) issues.push(`Graph "${graph.id}" node "${node.id}" maps unknown child output "${childField}".`);
+            if (!node.writes.includes(parentField)) issues.push(`Graph "${graph.id}" node "${node.id}" must declare mapped output "${parentField}" in writes.`);
+          }
+          if (!node.reads.includes(parsed.data.conditionField)) issues.push(`Graph "${graph.id}" loop node "${node.id}" must declare conditionField "${parsed.data.conditionField}" in reads.`);
+        });
+      }
+      if (node.kind === 'map') {
+        const parsed = mapNodeConfigSchema.safeParse(node.config);
+        if (parsed.success) validateCall(parsed.data, (child) => {
+          if (!(parsed.data.itemField in child.state.fields)) issues.push(`Graph "${graph.id}" map node "${node.id}" references unknown child itemField "${parsed.data.itemField}".`);
+          if (!(parsed.data.resultField in child.state.fields)) issues.push(`Graph "${graph.id}" map node "${node.id}" references unknown child resultField "${parsed.data.resultField}".`);
+          if (!node.reads.includes(parsed.data.itemsField)) issues.push(`Graph "${graph.id}" map node "${node.id}" must declare itemsField "${parsed.data.itemsField}" in reads.`);
+          if (!node.writes.includes(parsed.data.outputField)) issues.push(`Graph "${graph.id}" map node "${node.id}" must declare outputField "${parsed.data.outputField}" in writes.`);
+        });
+      }
     }
   }
+
+  for (const id of duplicates(manifest.graphs.flatMap((graph) => {
+    const trigger = graph.trigger;
+    return trigger?.type === 'webhook' ? [`${trigger.method} ${trigger.path}`] : [];
+  }))) {
+    issues.push(`Duplicate webhook trigger "${id}".`);
+  }
+
+  const dependencies = new Map(manifest.graphs.map((graph) => [graph.id, graph.nodes.flatMap((node) => {
+    if (node.kind === 'subgraph') {
+      const parsed = subgraphNodeConfigSchema.safeParse(node.config);
+      return parsed.success ? [parsed.data.graphId] : [];
+    }
+    if (node.kind === 'loop') {
+      const parsed = loopNodeConfigSchema.safeParse(node.config);
+      return parsed.success ? [parsed.data.graphId] : [];
+    }
+    if (node.kind === 'map') {
+      const parsed = mapNodeConfigSchema.safeParse(node.config);
+      return parsed.success ? [parsed.data.graphId] : [];
+    }
+    return [];
+  })]));
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const visitDependency = (graphId: string): void => {
+    if (visiting.has(graphId)) {
+      issues.push(`Subgraph dependency cycle includes "${graphId}".`);
+      return;
+    }
+    if (visited.has(graphId)) return;
+    visiting.add(graphId);
+    for (const dependency of dependencies.get(graphId) ?? []) {
+      if (dependencies.has(dependency)) visitDependency(dependency);
+    }
+    visiting.delete(graphId);
+    visited.add(graphId);
+  };
+  for (const graph of manifest.graphs) visitDependency(graph.id);
 
   const graphs = new Map<string, CompiledGraph>();
   for (const graph of manifest.graphs) {

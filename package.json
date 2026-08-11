@@ -34,6 +34,7 @@
     "@graph-workbench/pack-architecture": "workspace:*",
     "@graph-workbench/pack-customer-success": "workspace:*",
     "@graph-workbench/pack-research": "workspace:*",
+    "@graph-workbench/pack-software-delivery": "workspace:*",
     "@graph-workbench/pack-sdk": "workspace:*",
     "@playwright/test": "^1.62.1",
     "@types/node": "^24.10.0",

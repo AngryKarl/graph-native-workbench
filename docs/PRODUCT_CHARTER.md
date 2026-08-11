@@ -43,9 +43,11 @@ experience without modifying the kernel.
 
 ## First reference Packs
 
-1. Evidence Research: a cross-industry demonstration of parallel research,
+1. Professional Software Delivery: governed issue-to-release work with parallel
+   verification, independent approvals, deployment observation and rollback.
+2. Evidence Research: a cross-industry demonstration of parallel research,
    synthesis, independent verification, approval and publication.
-2. Architecture: the first deep vertical Pack for requirements, evidence,
+3. Architecture: the first deep vertical Pack for requirements, evidence,
    design decisions, review and deliverable production.
-3. Customer Success Renewal: an enterprise operating workflow for attributable
+4. Customer Success Renewal: an enterprise operating workflow for attributable
    account evidence, renewal-risk decisions, owned interventions and approval.

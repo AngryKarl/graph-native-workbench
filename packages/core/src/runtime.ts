@@ -1,11 +1,25 @@
 import { randomUUID } from 'node:crypto';
 import type {
+  ActorIdentity,
   EdgeCondition,
+  ExternalEvent,
   GraphCheckpoint,
   GraphEvent,
   GraphNode,
+  PortableArtifact,
 } from '@graph-workbench/contracts';
-import type { CompiledGraph } from './compiler.js';
+import {
+  externalEventSchema,
+  escalationNodeConfigSchema,
+  compensationNodeConfigSchema,
+  loopNodeConfigSchema,
+  mapNodeConfigSchema,
+  parseJsonSchemaValue,
+  subgraphNodeConfigSchema,
+  waitNodeConfigSchema,
+} from '@graph-workbench/contracts';
+import { compileGraph, type CompiledGraph } from './compiler.js';
+import { createRunArtifacts } from './artifact.js';
 import {
   AgentSuspensionError,
   ToolApprovalRequiredError,
@@ -19,11 +33,18 @@ import { assertValidPatch, assertValidState, type GraphState } from './state.js'
 
 export interface RunOptions {
   readonly runId?: string;
+  readonly actor?: ActorIdentity;
+  readonly historyEvents?: readonly GraphEvent[];
   readonly decisions?: Readonly<Record<string, unknown>>;
   readonly toolApprovals?: Readonly<Record<string, boolean>>;
   readonly onEvent?: (event: GraphEvent) => void | Promise<void>;
   readonly store?: RunStore;
   readonly signal?: AbortSignal;
+  readonly externalEvents?: readonly ExternalEvent[];
+  readonly triggerContext?:
+    | { readonly type: 'webhook'; readonly method: string; readonly path: string }
+    | { readonly type: 'schedule'; readonly occurrenceId: string; readonly scheduledFor: string }
+    | { readonly type: 'event'; readonly eventId: string; readonly eventType: string; readonly correlationKey?: string };
 }
 
 export type RunResult =
@@ -32,6 +53,7 @@ export type RunResult =
       readonly runId: string;
       readonly state: GraphState;
       readonly events: readonly GraphEvent[];
+      readonly artifacts?: readonly PortableArtifact[];
     }
   | {
       readonly status: 'paused';
@@ -66,6 +88,7 @@ interface MutableRun {
   startedAt: string;
   activeStartedAtMs: number;
   suspensions: Map<string, unknown>;
+  consumedEventIds: Set<string>;
   events: GraphEvent[];
 }
 
@@ -86,6 +109,13 @@ class NodeTimeoutError extends Error {
   constructor(nodeId: string, timeoutMs: number) {
     super(`Node "${nodeId}" timed out after ${timeoutMs}ms.`);
     this.name = 'NodeTimeoutError';
+  }
+}
+
+class NodeSuspensionError extends Error {
+  constructor() {
+    super('Node is durably suspended.');
+    this.name = 'NodeSuspensionError';
   }
 }
 
@@ -121,10 +151,19 @@ function asError(error: unknown): Error {
 }
 
 export class GraphRuntime {
+  private readonly subgraphs = new Map<string, CompiledGraph>();
+
   constructor(
     private readonly graph: CompiledGraph,
     private readonly bindings: RuntimeBindings = {},
-  ) {}
+  ) {
+    for (const [id, child] of Object.entries(bindings.subgraphs ?? {})) this.subgraphs.set(id, child);
+    for (const definition of bindings.pack?.graphs ?? []) {
+      if (definition.id !== graph.definition.id && !this.subgraphs.has(definition.id)) {
+        this.subgraphs.set(definition.id, compileGraph(definition));
+      }
+    }
+  }
 
   async run(initialState: GraphState, options: RunOptions = {}): Promise<RunResult> {
     assertValidState(this.graph.definition.state, initialState, { requireAllRequired: true });
@@ -139,6 +178,7 @@ export class GraphRuntime {
       startedAt: new Date().toISOString(),
       activeStartedAtMs: Date.now(),
       suspensions: new Map(),
+      consumedEventIds: new Set(),
       events: [],
     };
     await options.store?.createRun({
@@ -151,7 +191,10 @@ export class GraphRuntime {
       updatedAt: mutable.startedAt,
       error: null,
     });
-    await this.emit(mutable, 'run.started', options);
+    await this.emit(mutable, 'run.started', options, undefined, this.actorDetail(options.actor, 'startedBy'));
+    if (options.triggerContext) {
+      await this.emit(mutable, 'trigger.accepted', options, undefined, { ...options.triggerContext });
+    }
     await options.store?.saveCheckpoint(this.checkpoint(mutable));
     return this.execute(mutable, options);
   }
@@ -164,6 +207,7 @@ export class GraphRuntime {
       throw new Error('Checkpoint graph identity does not match the compiled graph.');
     }
     assertValidState(this.graph.definition.state, checkpoint.state, { requireAllRequired: true });
+    this.assertDecisionAuthority(options);
     const mutable: MutableRun = {
       runId: checkpoint.runId,
       state: structuredClone(checkpoint.state),
@@ -177,13 +221,14 @@ export class GraphRuntime {
       startedAt: checkpoint.startedAt,
       activeStartedAtMs: Date.now(),
       suspensions: new Map(Object.entries(checkpoint.suspensions)),
+      consumedEventIds: new Set(checkpoint.consumedEventIds),
       events: [],
     };
     await options.store?.updateRun(mutable.runId, {
       status: 'running',
       state: structuredClone(mutable.state),
     });
-    await this.emit(mutable, 'run.resumed', options);
+    await this.emit(mutable, 'run.resumed', options, undefined, this.actorDetail(options.actor, 'resumedBy'));
     return this.execute(mutable, options);
   }
 
@@ -192,9 +237,12 @@ export class GraphRuntime {
     store: RunStore,
     options: Omit<RunOptions, 'store'> = {},
   ): Promise<RunResult> {
-    const checkpoint = await store.getCheckpoint(runId);
+    const [checkpoint, historyEvents] = await Promise.all([
+      store.getCheckpoint(runId),
+      store.listEvents(runId),
+    ]);
     if (!checkpoint) throw new Error(`Run "${runId}" does not have a stored checkpoint.`);
-    return this.resume(checkpoint, { ...options, store });
+    return this.resume(checkpoint, { ...options, historyEvents, store });
   }
 
   private async execute(mutable: MutableRun, options: RunOptions): Promise<RunResult> {
@@ -273,6 +321,15 @@ export class GraphRuntime {
         });
       }
 
+      const artifacts = this.bindings.pack
+        ? createRunArtifacts({
+            pack: this.bindings.pack,
+            graph: this.graph.definition,
+            runId: mutable.runId,
+            state: mutable.state,
+            events: [...(options.historyEvents ?? []), ...mutable.events],
+          })
+        : [];
       await this.emit(mutable, 'run.completed', options);
       await options.store?.updateRun(mutable.runId, {
         status: 'completed',
@@ -284,6 +341,7 @@ export class GraphRuntime {
         runId: mutable.runId,
         state: structuredClone(mutable.state),
         events: mutable.events,
+        ...(artifacts.length > 0 ? { artifacts } : {}),
       };
     } catch (error) {
       const resolved = asError(error);
@@ -334,18 +392,46 @@ export class GraphRuntime {
       if (!(nodeId in (options.decisions ?? {}))) {
         await this.emit(mutable, 'human.requested', options, nodeId, {
           decisionField: node.config.decisionField,
+          ...(typeof node.config.roleId === 'string' ? { requiredRoleId: node.config.roleId } : {}),
         });
         return { nodeId, status: 'paused' };
       }
       const decisionField = String(node.config.decisionField);
       const patch = { [decisionField]: options.decisions?.[nodeId] };
       try {
+        this.assertActorRole(node, options.actor);
         assertValidPatch(this.graph.definition.state, node.writes, patch, nodeId);
-        await this.emit(mutable, 'human.resolved', options, nodeId, { decisionField });
+        await this.emit(mutable, 'human.resolved', options, nodeId, {
+          decisionField,
+          ...(typeof node.config.roleId === 'string' ? { requiredRoleId: node.config.roleId } : {}),
+          ...this.actorDetail(options.actor, 'resolvedBy'),
+        });
         return { nodeId, status: 'completed', patch, detail: {} };
       } catch (error) {
         return { nodeId, status: 'failed', error: asError(error) };
       }
+    }
+
+    if (node.kind === 'wait') {
+      await this.emit(mutable, 'node.started', options, nodeId, { kind: node.kind, attempt: 1 });
+      try {
+        const patch = await this.executeWait(mutable, node, state, options);
+        return { nodeId, status: 'completed', patch, detail: {} };
+      } catch (error) {
+        if (error instanceof NodeSuspensionError) return { nodeId, status: 'paused' };
+        return { nodeId, status: 'failed', error: asError(error) };
+      }
+    }
+
+    if (node.kind === 'escalation') {
+      const config = escalationNodeConfigSchema.parse(node.config);
+      await this.emit(mutable, 'node.started', options, nodeId, { kind: node.kind, attempt: 1 });
+      await this.emit(mutable, 'escalation.raised', options, nodeId, {
+        reason: config.reason,
+        severity: config.severity,
+        ...(config.roleId ? { roleId: config.roleId } : {}),
+      });
+      return { nodeId, status: 'completed', patch: {}, detail: { severity: config.severity } };
     }
 
     if (node.kind === 'trigger' || node.kind === 'router' || node.kind === 'join') {
@@ -355,6 +441,10 @@ export class GraphRuntime {
 
     const maxAttempts = node.execution?.retry?.maxAttempts ?? 1;
     const backoffMs = node.execution?.retry?.backoffMs ?? 0;
+    if (node.kind === 'compensation') {
+      const config = compensationNodeConfigSchema.parse(node.config);
+      await this.emit(mutable, 'compensation.started', options, nodeId, { compensates: config.compensates });
+    }
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       if (options.signal?.aborted) return { nodeId, status: 'cancelled' };
       await this.emit(mutable, 'node.started', options, nodeId, {
@@ -363,7 +453,14 @@ export class GraphRuntime {
         maxAttempts,
       });
       const result = await this.executeNodeAttempt(mutable, node, state, options);
-      if (result.status === 'completed' || result.status === 'cancelled' || result.status === 'paused') return result;
+      if (result.status === 'completed') {
+        if (node.kind === 'compensation') {
+          const config = compensationNodeConfigSchema.parse(node.config);
+          await this.emit(mutable, 'compensation.completed', options, nodeId, { compensates: config.compensates });
+        }
+        return result;
+      }
+      if (result.status === 'cancelled' || result.status === 'paused') return result;
       const timedOut = result.error instanceof NodeTimeoutError;
       if (timedOut) {
         await this.emit(mutable, 'node.timed_out', options, nodeId, {
@@ -432,6 +529,7 @@ export class GraphRuntime {
     } catch (error) {
       if (options.signal?.aborted) return { nodeId: node.id, status: 'cancelled' };
       if (error instanceof ToolApprovalRequiredError) return { nodeId: node.id, status: 'paused' };
+      if (error instanceof NodeSuspensionError) return { nodeId: node.id, status: 'paused' };
       return { nodeId: node.id, status: 'failed', error: asError(error) };
     } finally {
       if (timeout) clearTimeout(timeout);
@@ -446,6 +544,10 @@ export class GraphRuntime {
     options: RunOptions,
     signal: AbortSignal,
   ): Promise<{ patch: GraphState; detail: Record<string, unknown> }> {
+
+    if (node.kind === 'subgraph') return this.invokeSubgraph(mutable, node, state, options);
+    if (node.kind === 'loop') return this.invokeLoop(mutable, node, state, options);
+    if (node.kind === 'map') return this.invokeMap(mutable, node, state, options);
 
     const agent = node.kind === 'agent' && node.handler
       ? this.bindings.agents?.[node.handler]
@@ -498,6 +600,223 @@ export class GraphRuntime {
     }
   }
 
+  private async executeWait(
+    mutable: MutableRun,
+    node: GraphNode,
+    state: GraphState,
+    options: RunOptions,
+  ): Promise<GraphState> {
+    const config = waitNodeConfigSchema.parse(node.config);
+    const existing = mutable.suspensions.get(node.id);
+    if (config.mode === 'timer') {
+      const now = (this.bindings.clock?.() ?? new Date()).getTime();
+      if (!existing) {
+        const resumeAt = new Date(now + config.durationMs).toISOString();
+        mutable.suspensions.set(node.id, { type: 'timer', resumeAt });
+        await this.emit(mutable, 'wait.scheduled', options, node.id, { resumeAt, durationMs: config.durationMs });
+        throw new NodeSuspensionError();
+      }
+      const suspension = existing as { type?: unknown; resumeAt?: unknown };
+      if (suspension.type !== 'timer' || typeof suspension.resumeAt !== 'string') {
+        throw new Error(`Wait node "${node.id}" has an incompatible checkpoint suspension.`);
+      }
+      if (now < Date.parse(suspension.resumeAt)) throw new NodeSuspensionError();
+      mutable.suspensions.delete(node.id);
+      await this.emit(mutable, 'wait.resumed', options, node.id, { resumeAt: suspension.resumeAt });
+      return {};
+    }
+
+    const correlationValue = state[config.correlationField];
+    if (typeof correlationValue !== 'string' && typeof correlationValue !== 'number') {
+      throw new Error(`Wait node "${node.id}" correlation field "${config.correlationField}" must be a string or number.`);
+    }
+    const correlationKey = String(correlationValue);
+    if (!existing) {
+      mutable.suspensions.set(node.id, { type: 'event', eventType: config.eventType, correlationKey });
+      await this.emit(mutable, 'event.waiting', options, node.id, { eventType: config.eventType, correlationKey });
+      throw new NodeSuspensionError();
+    }
+    const suspension = existing as { type?: unknown; eventType?: unknown; correlationKey?: unknown };
+    if (
+      suspension.type !== 'event'
+      || suspension.eventType !== config.eventType
+      || suspension.correlationKey !== correlationKey
+    ) {
+      throw new Error(`Wait node "${node.id}" has an incompatible checkpoint suspension.`);
+    }
+    const event = (options.externalEvents ?? [])
+      .map((item) => externalEventSchema.parse(item))
+      .find((item) => !mutable.consumedEventIds.has(item.id)
+        && item.type === config.eventType && item.correlationKey === correlationKey);
+    if (!event) throw new NodeSuspensionError();
+    const patch = config.payloadField ? { [config.payloadField]: event.payload } : {};
+    assertValidPatch(this.graph.definition.state, node.writes, patch, node.id);
+    mutable.suspensions.delete(node.id);
+    mutable.consumedEventIds.add(event.id);
+    await this.emit(mutable, 'event.received', options, node.id, {
+      eventId: event.id,
+      eventType: event.type,
+      correlationKey,
+      occurredAt: event.occurredAt,
+    });
+    return patch;
+  }
+
+  private childGraph(graphId: string): CompiledGraph {
+    const child = this.subgraphs.get(graphId);
+    if (!child) throw new Error(`Subgraph "${graphId}" is not available to the runtime.`);
+    return child;
+  }
+
+  private childRuntime(graphId: string): GraphRuntime {
+    return new GraphRuntime(this.childGraph(graphId), {
+      ...this.bindings,
+      subgraphs: Object.fromEntries(this.subgraphs),
+    });
+  }
+
+  private mappedInput(mapping: Readonly<Record<string, string>>, state: GraphState): GraphState {
+    return Object.fromEntries(Object.entries(mapping).map(([childField, parentField]) => [
+      childField,
+      structuredClone(state[parentField]),
+    ]));
+  }
+
+  private mappedOutput(mapping: Readonly<Record<string, string>>, state: GraphState): GraphState {
+    return Object.fromEntries(Object.entries(mapping).map(([parentField, childField]) => [
+      parentField,
+      structuredClone(state[childField]),
+    ]));
+  }
+
+  private async invokeSubgraph(
+    mutable: MutableRun,
+    node: GraphNode,
+    state: GraphState,
+    options: RunOptions,
+  ): Promise<{ patch: GraphState; detail: Record<string, unknown> }> {
+    const config = subgraphNodeConfigSchema.parse(node.config);
+    const existing = mutable.suspensions.get(node.id) as {
+      type?: unknown;
+      graphId?: unknown;
+      checkpoint?: unknown;
+      historyEvents?: unknown;
+    } | undefined;
+    const runtime = this.childRuntime(config.graphId);
+    if (!existing) await this.emit(mutable, 'subgraph.started', options, node.id, { graphId: config.graphId });
+    if (existing && (existing.type !== 'subgraph' || existing.graphId !== config.graphId)) {
+      throw new Error(`Subgraph node "${node.id}" has an incompatible checkpoint suspension.`);
+    }
+    const result = existing
+      ? await runtime.resume(existing.checkpoint as GraphCheckpoint, {
+          ...(options.actor ? { actor: options.actor } : {}),
+          ...(existing.historyEvents ? { historyEvents: existing.historyEvents as GraphEvent[] } : {}),
+          ...(options.decisions ? { decisions: options.decisions } : {}),
+          ...(options.toolApprovals ? { toolApprovals: options.toolApprovals } : {}),
+          ...(options.externalEvents ? { externalEvents: options.externalEvents } : {}),
+          ...(options.signal ? { signal: options.signal } : {}),
+        })
+      : await runtime.run(this.mappedInput(config.inputMapping, state), {
+          ...(options.actor ? { actor: options.actor } : {}),
+          ...(options.decisions ? { decisions: options.decisions } : {}),
+          ...(options.toolApprovals ? { toolApprovals: options.toolApprovals } : {}),
+          ...(options.externalEvents ? { externalEvents: options.externalEvents } : {}),
+          ...(options.signal ? { signal: options.signal } : {}),
+        });
+    if (result.status === 'paused' || result.status === 'cancelled') {
+      mutable.suspensions.set(node.id, {
+        type: 'subgraph',
+        graphId: config.graphId,
+        checkpoint: result.checkpoint,
+        historyEvents: [...((existing?.historyEvents as GraphEvent[] | undefined) ?? []), ...result.events],
+      });
+      throw new NodeSuspensionError();
+    }
+    if (result.status === 'failed') throw result.error;
+    mutable.suspensions.delete(node.id);
+    const patch = this.mappedOutput(config.outputMapping, result.state);
+    await this.emit(mutable, 'subgraph.completed', options, node.id, {
+      graphId: config.graphId,
+      childRunId: result.runId,
+    });
+    return { patch, detail: { subgraphId: config.graphId, childRunId: result.runId } };
+  }
+
+  private async invokeLoop(
+    mutable: MutableRun,
+    node: GraphNode,
+    state: GraphState,
+    options: RunOptions,
+  ): Promise<{ patch: GraphState; detail: Record<string, unknown> }> {
+    const config = loopNodeConfigSchema.parse(node.config);
+    const working = structuredClone(state);
+    let iterations = 0;
+    while (Object.is(working[config.conditionField], config.conditionValue)) {
+      if (iterations >= config.maxIterations) {
+        throw new Error(`Loop node "${node.id}" exceeded its ${config.maxIterations} iteration budget.`);
+      }
+      iterations += 1;
+      await this.emit(mutable, 'loop.iteration', options, node.id, {
+        graphId: config.graphId,
+        iteration: iterations,
+        maxIterations: config.maxIterations,
+      });
+      const result = await this.childRuntime(config.graphId).run(this.mappedInput(config.inputMapping, working), {
+        ...(options.actor ? { actor: options.actor } : {}),
+        ...(options.signal ? { signal: options.signal } : {}),
+      });
+      if (result.status === 'failed') throw result.error;
+      if (result.status !== 'completed') {
+        throw new Error(`Loop node "${node.id}" child graph must complete without suspension.`);
+      }
+      Object.assign(working, this.mappedOutput(config.outputMapping, result.state));
+    }
+    return {
+      patch: Object.fromEntries(node.writes.map((field) => [field, structuredClone(working[field])])),
+      detail: { iterations, subgraphId: config.graphId },
+    };
+  }
+
+  private async invokeMap(
+    mutable: MutableRun,
+    node: GraphNode,
+    state: GraphState,
+    options: RunOptions,
+  ): Promise<{ patch: GraphState; detail: Record<string, unknown> }> {
+    const config = mapNodeConfigSchema.parse(node.config);
+    const items = state[config.itemsField];
+    if (!Array.isArray(items)) throw new Error(`Map node "${node.id}" field "${config.itemsField}" must be an array.`);
+    if (items.length > config.maxItems) throw new Error(`Map node "${node.id}" exceeds its ${config.maxItems} item budget.`);
+    await this.emit(mutable, 'map.started', options, node.id, {
+      graphId: config.graphId,
+      itemCount: items.length,
+      maxConcurrency: config.maxConcurrency,
+    });
+    const output: unknown[] = [];
+    for (let offset = 0; offset < items.length; offset += config.maxConcurrency) {
+      const batch = items.slice(offset, offset + config.maxConcurrency);
+      const results = await Promise.all(batch.map(async (item) => {
+        const input = this.mappedInput(config.inputMapping, state);
+        input[config.itemField] = structuredClone(item);
+        const result = await this.childRuntime(config.graphId).run(input, {
+          ...(options.actor ? { actor: options.actor } : {}),
+          ...(options.signal ? { signal: options.signal } : {}),
+        });
+        if (result.status === 'failed') throw result.error;
+        if (result.status !== 'completed') {
+          throw new Error(`Map node "${node.id}" child graph must complete without suspension.`);
+        }
+        return structuredClone(result.state[config.resultField]);
+      }));
+      output.push(...results);
+    }
+    await this.emit(mutable, 'map.completed', options, node.id, {
+      graphId: config.graphId,
+      itemCount: items.length,
+    });
+    return { patch: { [config.outputField]: output }, detail: { itemCount: items.length } };
+  }
+
   private delay(durationMs: number, signal?: AbortSignal): Promise<void> {
     if (signal?.aborted) return Promise.reject(new RunCancelledError());
     if (durationMs === 0) return Promise.resolve();
@@ -541,15 +860,35 @@ export class GraphRuntime {
     const adapter = this.bindings.tools?.[toolId];
     if (!adapter) return deny('no runtime adapter is registered');
 
+    let validatedInput = input;
+    if (tool.inputSchema) {
+      try {
+        validatedInput = parseJsonSchemaValue(tool.inputSchema, input);
+      } catch {
+        return deny('input does not match the declared schema');
+      }
+    }
+    let idempotencyKey: string | undefined;
+    if (tool.idempotency === 'keyed') {
+      const record = validatedInput && typeof validatedInput === 'object' && !Array.isArray(validatedInput)
+        ? validatedInput as Record<string, unknown>
+        : undefined;
+      const value = tool.idempotencyKeyField ? record?.[tool.idempotencyKeyField] : undefined;
+      if (typeof value !== 'string' || !value.trim()) {
+        return deny(`idempotency key field "${tool.idempotencyKeyField}" must be a non-empty string`);
+      }
+      idempotencyKey = value;
+    }
+
     const requested = this.bindings.authorizeTool
-      ? await this.bindings.authorizeTool({ runId: mutable.runId, node, role, tool, input })
+      ? await this.bindings.authorizeTool({ runId: mutable.runId, node, role, tool, input: validatedInput })
       : tool.risk === 'read' ? 'allow' : 'require-approval';
     const authorization = authorizationDecision(requested);
     if (authorization.effect === 'deny') {
       return deny(authorization.reason ?? `risk level "${tool.risk}" is denied by policy`);
     }
     if (authorization.effect === 'require-approval') {
-      const inputDigest = sha256Json(input);
+      const inputDigest = sha256Json(validatedInput);
       const approvalId = `tool-${sha256Json({
         runId: mutable.runId,
         nodeId: node.id,
@@ -570,10 +909,20 @@ export class GraphRuntime {
         });
         throw new ToolApprovalRequiredError(approvalId);
       }
+      try {
+        this.assertActorRole(node, options.actor);
+      } catch (error) {
+        await this.emit(mutable, 'tool.denied', options, node.id, {
+          toolId,
+          reason: asError(error).message,
+        });
+        throw new ToolApprovalRequiredError(approvalId);
+      }
       await this.emit(mutable, 'tool.approval_resolved', options, node.id, {
         approvalId,
         toolId,
         approved,
+        ...this.actorDetail(options.actor, 'resolvedBy'),
         ...(authorization.ruleId ? { policyRuleId: authorization.ruleId } : {}),
       });
       if (!approved) return deny('the requested tool approval was rejected');
@@ -586,16 +935,27 @@ export class GraphRuntime {
       secrets[name] = value;
     }
 
-    await this.emit(mutable, 'tool.started', options, node.id, { toolId, risk: tool.risk });
+    await this.emit(mutable, 'tool.started', options, node.id, {
+      toolId,
+      risk: tool.risk,
+      ...(tool.operation ? { operation: tool.operation, idempotency: tool.idempotency } : {}),
+    });
     try {
-      const output = await adapter.execute(input, {
+      const output = await adapter.execute(validatedInput, {
         runId: mutable.runId,
         nodeId: node.id,
         signal,
         secrets,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
       });
-      await this.emit(mutable, 'tool.completed', options, node.id, { toolId });
-      return output;
+      const validatedOutput = tool.outputSchema
+        ? parseJsonSchemaValue(tool.outputSchema, output)
+        : output;
+      await this.emit(mutable, 'tool.completed', options, node.id, {
+        toolId,
+        ...(tool.outputSchema ? { outputSchemaValidated: true } : {}),
+      });
+      return validatedOutput;
     } catch (error) {
       const resolved = asError(error);
       await this.emit(mutable, 'tool.failed', options, node.id, {
@@ -625,6 +985,30 @@ export class GraphRuntime {
     return advanced;
   }
 
+  private assertDecisionAuthority(options: RunOptions): void {
+    if (!options.actor) return;
+    for (const nodeId of Object.keys(options.decisions ?? {})) {
+      const node = this.graph.nodeById.get(nodeId);
+      if (node) this.assertActorRole(node, options.actor);
+    }
+  }
+
+  private assertActorRole(node: GraphNode, actor: ActorIdentity | undefined): void {
+    const requiredRoleId = typeof node.config.roleId === 'string' ? node.config.roleId : undefined;
+    if (!actor || !requiredRoleId || actor.workspaceRole === 'owner' || actor.roleIds.includes(requiredRoleId)) return;
+    throw new Error(
+      `Actor "${actor.id}" cannot resolve node "${node.id}"; role "${requiredRoleId}" is required.`,
+    );
+  }
+
+  private actorDetail(actor: ActorIdentity | undefined, prefix: string): Record<string, unknown> {
+    return actor ? {
+      [`${prefix}ActorId`]: actor.id,
+      [`${prefix}ActorKind`]: actor.kind,
+      [`${prefix}ActorName`]: actor.displayName,
+    } : {};
+  }
+
   private checkpoint(mutable: MutableRun): GraphCheckpoint {
     return {
       runId: mutable.runId,
@@ -640,6 +1024,7 @@ export class GraphRuntime {
       stepCount: mutable.stepCount,
       startedAt: mutable.startedAt,
       suspensions: Object.fromEntries(mutable.suspensions),
+      consumedEventIds: [...mutable.consumedEventIds],
     };
   }
 

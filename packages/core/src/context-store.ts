@@ -13,6 +13,7 @@ export interface ContextGraphStore {
   getObject(id: string, version?: number): Promise<ContextObject | undefined>;
   listObjects(): Promise<readonly ContextObject[]>;
   listRelations(): Promise<readonly ContextRelation[]>;
+  close?(): void | Promise<void>;
 }
 
 export class InMemoryContextGraphStore implements ContextGraphStore {

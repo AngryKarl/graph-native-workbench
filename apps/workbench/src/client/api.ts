@@ -2,6 +2,7 @@ import type {
   GraphDefinition,
   GraphPosition,
   GraphValidation,
+  ActorIdentityView,
   ModelConnectionResult,
   ModelProviderSelection,
   PackArtifactPreview,
@@ -48,6 +49,21 @@ export function configureModelProvider(selection: ModelProviderSelection): Promi
 
 export function testModelProvider(): Promise<ModelConnectionResult> {
   return request('/api/model-provider/test', { method: 'POST' });
+}
+
+export function saveActor(actor: ActorIdentityView): Promise<WorkbenchBootstrap> {
+  return request(`/api/actors/${encodeURIComponent(actor.id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(actor),
+  });
+}
+
+export function activateActor(actorId: string): Promise<WorkbenchBootstrap> {
+  return request(`/api/actors/${encodeURIComponent(actorId)}/activate`, { method: 'POST' });
+}
+
+export function removeActor(actorId: string): Promise<WorkbenchBootstrap> {
+  return request(`/api/actors/${encodeURIComponent(actorId)}`, { method: 'DELETE' });
 }
 
 export function loadRegistries(): Promise<RegistrySource[]> {
@@ -123,6 +139,13 @@ export function decideRun(runId: string, approved: boolean): Promise<RunSnapshot
   return request(`/api/runs/${encodeURIComponent(runId)}/decision`, {
     method: 'POST',
     body: JSON.stringify({ approved }),
+  });
+}
+
+export function resumeWaitingRun(runId: string): Promise<RunSnapshot> {
+  return request(`/api/runs/${encodeURIComponent(runId)}/resume`, {
+    method: 'POST',
+    body: '{}',
   });
 }
 

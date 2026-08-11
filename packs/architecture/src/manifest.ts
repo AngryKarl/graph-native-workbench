@@ -199,6 +199,9 @@ export const architecturePack: IndustryPackManifest = {
       graphId: 'architecture.concept_workflow',
       stateField: 'deliverable',
       mediaType: 'text/markdown',
+      artifactType: 'concept_design_brief',
+      evidenceFields: ['evidence', 'site_findings', 'program_findings'],
+      approvalField: 'approved',
     },
   ],
   fixtures: [
@@ -330,6 +333,58 @@ export const architecturePack: IndustryPackManifest = {
         { id: 'e_route_reject', source: 'approval_route', target: 'record_rejection', on: 'success', condition: { field: 'approved', operator: 'equals', value: false }, label: 'Rejected' },
       ],
       budget: { maxSteps: 40, maxDurationMs: 120_000, maxConcurrency: 4 },
+    },
+    {
+      id: 'architecture.feedback_followup',
+      version: 1,
+      name: 'Design feedback follow-up',
+      description: 'Accept a review webhook, wait durably for correlated design feedback and summarize it through a reusable subgraph.',
+      trigger: {
+        type: 'webhook',
+        method: 'POST',
+        path: '/architecture/feedback-followup',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            project_name: { type: 'string' },
+            feedback_case_id: { type: 'string' },
+          },
+          required: ['project_name', 'feedback_case_id'],
+          additionalProperties: false,
+        },
+      },
+      state: { fields: {
+        project_name: { type: 'string', required: true, description: 'Project name.' },
+        feedback_case_id: { type: 'string', required: true, description: 'Stable feedback correlation key.' },
+        feedback: { type: 'object', required: false, description: 'Correlated design feedback.' },
+        summary: { type: 'string', required: false, description: 'Normalized feedback summary.' },
+      } },
+      nodes: [
+        { id: 'start', kind: 'trigger', label: 'Review webhook', description: 'Accept a design review follow-up.', reads: ['project_name', 'feedback_case_id'], writes: [], config: {} },
+        { id: 'wait_feedback', kind: 'wait', label: 'Wait for feedback', description: 'Pause until the matching feedback event arrives.', reads: ['feedback_case_id'], writes: ['feedback'], config: { mode: 'event', eventType: 'design.feedback.received', correlationField: 'feedback_case_id', payloadField: 'feedback' } },
+        { id: 'summarize', kind: 'subgraph', label: 'Summarize feedback', description: 'Call the reusable feedback-normalization graph.', reads: ['feedback'], writes: ['summary'], config: { graphId: 'architecture.feedback_summary', inputMapping: { feedback: 'feedback' }, outputMapping: { summary: 'summary' } } },
+      ],
+      edges: [
+        { id: 'followup.wait', source: 'start', target: 'wait_feedback', on: 'success' },
+        { id: 'followup.summarize', source: 'wait_feedback', target: 'summarize', on: 'success' },
+      ],
+      budget: { maxSteps: 12, maxDurationMs: 30_000, maxConcurrency: 2 },
+    },
+    {
+      id: 'architecture.feedback_summary',
+      version: 1,
+      name: 'Feedback summary',
+      description: 'Reusable feedback normalization boundary.',
+      state: { fields: {
+        feedback: { type: 'object', required: true, description: 'Design feedback.' },
+        summary: { type: 'string', required: false, description: 'Normalized summary.' },
+      } },
+      nodes: [
+        { id: 'start', kind: 'trigger', label: 'Start', description: 'Accept mapped feedback.', reads: [], writes: [], config: {} },
+        { id: 'summarize', kind: 'function', label: 'Summarize', description: 'Normalize the feedback record.', handler: 'architecture.summarize_feedback', reads: ['feedback'], writes: ['summary'], config: {} },
+      ],
+      edges: [{ id: 'summary.run', source: 'start', target: 'summarize', on: 'success' }],
+      budget: { maxSteps: 6, maxDurationMs: 10_000, maxConcurrency: 1 },
     },
   ],
 };

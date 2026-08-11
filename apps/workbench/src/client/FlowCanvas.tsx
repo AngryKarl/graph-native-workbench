@@ -18,7 +18,7 @@ import {
   type OnNodesDelete,
   type ReactFlowInstance,
 } from '@xyflow/react';
-import { Bot, Braces, CircleDot, GitFork, GitMerge, UserRoundCheck } from 'lucide-react';
+import { Bot, Braces, CircleDot, GitFork, GitMerge, Hourglass, ListTree, Repeat2, ShieldAlert, Undo2, UserRoundCheck, Workflow } from 'lucide-react';
 import { nextEdgeId, nextNodeId, nodeKindLabel, nodeRunStatus } from './graph-model.js';
 import type { GraphDefinition, GraphNode, GraphPosition, RunSnapshot } from './types.js';
 
@@ -29,6 +29,12 @@ const kindIcon = {
   join: GitMerge,
   human: UserRoundCheck,
   router: GitFork,
+  wait: Hourglass,
+  subgraph: Workflow,
+  loop: Repeat2,
+  map: ListTree,
+  escalation: ShieldAlert,
+  compensation: Undo2,
 };
 
 interface WorkflowNodeData extends Record<string, unknown> {

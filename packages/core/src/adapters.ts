@@ -5,6 +5,7 @@ import type {
   ToolDefinition,
 } from '@graph-workbench/contracts';
 import type { GraphState } from './state.js';
+import type { CompiledGraph } from './compiler.js';
 
 export interface HandlerContext {
   readonly runId: string;
@@ -69,6 +70,7 @@ export interface ToolExecutionContext {
   readonly nodeId: string;
   readonly signal: AbortSignal;
   readonly secrets: Readonly<Record<string, string>>;
+  readonly idempotencyKey?: string;
 }
 
 export interface ToolAdapter {
@@ -110,4 +112,6 @@ export interface RuntimeBindings {
   readonly pack?: IndustryPackManifest;
   readonly secrets?: SecretProvider;
   readonly authorizeTool?: ToolAuthorizer;
+  readonly subgraphs?: Readonly<Record<string, CompiledGraph>>;
+  readonly clock?: () => Date;
 }

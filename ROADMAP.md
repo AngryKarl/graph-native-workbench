@@ -14,7 +14,7 @@ today from the evidence still required before a stable 1.0 release.
 - [x] Visual graph authoring, run history, approvals and context exploration
 - [x] Portable `.gpack` lifecycle with compatibility and integrity checks
 - [x] Signed Registry verification and isolated third-party Pack execution
-- [x] Research, Architecture and Customer Success reference Packs
+- [x] Software Delivery, Research, Architecture and Customer Success reference Packs
 - [x] Clean-install, browser E2E, performance and release-readiness gates
 
 ## Public launch
@@ -28,11 +28,42 @@ today from the evidence still required before a stable 1.0 release.
 - [x] Ship the `0.2.1` graph-editing interaction polish patch
 - [ ] Collect onboarding feedback from external Pack authors
 
+## 0.4 — organizational context and governed boundaries
+
+- [x] Aggregate persisted context across runs in the Workbench API and explorer
+- [x] Add storage-neutral context query and traversal
+- [x] Add workspace identity, role assignment and approval ownership
+- [x] Define typed connector operations, results, permissions and idempotency
+- [x] Validate portable Artifact and Evidence contracts across Packs
+
+## 0.5 — durable event-driven orchestration
+
+- [x] Add webhook, schedule and typed event triggers
+- [x] Add durable wait/timer and event-correlation checkpoints
+- [x] Add reusable subgraphs with explicit state boundaries
+- [x] Add budgeted loops and dynamic map execution
+- [x] Add visible escalation and compensation paths
+
+The evidence, boundary decision and acceptance criteria behind these milestones
+are recorded in the [industry workflow analysis](docs/INDUSTRY_WORKFLOW_ANALYSIS.md).
+
+## Six-industry standard Pack program
+
+- [x] Professional Software Delivery — issue-to-release governance and deployment recovery
+- [ ] Data and MLOps — asset release, lineage, quality gates and backfill control
+- [ ] Cybersecurity Operations — signal-to-recovery incident response
+- [ ] Quantitative Finance — research-to-reconciled execution governance
+- [ ] Healthcare Diagnostics — consent-aware request-to-report coordination
+- [ ] Robotics and Fleet Operations — request-to-dispatch, replanning and maintenance
+
+These first-party Packs are built and tested in this repository. External users
+may validate them, but their implementation is not a prerequisite for progress.
+
 ## Before stable 1.0
 
-- [ ] Validate at least three independently authored Industry Packs
+- [ ] Complete and validate all six first-party standard Industry Packs
 - [ ] Complete one real team pilot using shared PostgreSQL execution
-- [ ] Add team identity, workspace authorization and approval ownership
+- [ ] Bind workspace identities to production authentication and authorization
 - [ ] Publish compatibility guarantees for stable Pack contracts
 - [ ] Measure first-run success and Pack-authoring completion time
 - [ ] Complete an independent security review of Pack isolation and Registry

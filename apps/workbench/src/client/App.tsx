@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bot, Box, Braces, Check, CircleDot, Cpu, GitFork, GitMerge,
-  History, LayoutDashboard, LoaderCircle, Network, PackageOpen, Play, RotateCcw,
-  Save, Undo2, Redo2, UserRoundCheck,
+  History, Hourglass, LayoutDashboard, ListTree, LoaderCircle, Network, PackageOpen, Play, Repeat2, RotateCcw,
+  Save, ShieldAlert, Undo2, Redo2, UserRoundCheck, UsersRound, Workflow,
 } from 'lucide-react';
 import {
-  activatePack, configureModelProvider, decideRun, downloadRunAudit, inspectPackArtifact, installPack, installPackArtifact, installRegistryPack,
+  activateActor, activatePack, configureModelProvider, decideRun, downloadRunAudit, inspectPackArtifact, installPack, installPackArtifact, installRegistryPack,
   loadRegistries, loadWorkbench, resetGraphDraft,
-  saveGraphDraft, startRun, testModelProvider, uninstallPack,
+  removeActor, resumeWaitingRun, saveActor, saveGraphDraft, startRun, testModelProvider, uninstallPack,
 } from './api.js';
 import { ContextExplorer } from './ContextExplorer.js';
 import { FlowCanvas } from './FlowCanvas.js';
@@ -17,8 +17,9 @@ import { PackManager } from './PackManager.js';
 import { ProviderManager } from './ProviderManager.js';
 import { RunConsole } from './RunConsole.js';
 import { RunHistory } from './RunHistory.js';
+import { TeamManager } from './TeamManager.js';
 import type {
-  GraphDefinition, GraphNode, GraphPosition, InspectorTab, PackDescription,
+  ActorIdentityView, GraphDefinition, GraphNode, GraphPosition, InspectorTab, PackDescription,
   PrimaryView, RegistrySource, RunSnapshot, WorkbenchBootstrap,
 } from './types.js';
 
@@ -36,12 +37,19 @@ const palette = [
   { kind: 'join', icon: GitMerge, description: 'Synchronize branches' },
   { kind: 'human', icon: UserRoundCheck, description: 'Human gate' },
   { kind: 'router', icon: GitFork, description: 'Conditional route' },
+  { kind: 'wait', icon: Hourglass, description: 'Timer or event wait' },
+  { kind: 'subgraph', icon: Workflow, description: 'Reusable workflow' },
+  { kind: 'loop', icon: Repeat2, description: 'Bounded iteration' },
+  { kind: 'map', icon: ListTree, description: 'Parallel item map' },
+  { kind: 'escalation', icon: ShieldAlert, description: 'Visible escalation' },
+  { kind: 'compensation', icon: Undo2, description: 'Failure recovery' },
 ] as const;
 
 const navItems: Array<{ view: PrimaryView; label: string; icon: typeof LayoutDashboard }> = [
   { view: 'editor', label: 'Editor', icon: LayoutDashboard },
   { view: 'runs', label: 'Runs', icon: History },
   { view: 'context', label: 'Context', icon: Network },
+  { view: 'team', label: 'Team', icon: UsersRound },
   { view: 'models', label: 'Models', icon: Cpu },
   { view: 'packs', label: 'Packs', icon: PackageOpen },
 ];
@@ -73,6 +81,7 @@ export function App() {
   const [registries, setRegistries] = useState<RegistrySource[]>([]);
   const [registriesLoading, setRegistriesLoading] = useState(false);
   const [modelsBusy, setModelsBusy] = useState(false);
+  const [teamBusy, setTeamBusy] = useState(false);
   const initialized = useRef(false);
   const editorRevision = useRef(0);
 
@@ -134,6 +143,32 @@ export function App() {
       setModelsBusy(false);
     }
   };
+
+  const updateIdentity = async (operation: () => Promise<WorkbenchBootstrap>, message: string) => {
+    setTeamBusy(true);
+    try {
+      const next = await operation();
+      setBootstrap(next);
+      setRun((current) => current
+        ? next.runs.find((item) => item.runId === current.runId) ?? current
+        : current);
+      setNotice(message);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setTeamBusy(false);
+    }
+  };
+
+  const switchIdentity = (actorId: string) => updateIdentity(
+    () => activateActor(actorId),
+    `Active identity changed to ${bootstrap?.actors.find((actor) => actor.id === actorId)?.displayName ?? actorId}.`,
+  );
+
+  const persistActor = (actor: ActorIdentityView) => updateIdentity(
+    () => saveActor(actor),
+    `${actor.displayName} saved.`,
+  );
 
   useEffect(() => {
     if (view === 'packs') void refreshRegistries();
@@ -248,7 +283,7 @@ export function App() {
       if (!saved) return;
       const next = await startRun(pack.id, editor.graph.id, input);
       setRun(next);
-      setBootstrap((current) => current ? { ...current, runs: [next, ...current.runs.filter((item) => item.runId !== next.runId)] } : current);
+      setBootstrap(await loadWorkbench());
       setNotice(next.status === 'paused'
         ? next.pendingApproval?.kind === 'tool'
           ? 'Run paused safely for tool approval.'
@@ -268,7 +303,7 @@ export function App() {
     try {
       const next = await decideRun(run.runId, approved);
       setRun(next);
-      setBootstrap((current) => current ? { ...current, runs: current.runs.map((item) => item.runId === next.runId ? next : item) } : current);
+      setBootstrap(await loadWorkbench());
       setNotice(approved
         ? approvalKind === 'tool'
           ? 'Tool approved and run resumed.'
@@ -276,6 +311,21 @@ export function App() {
         : approvalKind === 'tool'
           ? 'Tool rejected with its audit trail preserved.'
           : 'Run rejected with its audit trail preserved.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resumeWait = async () => {
+    if (!run) return;
+    setBusy(true);
+    try {
+      const next = await resumeWaitingRun(run.runId);
+      setRun(next);
+      setBootstrap(await loadWorkbench());
+      setNotice(next.status === 'paused' ? 'The durable wait is not ready yet.' : `Run ${next.status}.`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
     } finally {
@@ -368,6 +418,7 @@ export function App() {
       <header className="topbar">
         <div className="workspace-name"><Box size={16} /><span><small>Local workspace</small><strong>Graph Workbench</strong></span></div>
         <div className="pack-switcher"><PackageOpen size={15} /><select value={pack.id} disabled={busyPackId !== null} onChange={(event) => { void mutatePack(event.target.value, 'activate'); }}>{bootstrap.catalog.filter((item) => bootstrap.installedPackIds.includes(item.id)).map((item) => <option key={item.id} value={item.id}>{item.name} · v{item.version}</option>)}</select></div>
+        <div className="identity-switcher"><UserRoundCheck size={15} /><select aria-label="Active identity" value={bootstrap.actor.id} disabled={teamBusy} onChange={(event) => { void switchIdentity(event.target.value); }}>{bootstrap.actors.map((actor) => <option key={actor.id} value={actor.id}>{actor.displayName}</option>)}</select></div>
         {view === 'editor' ? <div className="topbar-actions">
           <span className={`save-state state-${saveState}`}>{saveState === 'saving' ? <LoaderCircle className="spin" size={13} /> : saveState === 'saved' ? <Check size={13} /> : <CircleDot size={13} />}{saveState}</span>
           <button className="icon-control" onClick={undo} disabled={!past.length} aria-label="Undo"><Undo2 size={16} /></button>
@@ -391,11 +442,12 @@ export function App() {
               <FlowCanvas graph={editor.graph} positions={editor.positions} run={run} selectedNodeId={selectedNodeId} onSelectNode={(id) => { setSelectedNodeId(id); if (id) { setInspectorTab('node'); setInspectorOpen(true); } }} onChange={commitEditor} />
             </section>
             <Inspector tab={inspectorTab} onTab={setInspectorTab} node={selectedNode} pack={pack} input={input} open={inspectorOpen} onToggle={() => setInspectorOpen((value) => !value)} onInput={setInput} onUpdateNode={updateNode} onSelectFixture={selectFixture} />
-            <RunConsole run={run} busy={busy} onDecision={(approved) => void decide(approved)} onExport={() => void exportAudit()} />
+            <RunConsole run={run} busy={busy} onDecision={(approved) => void decide(approved)} onResume={() => void resumeWait()} onExport={() => void exportAudit()} />
           </div>
         ) : null}
         {view === 'runs' ? <RunHistory runs={bootstrap.runs} selectedRunId={run?.runId} onSelect={(selected) => { setRun(selected); setView('editor'); }} /> : null}
-        {view === 'context' ? <ContextExplorer runs={bootstrap.runs} /> : null}
+        {view === 'context' ? <ContextExplorer context={bootstrap.context} /> : null}
+        {view === 'team' ? <TeamManager actors={bootstrap.actors} currentActor={bootstrap.actor} roles={bootstrap.activePack.manifest.roles} busy={teamBusy} onActivate={(actorId) => { void switchIdentity(actorId); }} onSave={(actor) => { void persistActor(actor); }} onRemove={(actorId) => { void updateIdentity(() => removeActor(actorId), 'Identity removed.'); }} /> : null}
         {view === 'models' ? <ProviderManager state={bootstrap.models} busy={modelsBusy} onSave={saveModelProvider} onTest={checkModelProvider} /> : null}
         {view === 'packs' ? <PackManager catalog={bootstrap.catalog} registries={registries} registriesLoading={registriesLoading} activePackId={bootstrap.activePackId} installedPackIds={bootstrap.installedPackIds} busyPackId={busyPackId} onInspectArtifact={inspectPackArtifact} onImportArtifact={importPackArtifact} onInstallRegistry={(registryId, packId, version) => void installFromRegistry(registryId, packId, version)} onInstall={(id) => void mutatePack(id, 'install')} onActivate={(id) => void mutatePack(id, 'activate')} onUninstall={(id) => void mutatePack(id, 'uninstall')} /> : null}
       </div>

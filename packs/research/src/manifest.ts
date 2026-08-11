@@ -113,12 +113,54 @@ export const researchPack: IndustryPackManifest = {
       label: 'Source search',
       risk: 'read',
       description: 'Search approved evidence sources. Input is an object with an optional query and optional domain of market or technology.',
+      operation: 'query',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string' },
+          domain: { type: 'string', enum: ['market', 'technology'] },
+        },
+        additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            locator: { type: 'string' },
+            domain: { type: 'string' },
+            title: { type: 'string' },
+          },
+          required: ['locator', 'domain', 'title'],
+          additionalProperties: false,
+        },
+      },
+      idempotency: 'intrinsic',
     },
     {
       id: 'document_read',
       label: 'Document read',
       risk: 'read',
       description: 'Read a document without mutating it. Input is an object with a locator string returned by source_search or supplied evidence.',
+      operation: 'query',
+      inputSchema: {
+        type: 'object',
+        properties: { locator: { type: 'string', minLength: 1 } },
+        required: ['locator'],
+        additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          locator: { type: 'string' },
+          domain: { type: 'string' },
+          title: { type: 'string' },
+          content: { type: 'string' },
+        },
+        required: ['locator', 'domain', 'title', 'content'],
+        additionalProperties: false,
+      },
+      idempotency: 'intrinsic',
     },
   ],
   evaluations: [
@@ -143,6 +185,9 @@ export const researchPack: IndustryPackManifest = {
       graphId: 'research.workflow',
       stateField: 'deliverable',
       mediaType: 'text/markdown',
+      artifactType: 'evidence_synthesis',
+      evidenceFields: ['market_evidence', 'technology_evidence'],
+      approvalField: 'approved',
     },
   ],
   fixtures: [

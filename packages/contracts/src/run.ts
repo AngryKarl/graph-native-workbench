@@ -16,6 +16,7 @@ export const graphEventSchema = z
     timestamp: z.string().datetime(),
     type: z.enum([
       'run.started',
+      'trigger.accepted',
       'run.resumed',
       'node.started',
       'node.retrying',
@@ -24,6 +25,18 @@ export const graphEventSchema = z
       'node.failed',
       'human.requested',
       'human.resolved',
+      'wait.scheduled',
+      'wait.resumed',
+      'event.waiting',
+      'event.received',
+      'subgraph.started',
+      'subgraph.completed',
+      'loop.iteration',
+      'map.started',
+      'map.completed',
+      'escalation.raised',
+      'compensation.started',
+      'compensation.completed',
       'tool.requested',
       'tool.approval_requested',
       'tool.approval_resolved',
@@ -54,6 +67,7 @@ export const graphCheckpointSchema = z
     stepCount: z.number().int().nonnegative(),
     startedAt: z.string().datetime(),
     suspensions: z.record(identifierSchema, z.unknown()).default({}),
+    consumedEventIds: z.array(identifierSchema).default([]),
   })
   .strict();
 

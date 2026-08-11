@@ -29,6 +29,9 @@ importers:
       '@graph-workbench/pack-sdk':
         specifier: workspace:*
         version: link:packages/pack-sdk
+      '@graph-workbench/pack-software-delivery':
+        specifier: workspace:*
+        version: link:packs/software-delivery
       '@playwright/test':
         specifier: ^1.62.1
         version: 1.62.1
@@ -107,6 +110,9 @@ importers:
       '@graph-workbench/pack-sdk':
         specifier: workspace:*
         version: link:../../packages/pack-sdk
+      '@graph-workbench/pack-software-delivery':
+        specifier: workspace:*
+        version: link:../../packs/software-delivery
       '@xyflow/react':
         specifier: ^12.11.2
         version: 12.11.2(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -198,6 +204,15 @@ importers:
         version: link:../../packages/core
 
   packs/research:
+    dependencies:
+      '@graph-workbench/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@graph-workbench/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
+  packs/software-delivery:
     dependencies:
       '@graph-workbench/contracts':
         specifier: workspace:*

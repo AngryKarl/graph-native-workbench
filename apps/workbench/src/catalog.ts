@@ -21,6 +21,12 @@ import {
   researchPack,
   researchTools,
 } from '@graph-workbench/pack-research';
+import {
+  projectSoftwareDeliveryRun,
+  softwareDeliveryHandlers,
+  softwareDeliveryPack,
+  softwareDeliveryTools,
+} from '@graph-workbench/pack-software-delivery';
 
 export interface PackRuntimeDefinition {
   readonly manifest: IndustryPackManifest;
@@ -40,6 +46,17 @@ export interface PackRuntimeDefinition {
 }
 
 export const bundledPackCatalog = new Map<string, PackRuntimeDefinition>([
+  [
+    softwareDeliveryPack.id,
+    {
+      manifest: softwareDeliveryPack,
+      handlers: softwareDeliveryHandlers,
+      tools: softwareDeliveryTools,
+      projector: projectSoftwareDeliveryRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
   [
     architecturePack.id,
     {

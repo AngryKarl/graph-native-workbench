@@ -1,11 +1,8 @@
 import { z } from 'zod';
+import { identifierSchema } from './identifier.js';
+import { graphTriggerSchema } from './orchestration.js';
 
-export const identifierSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(120)
-  .regex(/^[a-z][a-z0-9._-]*$/);
+export { identifierSchema } from './identifier.js';
 
 export const stateValueTypeSchema = z.enum([
   'string',
@@ -36,6 +33,12 @@ export const graphNodeKindSchema = z.enum([
   'router',
   'join',
   'human',
+  'wait',
+  'subgraph',
+  'loop',
+  'map',
+  'escalation',
+  'compensation',
 ]);
 
 export const nodeRetryPolicySchema = z
@@ -111,6 +114,7 @@ export const graphDefinitionSchema = z
     nodes: z.array(graphNodeSchema).min(1).max(1_000),
     edges: z.array(graphEdgeSchema).max(5_000),
     budget: graphBudgetSchema,
+    trigger: graphTriggerSchema.optional(),
   })
   .strict();
 

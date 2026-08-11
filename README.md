@@ -61,15 +61,16 @@ Pause at the human gate instead:
 pnpm dlx graph-workbench demo --pause
 ```
 
-## Three installable examples
+## Four installable examples
 
 From **Packs**, a workflow installs into the same editor, runtime, approval
 inbox, deliverable console and context explorer:
 
-![Research, Architecture and Customer Success reference Packs](docs/assets/reference-packs.png)
+![Graph Workbench reference Packs](docs/assets/reference-packs.png)
 
 | Industry Pack | What it produces | Why it matters |
 | --- | --- | --- |
+| Professional Software Delivery | A requirement-to-release record plus deployment health or rollback evidence | Proves governed delivery can connect issue tracking, source control, CI/CD and operations without replacing them |
 | Customer Success Renewal | An approved renewal-risk assessment and owned success plan | Shows a common enterprise SOP becoming a complete workbench without kernel changes |
 | Architecture Concept Design | A source-linked concept brief with reviewed design directions | Proves a deep vertical can keep evidence, constraints and decisions traceable |
 | Cross-industry Research | An approved evidence synthesis | Keeps the first run zero-key and easy to inspect |
@@ -110,7 +111,9 @@ versioned contracts used by the compiler and runtime:
    human checkpoints or policy-gated tool calls.
 5. Open **Runs** to revisit execution history and **Context** to inspect the
    confirmed objects, relations and provenance produced by approved work.
-6. Open **Packs**, choose **Import .gpack**, review compatibility, permissions
+6. Open **Team** to add human, service or Agent identities, assign Pack roles
+   and select the identity responsible for approvals.
+7. Open **Packs**, choose **Import .gpack**, review compatibility, permissions
    and the SHA-256 fingerprint, then explicitly trust and install the artifact.
 
 Open **Models** to keep the built-in zero-key runtime or connect OpenAI,
@@ -122,18 +125,29 @@ only from server environment variables; they are never sent to the browser or
 stored in the workspace. Credentialed provider presets use locked official
 endpoints; only custom or keyless providers may use a reviewed compatible URL.
 
-Graph drafts, installed Packs, active Pack selection, runs and checkpoints are
-stored locally in `.graph-workbench/workbench.json`. Architecture, Customer Success
-and Research are bundled; trusted `.gpack` artifacts can be imported from the
+Graph drafts, installed Packs, active Pack selection, team identities, runs and
+checkpoints are stored locally in `.graph-workbench/workbench.json`. Confirmed
+cross-run context is independently stored in `.graph-workbench/context.sqlite`.
+Set `GRAPH_WORKBENCH_CONTEXT_DATABASE` to a PostgreSQL URL to share that context
+authority across Workbench instances, or to another SQLite file path. Software Delivery,
+Architecture, Customer Success and Research are bundled; trusted `.gpack` artifacts can be imported from the
 Packs view or installed through the CLI and are stored under `.graph-workbench/packs`.
 
 Optional declarative tool policy lives at `.graph-workbench/policy.json`. Completed
 or paused runs can be exported from the run console as portable, integrity-
 checked audit bundles for independent verification.
 
-Workspace upgrades are automatic and fail-safe. Opening a legacy v1 workspace
-preserves an untouched `workbench.json.v1.backup` before atomically migrating
-it to the current format with a stable workspace identity.
+Packs may also expose validated webhook, schedule and typed-event ingress.
+Timers and event correlations persist in the same run checkpoint, while stable
+event and schedule occurrence IDs prevent replay from creating duplicate Runs.
+See [Runtime adapters](docs/RUNTIME_ADAPTERS.md#trigger-and-wait-adapters) for the
+HTTP endpoints and [Pack authoring](docs/PACK_AUTHORING.md#durable-orchestration)
+for wait, subgraph, loop, Map, escalation and compensation contracts.
+
+Workspace upgrades are automatic and fail-safe. Opening a legacy v1 or v2
+workspace preserves an untouched versioned backup before atomically migrating
+it to the current format. Existing per-run context is then copied idempotently
+into the independent context authority.
 
 ## Create an Industry Pack
 
@@ -167,7 +181,7 @@ Registry. Publisher keys are configured out of band; the signed index binds the
 Pack identity, checksum, compatibility and permissions before download:
 
 The public [Graph Workbench Reference Registry](https://angrykarl.github.io/graph-workbench/registry/registry.json)
-contains the three bundled examples. Its source-controlled publisher key and
+contains the four bundled examples. Its source-controlled publisher key and
 fingerprint are documented in the [Registry publishing guide](docs/REGISTRY_PUBLISHING.md).
 
 ```bash
@@ -234,6 +248,7 @@ packages/pack-sdk    authoring, packaging, integrity and lifecycle SDK
 packs/architecture   Evidence-backed concept design Industry Pack
 packs/customer-success Evidence-based renewal workflow Industry Pack
 packs/research       Zero-key cross-industry reference Pack
+packs/software-delivery Governed issue-to-release and deployment recovery Pack
 apps/cli             graph-workbench CLI
 apps/workbench       Persistent local API and React graph editor
 tests                Contract and end-to-end behavior tests
@@ -250,13 +265,16 @@ run the complete [release-readiness gate](docs/RELEASE_READINESS.md) locally.
 - typed state with node-level write permissions;
 - parallel ready sets, joins, routers and conditional edges;
 - functions, Agent adapters and human pause/resume checkpoints;
+- actor-attributed approvals with Pack-role ownership enforcement;
 - provider-neutral, bounded Agent tool loops across OpenAI-compatible,
   Anthropic Messages and Gemini GenerateContent protocols;
 - role-scoped tools, risk authorization and secret-isolated tool adapters;
+- optional JSON Schema tool I/O with query/command and idempotency contracts;
 - run budgets and ordered event traces;
 - node retry and timeout policies plus resumable run cancellation;
 - SQLite persistence for runs, events and resumable checkpoints;
 - versioned context objects and relations with run/node provenance;
+- storage-neutral context filtering and bounded neighborhood traversal;
 - in-memory and SQLite context-store adapters;
 - `init`, `validate`, `inspect`, `test`, `build`, `install`, `list`, `activate`,
   `rollback`, `uninstall`, `run` and `resume` Pack CLI commands;
@@ -266,14 +284,15 @@ run the complete [release-readiness gate](docs/RELEASE_READINESS.md) locally.
   trust keys;
 - network-denied container Workers for third-party handlers and context projectors;
 - declared deliverables and executable Pack fixtures;
+- portable Artifact envelopes with evidence snapshots, digests and approval provenance;
 - JSON Schema export for editor integration;
 - Windows and Linux CI with a zero-key smoke demo.
 - responsive graph editor with node/edge authoring, contract and policy
   inspection, autosaved drafts, undo/redo and real runtime execution;
-- local Pack installation and switching for the bundled Architecture,
-  Customer Success and Research Packs;
+- local Pack installation and switching for the bundled Software Delivery,
+  Architecture, Customer Success and Research Packs;
 - persisted run history, human checkpoint resume, Markdown deliverables and
-  context graph provenance exploration.
+  cross-run context graph provenance exploration.
 
 Read the [Product Charter](docs/PRODUCT_CHARTER.md),
 [Why execution and context graphs must connect](docs/WHY_TWO_GRAPHS.md),
@@ -283,6 +302,7 @@ Read the [Product Charter](docs/PRODUCT_CHARTER.md),
 [Registry Trust and Worker Isolation](docs/TRUST_AND_ISOLATION.md),
 [Registry Publishing Guide](docs/REGISTRY_PUBLISHING.md),
 [npm Distribution Guide](docs/NPM_DISTRIBUTION.md),
+[Industry workflow analysis](docs/INDUSTRY_WORKFLOW_ANALYSIS.md),
 [Architecture Pack](docs/ARCHITECTURE_PACK.md),
 [Runtime Adapter Guide](docs/RUNTIME_ADAPTERS.md),
 [Roadmap](ROADMAP.md) and [release process](docs/RELEASE_PROCESS.md).
