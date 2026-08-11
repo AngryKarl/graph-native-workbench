@@ -3,6 +3,8 @@
 An executable customer-success workflow for turning account health signals,
 stakeholder evidence and renewal context into a reviewed renewal success plan.
 
+![Customer Success Renewal workflow](../../docs/assets/pack-graphs/customer-success-renewal.png)
+
 From the repository root:
 
 ```bash

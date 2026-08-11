@@ -5,6 +5,8 @@ declaration, approved containment, verified recovery and lessons learned. It
 complements SIEM, EDR, identity, asset, forensic and response systems; it does
 not replace their detection, evidence or technical-action authority.
 
+![Cybersecurity Incident Response workflow](../../docs/assets/pack-graphs/cybersecurity-incident-response.png)
+
 The reference workflows include:
 
 - typed signal ingress with a stable correlation key;

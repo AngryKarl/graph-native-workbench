@@ -59,6 +59,8 @@ pnpm dlx graph-workbench demo --pause
 
 ![Graph Workbench 示例 Pack](docs/assets/reference-packs.png)
 
+[查看六个第一方 Pack 的真实可执行节点图 →](docs/PACK_GALLERY.md)
+
 | Industry Pack | 直接产出 | 验证重点 |
 | --- | --- | --- |
 | Professional Software Delivery | 需求到发布的可追溯记录，以及部署健康或回滚证据 | 连接需求、代码、CI/CD 与运维系统，同时不替代这些专业系统 |

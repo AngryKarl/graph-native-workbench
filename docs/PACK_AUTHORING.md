@@ -124,7 +124,10 @@ compensation targets fail compilation.
     Registry, then run by Pack ID:
     `pnpm graph-workbench pack install <artifact> --trust`, then
     `pnpm graph-workbench pack run <id> --installed --set topic=hello`.
-11. Prove the Pack without changing `packages/core`.
+11. For a first-party reference Pack, capture its primary executable graph after
+    **Fit View**, add it to `docs/assets/pack-graphs`, and update the
+    [Industry Pack Gallery](PACK_GALLERY.md).
+12. Prove the Pack without changing `packages/core`.
 
 See [`.gpack` Package Format](PACK_FORMAT.md) for compatibility, integrity,
 permissions, side-by-side versions and rollback behavior. Installed third-party

@@ -68,6 +68,8 @@ inbox, deliverable console and context explorer:
 
 ![Graph Workbench reference Packs](docs/assets/reference-packs.png)
 
+[Explore the executable node graphs for all six first-party Packs →](docs/PACK_GALLERY.md)
+
 | Industry Pack | What it produces | Why it matters |
 | --- | --- | --- |
 | Professional Software Delivery | A requirement-to-release record plus deployment health or rollback evidence | Proves governed delivery can connect issue tracking, source control, CI/CD and operations without replacing them |

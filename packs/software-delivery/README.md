@@ -4,6 +4,8 @@ This Pack governs the path from an accepted work item to an approved release and
 post-deployment evidence. It complements source control, CI/CD and observability;
 it does not replace them.
 
+![Professional Software Delivery workflow](../../docs/assets/pack-graphs/software-delivery.png)
+
 The reference workflow includes:
 
 - testable requirement intake and explicit delivery-risk classification;

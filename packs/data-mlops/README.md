@@ -5,6 +5,8 @@ approved registry entry, controlled historical reprocessing and post-release
 quality recovery. It complements orchestrators, catalogs and model registries;
 it does not replace their execution or storage authority.
 
+![Data and MLOps Asset Release workflow](../../docs/assets/pack-graphs/data-mlops-asset-release.png)
+
 The reference workflows include:
 
 - schema, completeness and freshness gates across bounded partitions;
