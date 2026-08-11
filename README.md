@@ -61,7 +61,7 @@ Pause at the human gate instead:
 pnpm dlx graph-workbench demo --pause
 ```
 
-## Four installable examples
+## Five installable examples
 
 From **Packs**, a workflow installs into the same editor, runtime, approval
 inbox, deliverable console and context explorer:
@@ -71,6 +71,7 @@ inbox, deliverable console and context explorer:
 | Industry Pack | What it produces | Why it matters |
 | --- | --- | --- |
 | Professional Software Delivery | A requirement-to-release record plus deployment health or rollback evidence | Proves governed delivery can connect issue tracking, source control, CI/CD and operations without replacing them |
+| Data and MLOps Asset Release | An approved data/model registry release, bounded backfill record and quality-recovery evidence | Connects orchestration, catalog, lineage and registry systems while keeping their execution authority intact |
 | Customer Success Renewal | An approved renewal-risk assessment and owned success plan | Shows a common enterprise SOP becoming a complete workbench without kernel changes |
 | Architecture Concept Design | A source-linked concept brief with reviewed design directions | Proves a deep vertical can keep evidence, constraints and decisions traceable |
 | Cross-industry Research | An approved evidence synthesis | Keeps the first run zero-key and easy to inspect |
@@ -130,7 +131,7 @@ checkpoints are stored locally in `.graph-workbench/workbench.json`. Confirmed
 cross-run context is independently stored in `.graph-workbench/context.sqlite`.
 Set `GRAPH_WORKBENCH_CONTEXT_DATABASE` to a PostgreSQL URL to share that context
 authority across Workbench instances, or to another SQLite file path. Software Delivery,
-Architecture, Customer Success and Research are bundled; trusted `.gpack` artifacts can be imported from the
+Data and MLOps, Architecture, Customer Success and Research are bundled; trusted `.gpack` artifacts can be imported from the
 Packs view or installed through the CLI and are stored under `.graph-workbench/packs`.
 
 Optional declarative tool policy lives at `.graph-workbench/policy.json`. Completed
@@ -181,7 +182,7 @@ Registry. Publisher keys are configured out of band; the signed index binds the
 Pack identity, checksum, compatibility and permissions before download:
 
 The public [Graph Workbench Reference Registry](https://angrykarl.github.io/graph-workbench/registry/registry.json)
-contains the four bundled examples. Its source-controlled publisher key and
+contains the five bundled examples. Its source-controlled publisher key and
 fingerprint are documented in the [Registry publishing guide](docs/REGISTRY_PUBLISHING.md).
 
 ```bash
@@ -247,6 +248,7 @@ packages/core        Compiler, runtime and memory/SQLite/PostgreSQL stores
 packages/pack-sdk    authoring, packaging, integrity and lifecycle SDK
 packs/architecture   Evidence-backed concept design Industry Pack
 packs/customer-success Evidence-based renewal workflow Industry Pack
+packs/data-mlops     Governed data/model release, backfill and monitoring Pack
 packs/research       Zero-key cross-industry reference Pack
 packs/software-delivery Governed issue-to-release and deployment recovery Pack
 apps/cli             graph-workbench CLI
@@ -290,7 +292,7 @@ run the complete [release-readiness gate](docs/RELEASE_READINESS.md) locally.
 - responsive graph editor with node/edge authoring, contract and policy
   inspection, autosaved drafts, undo/redo and real runtime execution;
 - local Pack installation and switching for the bundled Software Delivery,
-  Architecture, Customer Success and Research Packs;
+  Data and MLOps, Architecture, Customer Success and Research Packs;
 - persisted run history, human checkpoint resume, Markdown deliverables and
   cross-run context graph provenance exploration.
 

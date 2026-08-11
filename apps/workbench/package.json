@@ -14,6 +14,7 @@
     "@graph-workbench/contracts": "workspace:*",
     "@graph-workbench/core": "workspace:*",
     "@graph-workbench/pack-sdk": "workspace:*",
+    "@graph-workbench/pack-data-mlops": "workspace:*",
     "@graph-workbench/pack-architecture": "workspace:*",
     "@graph-workbench/pack-customer-success": "workspace:*",
     "@graph-workbench/pack-research": "workspace:*",

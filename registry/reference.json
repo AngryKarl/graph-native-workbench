@@ -6,6 +6,9 @@
   },
   "packs": [
     {
+      "source": "../packs/data-mlops/src/index.ts"
+    },
+    {
       "source": "../packs/software-delivery/src/index.ts"
     },
     {

@@ -16,6 +16,12 @@ import {
   projectCustomerSuccessRun,
 } from '@graph-workbench/pack-customer-success';
 import {
+  dataMlopsHandlers,
+  dataMlopsPack,
+  dataMlopsTools,
+  projectDataMlopsRun,
+} from '@graph-workbench/pack-data-mlops';
+import {
   projectResearchRun,
   researchHandlers,
   researchPack,
@@ -46,6 +52,17 @@ export interface PackRuntimeDefinition {
 }
 
 export const bundledPackCatalog = new Map<string, PackRuntimeDefinition>([
+  [
+    dataMlopsPack.id,
+    {
+      manifest: dataMlopsPack,
+      handlers: dataMlopsHandlers,
+      tools: dataMlopsTools,
+      projector: projectDataMlopsRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
   [
     softwareDeliveryPack.id,
     {

@@ -111,7 +111,7 @@ Workbench replaces the industry's specialist execution or record system.
 | Domain | Typical mechanisms exercised | Readiness | Specialist authority kept outside Graph Workbench |
 | --- | --- | --- | --- |
 | Software delivery | Typed issue/repository/CI connectors, parallel checks, two human gates, release artifacts, deployment events and rollback | Pass; first standard Pack implemented | Git hosting, CI runners, artifact registry, deployment platform and observability |
-| Data and MLOps | Schedule/event ingress, partition Map, bounded backfill, lineage context, quality gate and publication | Pass for a standard Pack | Airflow/Dagster execution, warehouse, feature/model registry and compute plane |
+| Data and MLOps | Schedule/event ingress, partition Map, bounded backfill, lineage context, quality gate and publication | Pass; second standard Pack implemented | Airflow/Dagster execution, warehouse, feature/model registry and compute plane |
 | Cybersecurity operations | Alert correlation, evidence, severity routing, containment approval, escalation and compensation | Pass for a standard Pack | SIEM/EDR, identity authority, forensic store and containment system |
 | Quantitative finance | Research subgraphs, dynamic instrument Map, risk/compliance gates, execution events and reconciliation | Pass for a governance Pack | Market data, backtest engine, OMS/EMS, broker and books-and-records system |
 | Healthcare diagnostics | Identity-attributed work, consent gate, parallel analysis, specialist approval, FHIR-shaped context and follow-up | Pass for a non-clinical reference Pack; production requires regulated auth and validation | EHR/FHIR server, PACS/LIS, scheduling, clinical decision authority and regulated identity |
@@ -204,7 +204,8 @@ kernel state.
 1. **Professional Software Delivery Pack** — issue-to-release governance and
    deployment recovery. Implemented as the first standard example.
 2. **Data/AI Asset Release Pack** — quality gates, lineage, publication and
-   controlled backfill.
+   controlled backfill. Implemented with dataset and model release fixtures,
+   post-release quality recovery and typed context projection.
 3. **Security Incident Response Pack** — evidence, approval, containment,
    escalation and recovery.
 4. **Quantitative Finance Pack** — governed research, risk, execution and
