@@ -43,8 +43,9 @@ npx graph-workbench demo --pause
 npx graph-workbench pack init customer_success
 npx graph-workbench pack validate packs/customer_success/src/index.mjs
 npx graph-workbench pack test packs/customer_success/src/index.mjs
+npx graph-workbench pack run packs/customer_success/src/index.mjs --set topic=hello
 npx graph-workbench pack build packs/customer_success/src/index.mjs \
-  --output customer_success-0.4.0.gpack
+  --output customer_success-0.1.0.gpack
 ```
 
 Run `npx graph-workbench help` for the complete Pack lifecycle and signed

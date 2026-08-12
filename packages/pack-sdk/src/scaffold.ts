@@ -102,6 +102,8 @@ export async function scaffoldPack(
   const sourceExtension = options.standalone ? 'mjs' : 'ts';
   const sourcePath = `src/index.${sourceExtension}`;
   const repositoryPath = relative(process.cwd(), directory).replaceAll('\\', '/');
+  const modulePath = `${repositoryPath}/${sourcePath}`;
+  const runner = options.standalone ? 'npx graph-workbench' : 'pnpm graph-workbench';
   const packageJson = `${JSON.stringify(
     {
       name: `@graph-workbench/pack-${id}`,
@@ -125,12 +127,15 @@ export async function scaffoldPack(
     '',
     'Generated Industry Pack for Graph Workbench.',
     '',
-    'From the repository root:',
+    options.standalone
+      ? 'From the directory where you created this Pack:'
+      : 'From the repository root:',
     '',
     '```bash',
-    `pnpm graph-workbench pack validate ${repositoryPath}/${sourcePath}`,
-    `pnpm graph-workbench pack test ${repositoryPath}/${sourcePath}`,
-    `pnpm graph-workbench pack build ${repositoryPath}/${sourcePath} --output ${id}-0.1.0.gpack`,
+    `${runner} pack validate "${modulePath}"`,
+    `${runner} pack test "${modulePath}"`,
+    `${runner} pack run "${modulePath}" --set topic=hello`,
+    `${runner} pack build "${modulePath}" --output ${id}-0.1.0.gpack`,
     '```',
     '',
   ].join('\n');

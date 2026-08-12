@@ -5,6 +5,21 @@ versioning once public packages begin publishing.
 
 ## Unreleased
 
+## 0.4.1 - 2026-08-12
+
+### Fixed
+
+- Corrected standalone Industry Pack scaffolds so generated instructions use
+  the public `npx graph-workbench` CLI instead of repository-only pnpm commands.
+- Added a directly runnable Pack command to generated READMEs and terminal
+  guidance, including quoted paths for directories containing spaces.
+
+### Documentation
+
+- Added a zero-install Pack-authoring path to the English, Chinese and npm
+  READMEs so users can move from the Workbench demo to their own executable
+  Pack without cloning the repository or configuring a model key.
+
 ## 0.4.0 - 2026-08-12
 
 ### Added

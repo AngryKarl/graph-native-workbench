@@ -54,7 +54,7 @@ Workbench 会自动在浏览器中打开，并把数据保存在本地 `.graph-w
 npx graph-workbench demo
 ```
 
-`0.4.0` 公开 Alpha 已包含完整六行业 Pack 和 Pack System Map。也可以从源码运行：
+`0.4.1` 公开 Alpha 已包含完整六行业 Pack 和 Pack System Map。也可以从源码运行：
 
 ```bash
 git clone https://github.com/AngryKarl/graph-workbench.git
@@ -63,6 +63,19 @@ corepack enable
 pnpm install
 pnpm workbench
 ```
+
+## 创建你的第一个 Industry Pack
+
+公开 CLI 也可以在本仓库之外直接生成一个独立 Pack：
+
+```bash
+npx graph-workbench pack init claims_operations
+npx graph-workbench pack test packs/claims_operations/src/index.mjs
+npx graph-workbench pack run packs/claims_operations/src/index.mjs --set topic=claim-1042
+```
+
+生成结果已经包含可执行图、真实处理器、零密钥样例、交付物和上下文投影器，
+不需要克隆本仓库，也不需要模型密钥。
 
 ## 一次运行，变成可复用的组织上下文
 

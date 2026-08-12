@@ -37,7 +37,7 @@ function legacyWorkspace() {
 
 describe('compatibility and workspace migration', () => {
   it('uses the Pack SDK package version as the engine compatibility authority', () => {
-    expect(GRAPH_WORKBENCH_ENGINE_VERSION).toBe('0.4.0');
+    expect(GRAPH_WORKBENCH_ENGINE_VERSION).toBe('0.4.1');
   });
 
   it('maps legacy environment variables without overriding the new namespace', () => {

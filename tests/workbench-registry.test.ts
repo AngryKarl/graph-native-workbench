@@ -113,7 +113,7 @@ describe('Workbench Registry catalog', () => {
         name: 'Catalog Pack Pack',
         installed: false,
         compatible: true,
-        compatibilityMessage: 'Compatible with Graph Workbench 0.4.0.',
+        compatibilityMessage: 'Compatible with Graph Workbench 0.4.1.',
       }],
     });
 

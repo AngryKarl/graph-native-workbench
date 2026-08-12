@@ -134,7 +134,7 @@ const reconciliationGraph: GraphDefinition = {
 const stringField = (description: string) => ({ type: 'string' as const, required: true, description });
 
 export const quantitativeFinancePack: IndustryPackManifest = {
-  id: 'quantitative_finance', version: '0.4.0', name: 'Quantitative Finance Governance Pack', license: 'MIT',
+  id: 'quantitative_finance', version: '0.4.1', name: 'Quantitative Finance Governance Pack', license: 'MIT',
   description: 'A governed research-to-order and fill-reconciliation workflow. It keeps market data, backtesting, OMS/EMS, broker routing and books-and-records in specialist systems while preserving evidence, limits, approvals, intent, fills and exceptions as connected context.',
   ontology: {
     objectTypes: [
