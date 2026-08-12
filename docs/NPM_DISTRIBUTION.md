@@ -52,9 +52,11 @@ that version before every release.
 [`release-npm.yml`](../.github/workflows/release-npm.yml) is manually triggered
 and defaults to a non-publishing dry run. It repeats type checking, tests and
 distribution smoke checks before npm inspects the package. Actual publication
-requires `publish=true` and an npm trusted-publishing setup or repository
-`NPM_TOKEN`, and refuses to replace an existing version. Public releases request
-an npm provenance attestation through GitHub Actions OIDC.
+requires `publish=true` and an npm Trusted Publisher bound to
+`AngryKarl/graph-workbench` and `release-npm.yml`; the workflow refuses to
+replace an existing version. npm authenticates
+the GitHub-hosted job through short-lived OIDC credentials and automatically
+publishes a provenance attestation; no write token is stored in the repository.
 
 Run the dry rehearsal:
 
