@@ -109,7 +109,7 @@ const followupGraph: GraphDefinition = {
 const requiredString = (description: string) => ({ type: 'string' as const, required: true, description });
 
 export const healthcareDiagnosticsPack: IndustryPackManifest = {
-  id: 'healthcare_diagnostics', version: '0.3.0', name: 'Healthcare Diagnostic Coordination Pack', license: 'MIT',
+  id: 'healthcare_diagnostics', version: '0.4.0', name: 'Healthcare Diagnostic Coordination Pack', license: 'MIT',
   description: 'A non-clinical reference Pack for consent-aware diagnostic coordination. It connects FHIR-shaped requests, study evidence, advisory AI, accountable specialist decisions, reports and follow-up while keeping identity, EHR/FHIR, PACS/LIS, scheduling and clinical authority outside the kernel.',
   ontology: {
     objectTypes: [

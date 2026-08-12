@@ -11,7 +11,7 @@ import {
 } from './api.js';
 import { ContextExplorer } from './ContextExplorer.js';
 import { FlowCanvas } from './FlowCanvas.js';
-import { createAutomaticLayout, nextNodeId, nodeKindLabel } from './graph-model.js';
+import { createAutomaticLayout, nextNodeId, nodeKindLabel, resolveRunDeliverable } from './graph-model.js';
 import { Inspector } from './Inspector.js';
 import { PackManager } from './PackManager.js';
 import { PackOverview } from './PackOverview.js';
@@ -87,6 +87,10 @@ export function App() {
   const [teamBusy, setTeamBusy] = useState(false);
   const initialized = useRef(false);
   const editorRevision = useRef(0);
+  const runDeliverable = useMemo(
+    () => resolveRunDeliverable(pack?.manifest.deliverables ?? [], run),
+    [pack?.manifest.deliverables, run],
+  );
 
   const acceptPack = useCallback((nextPack: PackDescription) => {
     const positions = Object.keys(nextPack.positions).length ? nextPack.positions : createAutomaticLayout(nextPack.graph);
@@ -487,7 +491,7 @@ export function App() {
                 : <PackOverview pack={pack} activeGraphId={editor.graph.id} onOpenGraph={(graphId) => { void openGraph(graphId); }} />}
             </section>
             <Inspector tab={inspectorTab} onTab={setInspectorTab} node={selectedNode} pack={pack} input={input} open={inspectorOpen} onToggle={() => setInspectorOpen((value) => !value)} onInput={setInput} onUpdateNode={updateNode} onSelectFixture={selectFixture} />
-            <RunConsole run={run} busy={busy} onDecision={(approved) => void decide(approved)} onResume={() => void resumeWait()} onExport={() => void exportAudit()} />
+            <RunConsole run={run} deliverable={runDeliverable} busy={busy} onDecision={(approved) => void decide(approved)} onResume={() => void resumeWait()} onExport={() => void exportAudit()} />
           </div>
         ) : null}
         {view === 'runs' ? <RunHistory runs={bootstrap.runs} selectedRunId={run?.runId} onSelect={(selected) => { setRun(selected); setView('editor'); }} /> : null}

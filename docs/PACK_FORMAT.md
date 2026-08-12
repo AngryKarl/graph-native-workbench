@@ -22,11 +22,11 @@ installation.
   "formatVersion": 1,
   "pack": {
     "id": "customer_success",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "manifest": "manifest.json",
     "entry": "dist/index.mjs"
   },
-  "engine": { "graph-workbench": "^0.3.0" },
+  "engine": { "graph-workbench": "^0.4.0" },
   "permissions": ["handlers.execute"],
   "integrity": {
     "algorithm": "sha256",
@@ -51,8 +51,8 @@ and `graph-workbench` engine key.
 
 ```bash
 pnpm graph-workbench pack build packs/customer_success/src/index.ts \
-  --output dist/customer_success-0.3.0.gpack
-pnpm graph-workbench pack inspect dist/customer_success-0.3.0.gpack
+  --output dist/customer_success-0.4.0.gpack
+pnpm graph-workbench pack inspect dist/customer_success-0.4.0.gpack
 ```
 
 Building executes the local source module to validate its manifest, then
@@ -62,7 +62,7 @@ the `context.write` permission. Build only source you trust.
 ## Install and run
 
 ```bash
-pnpm graph-workbench pack install dist/customer_success-0.3.0.gpack --trust
+pnpm graph-workbench pack install dist/customer_success-0.4.0.gpack --trust
 pnpm graph-workbench pack list
 pnpm graph-workbench pack run customer_success --installed --set "topic=renewal risk"
 ```
@@ -85,7 +85,7 @@ Versions are stored side by side. A newly installed version becomes active by
 default; use `--no-activate` to stage it.
 
 ```bash
-pnpm graph-workbench pack activate customer_success@0.3.0
+pnpm graph-workbench pack activate customer_success@0.4.0
 pnpm graph-workbench pack rollback customer_success
 pnpm graph-workbench pack uninstall customer_success --version 0.2.0
 ```

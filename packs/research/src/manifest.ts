@@ -2,7 +2,7 @@ import type { IndustryPackManifest } from '@graph-workbench/contracts';
 
 export const researchPack: IndustryPackManifest = {
   id: 'research',
-  version: '0.3.0',
+  version: '0.4.0',
   name: 'Cross-industry Research Pack',
   description:
     'A zero-key reference Pack that can optionally use a selected model for synthesis while preserving evidence, quality review, human approval, and a publishable deliverable.',

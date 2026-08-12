@@ -1,4 +1,4 @@
-import type { GraphDefinition, GraphNode, RunSnapshot } from './types.js';
+import type { GraphDefinition, GraphNode, IndustryPackManifest, RunSnapshot } from './types.js';
 
 export const nodeKindLabel: Record<GraphNode['kind'], string> = {
   trigger: 'Trigger',
@@ -37,6 +37,19 @@ export function nodeRunStatus(run: RunSnapshot | null, nodeId: string): NodeRunS
   if (events.some((event) => event.type === 'node.completed')) return 'complete';
   if (events.some((event) => event.type === 'node.started')) return 'running';
   return 'idle';
+}
+
+export function resolveRunDeliverable(
+  deliverables: IndustryPackManifest['deliverables'],
+  run: RunSnapshot | null,
+): string {
+  if (!run) return '';
+  for (const definition of deliverables) {
+    if (definition.graphId !== run.graphId) continue;
+    const value = run.state[definition.stateField];
+    if (typeof value === 'string') return value;
+  }
+  return '';
 }
 
 export function createAutomaticLayout(graph: GraphDefinition): Record<string, { x: number; y: number }> {
