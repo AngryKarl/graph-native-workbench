@@ -63,7 +63,7 @@ export const customerSuccessPack: IndustryPackManifest = {
     { id: 'revenue_approval', label: 'Revenue approval', description: 'A revenue owner approves the plan before publication.', blocking: true },
   ],
   deliverables: [
-    { id: 'renewal_success_plan', label: 'Renewal success plan', description: 'An approved Markdown plan linking renewal risk to owned interventions.', graphId: 'customer_success.renewal_workflow', stateField: 'deliverable', mediaType: 'text/markdown' },
+    { id: 'renewal_success_plan', label: 'Renewal success plan', description: 'An approved Markdown plan linking renewal risk to owned interventions.', graphId: 'customer_success.renewal_workflow', stateField: 'deliverable', mediaType: 'text/markdown', artifactType: 'renewal_success_plan', evidenceFields: ['health_signals', 'product_findings', 'stakeholder_findings'], approvalField: 'approved' },
   ],
   fixtures: [
     {
@@ -154,5 +154,74 @@ export const customerSuccessPack: IndustryPackManifest = {
       { id: 'e_route_reject', source: 'approval_route', target: 'record_rejection', on: 'success', condition: { field: 'approved', operator: 'equals', value: false } },
     ],
     budget: { maxSteps: 48, maxDurationMs: 120_000, maxConcurrency: 4 },
+  }, {
+    id: 'customer_success.scheduled_health_scan', version: 1, name: 'Scheduled account health scan',
+    description: 'Run a bounded preparation loop and score a dynamic account batch on a declared schedule.',
+    trigger: { type: 'schedule', cron: '0 8 * * 1-5', timezone: 'UTC', input: { accounts: [{ account_id: 'reference-account', health: 'review' }], scan_attempt: 0, continue_scan: true } },
+    state: { fields: {
+      accounts: { type: 'array', required: true, description: 'Accounts to score.' },
+      scan_attempt: { type: 'number', required: true, description: 'Preparation attempt.' },
+      continue_scan: { type: 'boolean', required: true, description: 'Whether preparation continues.' },
+      scored_accounts: { type: 'array', required: false, description: 'Parallel scoring results.' },
+    } },
+    nodes: [
+      { id: 'start', kind: 'trigger', label: 'Schedule', description: 'Start the scheduled scan.', reads: ['accounts'], writes: [], config: {} },
+      { id: 'prepare', kind: 'loop', label: 'Prepare scan', description: 'Run bounded preparation until ready.', reads: ['scan_attempt', 'continue_scan'], writes: ['scan_attempt', 'continue_scan'], config: { graphId: 'customer_success.scan_preparation', inputMapping: { scan_attempt: 'scan_attempt', continue_scan: 'continue_scan' }, outputMapping: { scan_attempt: 'scan_attempt', continue_scan: 'continue_scan' }, conditionField: 'continue_scan', conditionValue: true, maxIterations: 3 } },
+      { id: 'score_accounts', kind: 'map', label: 'Score accounts', description: 'Score the current account batch concurrently.', reads: ['accounts'], writes: ['scored_accounts'], config: { graphId: 'customer_success.account_score', itemsField: 'accounts', itemField: 'item', resultField: 'result', outputField: 'scored_accounts', inputMapping: {}, maxItems: 500, maxConcurrency: 8 } },
+    ],
+    edges: [
+      { id: 'scan.prepare', source: 'start', target: 'prepare', on: 'success' },
+      { id: 'scan.score', source: 'prepare', target: 'score_accounts', on: 'success' },
+    ],
+    budget: { maxSteps: 24, maxDurationMs: 60_000, maxConcurrency: 2 },
+  }, {
+    id: 'customer_success.scan_preparation', version: 1, name: 'Scan preparation', description: 'Reusable bounded preparation step.',
+    state: { fields: {
+      scan_attempt: { type: 'number', required: true, description: 'Preparation attempt.' },
+      continue_scan: { type: 'boolean', required: true, description: 'Whether preparation continues.' },
+    } },
+    nodes: [
+      { id: 'start', kind: 'trigger', label: 'Start', description: 'Start preparation.', reads: [], writes: [], config: {} },
+      { id: 'advance', kind: 'function', label: 'Advance', description: 'Advance bounded preparation.', handler: 'customer_success.advance_scan', reads: ['scan_attempt'], writes: ['scan_attempt', 'continue_scan'], config: {} },
+    ],
+    edges: [{ id: 'prepare.advance', source: 'start', target: 'advance', on: 'success' }],
+    budget: { maxSteps: 6, maxDurationMs: 10_000, maxConcurrency: 1 },
+  }, {
+    id: 'customer_success.account_score', version: 1, name: 'Account score', description: 'Reusable account scoring boundary.',
+    state: { fields: {
+      item: { type: 'object', required: true, description: 'Account input.' },
+      result: { type: 'object', required: false, description: 'Scored account.' },
+    } },
+    nodes: [
+      { id: 'start', kind: 'trigger', label: 'Start', description: 'Start scoring.', reads: [], writes: [], config: {} },
+      { id: 'score', kind: 'function', label: 'Score', description: 'Score one account.', handler: 'customer_success.score_scheduled_account', reads: ['item'], writes: ['result'], config: {} },
+    ],
+    edges: [{ id: 'score.run', source: 'start', target: 'score', on: 'success' }],
+    budget: { maxSteps: 6, maxDurationMs: 10_000, maxConcurrency: 1 },
+  }, {
+    id: 'customer_success.health_alert', version: 1, name: 'Critical health alert',
+    description: 'Handle a typed health event with explicit escalation and compensation when synchronization fails.',
+    trigger: {
+      type: 'event', eventType: 'customer.health_critical', correlationField: 'account_id',
+      inputSchema: { type: 'object', properties: { severity: { type: 'string' }, simulate_failure: { type: 'boolean' } }, required: ['severity', 'simulate_failure'], additionalProperties: false },
+    },
+    state: { fields: {
+      account_id: { type: 'string', required: true, description: 'Correlated account id.' },
+      severity: { type: 'string', required: true, description: 'Alert severity.' },
+      simulate_failure: { type: 'boolean', required: true, description: 'Reference failure switch.' },
+      recovered: { type: 'boolean', required: false, description: 'Compensation outcome.' },
+    } },
+    nodes: [
+      { id: 'start', kind: 'trigger', label: 'Health event', description: 'Accept a typed critical-health event.', reads: ['account_id', 'severity'], writes: [], config: {} },
+      { id: 'sync', kind: 'function', label: 'Synchronize response', description: 'Synchronize the alert response.', handler: 'customer_success.sync_health_alert', reads: ['simulate_failure'], writes: ['recovered'], config: {} },
+      { id: 'escalate', kind: 'escalation', label: 'Escalate failure', description: 'Raise the failed response to the revenue owner.', reads: [], writes: [], config: { reason: 'Critical health response synchronization failed', severity: 'critical', roleId: 'revenue_owner' } },
+      { id: 'compensate', kind: 'compensation', label: 'Restore response state', description: 'Restore a safe response state.', handler: 'customer_success.compensate_health_alert', reads: [], writes: ['recovered'], config: { compensates: ['sync'] } },
+    ],
+    edges: [
+      { id: 'alert.sync', source: 'start', target: 'sync', on: 'success' },
+      { id: 'alert.escalate', source: 'sync', target: 'escalate', on: 'failure' },
+      { id: 'alert.compensate', source: 'sync', target: 'compensate', on: 'failure' },
+    ],
+    budget: { maxSteps: 12, maxDurationMs: 30_000, maxConcurrency: 2 },
   }],
 };

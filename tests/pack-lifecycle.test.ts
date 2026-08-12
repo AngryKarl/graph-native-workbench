@@ -197,13 +197,17 @@ describe('Pack lifecycle', () => {
     const discovery = await discoverInstalledPackRuntimes(paths.registry, { unsafeProcessIsolation: true });
     expect(discovery).toEqual({ loaded: 1, errors: [] });
     const service = new WorkbenchService({ dataFile: resolve(paths.directory, 'workbench.json') });
-    expect(service.describeWorkbench().catalog.some((pack) => pack.id === 'support_ops')).toBe(true);
-    service.install('support_ops');
-    service.activate('support_ops');
-    const result = await service.start({ topic: 'Workbench discovery' });
-    expect(result.status).toBe('completed');
-    expect(result.state.result).toContain('Workbench discovery');
-    expect(result.context?.objects).toHaveLength(1);
-    expect(result.context?.objects[0]?.type).toBe('artifact');
+    try {
+      expect((await service.describeWorkbench()).catalog.some((pack) => pack.id === 'support_ops')).toBe(true);
+      await service.install('support_ops');
+      await service.activate('support_ops');
+      const result = await service.start({ topic: 'Workbench discovery' });
+      expect(result.status).toBe('completed');
+      expect(result.state.result).toContain('Workbench discovery');
+      expect(result.context?.objects).toHaveLength(1);
+      expect(result.context?.objects[0]?.type).toBe('artifact');
+    } finally {
+      await service.close();
+    }
   });
 });

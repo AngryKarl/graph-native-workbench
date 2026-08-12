@@ -16,11 +16,47 @@ import {
   projectCustomerSuccessRun,
 } from '@graph-workbench/pack-customer-success';
 import {
+  cybersecurityResponseHandlers,
+  cybersecurityResponsePack,
+  cybersecurityResponseTools,
+  projectCybersecurityResponseRun,
+} from '@graph-workbench/pack-cybersecurity-response';
+import {
+  dataMlopsHandlers,
+  dataMlopsPack,
+  dataMlopsTools,
+  projectDataMlopsRun,
+} from '@graph-workbench/pack-data-mlops';
+import {
   projectResearchRun,
   researchHandlers,
   researchPack,
   researchTools,
 } from '@graph-workbench/pack-research';
+import {
+  projectQuantitativeFinanceRun,
+  quantitativeFinanceHandlers,
+  quantitativeFinancePack,
+  quantitativeFinanceTools,
+} from '@graph-workbench/pack-quantitative-finance';
+import {
+  healthcareDiagnosticsHandlers,
+  healthcareDiagnosticsPack,
+  healthcareDiagnosticsTools,
+  projectHealthcareDiagnosticsRun,
+} from '@graph-workbench/pack-healthcare-diagnostics';
+import {
+  projectRoboticsFleetRun,
+  roboticsFleetHandlers,
+  roboticsFleetPack,
+  roboticsFleetTools,
+} from '@graph-workbench/pack-robotics-fleet';
+import {
+  projectSoftwareDeliveryRun,
+  softwareDeliveryHandlers,
+  softwareDeliveryPack,
+  softwareDeliveryTools,
+} from '@graph-workbench/pack-software-delivery';
 
 export interface PackRuntimeDefinition {
   readonly manifest: IndustryPackManifest;
@@ -40,6 +76,72 @@ export interface PackRuntimeDefinition {
 }
 
 export const bundledPackCatalog = new Map<string, PackRuntimeDefinition>([
+  [
+    roboticsFleetPack.id,
+    {
+      manifest: roboticsFleetPack,
+      handlers: roboticsFleetHandlers,
+      tools: roboticsFleetTools,
+      projector: projectRoboticsFleetRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
+  [
+    healthcareDiagnosticsPack.id,
+    {
+      manifest: healthcareDiagnosticsPack,
+      handlers: healthcareDiagnosticsHandlers,
+      tools: healthcareDiagnosticsTools,
+      projector: projectHealthcareDiagnosticsRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
+  [
+    quantitativeFinancePack.id,
+    {
+      manifest: quantitativeFinancePack,
+      handlers: quantitativeFinanceHandlers,
+      tools: quantitativeFinanceTools,
+      projector: projectQuantitativeFinanceRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
+  [
+    cybersecurityResponsePack.id,
+    {
+      manifest: cybersecurityResponsePack,
+      handlers: cybersecurityResponseHandlers,
+      tools: cybersecurityResponseTools,
+      projector: projectCybersecurityResponseRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
+  [
+    dataMlopsPack.id,
+    {
+      manifest: dataMlopsPack,
+      handlers: dataMlopsHandlers,
+      tools: dataMlopsTools,
+      projector: projectDataMlopsRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
+  [
+    softwareDeliveryPack.id,
+    {
+      manifest: softwareDeliveryPack,
+      handlers: softwareDeliveryHandlers,
+      tools: softwareDeliveryTools,
+      projector: projectSoftwareDeliveryRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
   [
     architecturePack.id,
     {

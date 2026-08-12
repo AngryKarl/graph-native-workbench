@@ -27,6 +27,27 @@ export interface PackFixtureResult {
   readonly error?: string;
 }
 
+export interface PackHandlerCoverage {
+  readonly required: readonly string[];
+}
+
+export function validatePackHandlerCoverage(
+  packInput: IndustryPackManifest,
+  handlers: HandlerRegistry,
+): PackHandlerCoverage {
+  const compiled = compilePack(packInput);
+  const required = [...new Set(
+    compiled.manifest.graphs.flatMap((graph) => graph.nodes.flatMap((node) => node.handler ?? [])),
+  )].sort();
+  const missing = required.filter((handlerId) => typeof handlers[handlerId] !== 'function');
+  if (missing.length > 0) {
+    throw new Error(
+      `Pack "${compiled.manifest.id}" is missing executable handler binding(s): ${missing.join(', ')}.`,
+    );
+  }
+  return { required };
+}
+
 function expectationPasses(expectation: FixtureExpectation, actual: unknown): boolean {
   switch (expectation.operator) {
     case 'equals':
@@ -47,6 +68,7 @@ export async function runPackFixture(
   handlers: HandlerRegistry,
   fixtureId: string,
 ): Promise<PackFixtureResult> {
+  validatePackHandlerCoverage(packInput, handlers);
   const compiled = compilePack(packInput);
   const fixture = compiled.manifest.fixtures.find((item) => item.id === fixtureId);
   if (!fixture) throw new Error(`Pack "${compiled.manifest.id}" has no fixture "${fixtureId}".`);
@@ -77,6 +99,7 @@ export async function runAllPackFixtures(
   pack: IndustryPackManifest,
   handlers: HandlerRegistry,
 ): Promise<readonly PackFixtureResult[]> {
+  validatePackHandlerCoverage(pack, handlers);
   const compiled = compilePack(pack);
   return Promise.all(
     compiled.manifest.fixtures.map((fixture) => runPackFixture(compiled.manifest, handlers, fixture.id)),

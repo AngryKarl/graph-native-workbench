@@ -67,5 +67,6 @@ practical value of connecting the execution graph to the context graph.
 ![Customer Success objects and relations in the context graph](assets/customer-success-context.png)
 
 The Pack source is under [`packs/customer-success`](../packs/customer-success)
-and is released through the same signed Reference Registry as the Research and
-Architecture Packs.
+and remains bundled as an additional authoring example. The signed Reference
+Registry publishes the six standard industry Packs listed in the
+[Industry Pack Gallery](PACK_GALLERY.md).

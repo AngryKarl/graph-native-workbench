@@ -290,4 +290,8 @@ export const architectureHandlers: HandlerRegistry = {
       ? `设计评审人在质量检查 ${asString(state.review_status)} 后退回了发布。`
       : `The design reviewer rejected publication after quality gate ${asString(state.review_status)}.`,
   }),
+
+  'architecture.summarize_feedback': ({ state }) => ({
+    summary: `Feedback recorded: ${JSON.stringify(state.feedback)}`,
+  }),
 };

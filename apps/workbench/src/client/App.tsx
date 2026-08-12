@@ -1,24 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bot, Box, Braces, Check, CircleDot, Cpu, GitFork, GitMerge,
-  History, LayoutDashboard, LoaderCircle, Network, PackageOpen, Play, RotateCcw,
-  Save, Undo2, Redo2, UserRoundCheck,
+  History, Hourglass, LayoutDashboard, ListTree, LoaderCircle, Network, PackageOpen, Play, Repeat2, RotateCcw,
+  Save, ShieldAlert, Undo2, Redo2, UserRoundCheck, UsersRound, Workflow,
 } from 'lucide-react';
 import {
-  activatePack, configureModelProvider, decideRun, downloadRunAudit, inspectPackArtifact, installPack, installPackArtifact, installRegistryPack,
-  loadRegistries, loadWorkbench, resetGraphDraft,
-  saveGraphDraft, startRun, testModelProvider, uninstallPack,
+  activateActor, activatePack, configureModelProvider, decideRun, downloadRunAudit, inspectPackArtifact, installPack, installPackArtifact, installRegistryPack,
+  loadPackGraph, loadRegistries, loadWorkbench, resetGraphDraft,
+  removeActor, resumeWaitingRun, saveActor, saveGraphDraft, startRun, testModelProvider, uninstallPack,
 } from './api.js';
 import { ContextExplorer } from './ContextExplorer.js';
 import { FlowCanvas } from './FlowCanvas.js';
 import { createAutomaticLayout, nextNodeId, nodeKindLabel } from './graph-model.js';
 import { Inspector } from './Inspector.js';
 import { PackManager } from './PackManager.js';
+import { PackOverview } from './PackOverview.js';
 import { ProviderManager } from './ProviderManager.js';
 import { RunConsole } from './RunConsole.js';
 import { RunHistory } from './RunHistory.js';
+import { TeamManager } from './TeamManager.js';
 import type {
-  GraphDefinition, GraphNode, GraphPosition, InspectorTab, PackDescription,
+  ActorIdentityView, GraphDefinition, GraphNode, GraphPosition, InspectorTab, PackDescription,
   PrimaryView, RegistrySource, RunSnapshot, WorkbenchBootstrap,
 } from './types.js';
 
@@ -28,6 +30,7 @@ interface EditorSnapshot {
 }
 
 type SaveState = 'saved' | 'saving' | 'dirty' | 'invalid';
+type CanvasMode = 'workflow' | 'system';
 
 const palette = [
   { kind: 'trigger', icon: CircleDot, description: 'Entry point' },
@@ -36,12 +39,19 @@ const palette = [
   { kind: 'join', icon: GitMerge, description: 'Synchronize branches' },
   { kind: 'human', icon: UserRoundCheck, description: 'Human gate' },
   { kind: 'router', icon: GitFork, description: 'Conditional route' },
+  { kind: 'wait', icon: Hourglass, description: 'Timer or event wait' },
+  { kind: 'subgraph', icon: Workflow, description: 'Reusable workflow' },
+  { kind: 'loop', icon: Repeat2, description: 'Bounded iteration' },
+  { kind: 'map', icon: ListTree, description: 'Parallel item map' },
+  { kind: 'escalation', icon: ShieldAlert, description: 'Visible escalation' },
+  { kind: 'compensation', icon: Undo2, description: 'Failure recovery' },
 ] as const;
 
 const navItems: Array<{ view: PrimaryView; label: string; icon: typeof LayoutDashboard }> = [
   { view: 'editor', label: 'Editor', icon: LayoutDashboard },
   { view: 'runs', label: 'Runs', icon: History },
   { view: 'context', label: 'Context', icon: Network },
+  { view: 'team', label: 'Team', icon: UsersRound },
   { view: 'models', label: 'Models', icon: Cpu },
   { view: 'packs', label: 'Packs', icon: PackageOpen },
 ];
@@ -62,6 +72,7 @@ export function App() {
   const [future, setFuture] = useState<EditorSnapshot[]>([]);
   const [input, setInput] = useState<Record<string, unknown>>({});
   const [view, setView] = useState<PrimaryView>('editor');
+  const [canvasMode, setCanvasMode] = useState<CanvasMode>('workflow');
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('node');
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -73,6 +84,7 @@ export function App() {
   const [registries, setRegistries] = useState<RegistrySource[]>([]);
   const [registriesLoading, setRegistriesLoading] = useState(false);
   const [modelsBusy, setModelsBusy] = useState(false);
+  const [teamBusy, setTeamBusy] = useState(false);
   const initialized = useRef(false);
   const editorRevision = useRef(0);
 
@@ -134,6 +146,32 @@ export function App() {
       setModelsBusy(false);
     }
   };
+
+  const updateIdentity = async (operation: () => Promise<WorkbenchBootstrap>, message: string) => {
+    setTeamBusy(true);
+    try {
+      const next = await operation();
+      setBootstrap(next);
+      setRun((current) => current
+        ? next.runs.find((item) => item.runId === current.runId) ?? current
+        : current);
+      setNotice(message);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setTeamBusy(false);
+    }
+  };
+
+  const switchIdentity = (actorId: string) => updateIdentity(
+    () => activateActor(actorId),
+    `Active identity changed to ${bootstrap?.actors.find((actor) => actor.id === actorId)?.displayName ?? actorId}.`,
+  );
+
+  const persistActor = (actor: ActorIdentityView) => updateIdentity(
+    () => saveActor(actor),
+    `${actor.displayName} saved.`,
+  );
 
   useEffect(() => {
     if (view === 'packs') void refreshRegistries();
@@ -200,6 +238,35 @@ export function App() {
     }
   }, [editor, pack]);
 
+  const openGraph = useCallback(async (graphId: string) => {
+    if (!pack || graphId === editor?.graph.id) {
+      setCanvasMode('workflow');
+      return;
+    }
+    if (saveState === 'saving') {
+      setNotice('Wait for the current workflow to finish saving.');
+      return;
+    }
+    if (saveState === 'dirty' || saveState === 'invalid') {
+      const saved = await persist(true);
+      if (!saved) {
+        setNotice('Save the current graph before opening another workflow.');
+        return;
+      }
+    }
+    setBusy(true);
+    try {
+      const next = await loadPackGraph(pack.id, graphId);
+      acceptPack(next);
+      setRun(bootstrap?.runs.find((item) => item.packId === pack.id && item.graphId === graphId) ?? null);
+      setCanvasMode('workflow');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }, [acceptPack, bootstrap?.runs, editor?.graph.id, pack, persist, saveState]);
+
   useEffect(() => {
     if (!initialized.current || saveState !== 'dirty') return;
     const timer = window.setTimeout(() => { void persist(true); }, 900);
@@ -248,7 +315,7 @@ export function App() {
       if (!saved) return;
       const next = await startRun(pack.id, editor.graph.id, input);
       setRun(next);
-      setBootstrap((current) => current ? { ...current, runs: [next, ...current.runs.filter((item) => item.runId !== next.runId)] } : current);
+      setBootstrap(await loadWorkbench());
       setNotice(next.status === 'paused'
         ? next.pendingApproval?.kind === 'tool'
           ? 'Run paused safely for tool approval.'
@@ -268,7 +335,7 @@ export function App() {
     try {
       const next = await decideRun(run.runId, approved);
       setRun(next);
-      setBootstrap((current) => current ? { ...current, runs: current.runs.map((item) => item.runId === next.runId ? next : item) } : current);
+      setBootstrap(await loadWorkbench());
       setNotice(approved
         ? approvalKind === 'tool'
           ? 'Tool approved and run resumed.'
@@ -276,6 +343,21 @@ export function App() {
         : approvalKind === 'tool'
           ? 'Tool rejected with its audit trail preserved.'
           : 'Run rejected with its audit trail preserved.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resumeWait = async () => {
+    if (!run) return;
+    setBusy(true);
+    try {
+      const next = await resumeWaitingRun(run.runId);
+      setRun(next);
+      setBootstrap(await loadWorkbench());
+      setNotice(next.status === 'paused' ? 'The durable wait is not ready yet.' : `Run ${next.status}.`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
     } finally {
@@ -368,6 +450,7 @@ export function App() {
       <header className="topbar">
         <div className="workspace-name"><Box size={16} /><span><small>Local workspace</small><strong>Graph Workbench</strong></span></div>
         <div className="pack-switcher"><PackageOpen size={15} /><select value={pack.id} disabled={busyPackId !== null} onChange={(event) => { void mutatePack(event.target.value, 'activate'); }}>{bootstrap.catalog.filter((item) => bootstrap.installedPackIds.includes(item.id)).map((item) => <option key={item.id} value={item.id}>{item.name} · v{item.version}</option>)}</select></div>
+        <div className="identity-switcher"><UserRoundCheck size={15} /><select aria-label="Active identity" value={bootstrap.actor.id} disabled={teamBusy} onChange={(event) => { void switchIdentity(event.target.value); }}>{bootstrap.actors.map((actor) => <option key={actor.id} value={actor.id}>{actor.displayName}</option>)}</select></div>
         {view === 'editor' ? <div className="topbar-actions">
           <span className={`save-state state-${saveState}`}>{saveState === 'saving' ? <LoaderCircle className="spin" size={13} /> : saveState === 'saved' ? <Check size={13} /> : <CircleDot size={13} />}{saveState}</span>
           <button className="icon-control" onClick={undo} disabled={!past.length} aria-label="Undo"><Undo2 size={16} /></button>
@@ -387,15 +470,29 @@ export function App() {
               <div className="palette-footer"><GitFork size={15} /><span><strong>{editor.graph.nodes.length} nodes</strong><small>{editor.graph.edges.length} connections</small></span></div>
             </aside>
             <section className="canvas-region">
-              <div className="canvas-title"><span><strong>{editor.graph.name}</strong><small>{editor.graph.id} · version {editor.graph.version}</small></span><div><button className="active">Execution</button><button onClick={() => setView('context')}>Context</button></div></div>
-              <FlowCanvas graph={editor.graph} positions={editor.positions} run={run} selectedNodeId={selectedNodeId} onSelectNode={(id) => { setSelectedNodeId(id); if (id) { setInspectorTab('node'); setInspectorOpen(true); } }} onChange={commitEditor} />
+              <div className="canvas-title">
+                <span className="graph-heading">
+                  <select aria-label="Active workflow" value={editor.graph.id} disabled={busy || saveState === 'saving'} onChange={(event) => { void openGraph(event.target.value); }}>
+                    {pack.manifest.graphs.map((graph) => <option key={graph.id} value={graph.id}>{graph.name}</option>)}
+                  </select>
+                  <small>{editor.graph.id} · version {editor.graph.version}</small>
+                </span>
+                <div className="canvas-actions">
+                  {canvasMode === 'workflow' ? <button className="auto-layout" onClick={() => commitEditor(editor.graph, createAutomaticLayout(editor.graph))} title="Arrange workflow">Arrange</button> : null}
+                  <span className="canvas-view-switch"><button className={canvasMode === 'workflow' ? 'active' : ''} onClick={() => setCanvasMode('workflow')}>Execution</button><button className={canvasMode === 'system' ? 'active' : ''} onClick={() => setCanvasMode('system')}>System map</button><button onClick={() => setView('context')}>Context</button></span>
+                </div>
+              </div>
+              {canvasMode === 'workflow'
+                ? <FlowCanvas graph={editor.graph} positions={editor.positions} run={run} selectedNodeId={selectedNodeId} manifest={pack.manifest} modelLabel={bootstrap.models.mode === 'model' ? bootstrap.models.selection.model : 'deterministic'} onSelectNode={(id) => { setSelectedNodeId(id); if (id) { setInspectorTab('node'); setInspectorOpen(true); } }} onChange={commitEditor} />
+                : <PackOverview pack={pack} activeGraphId={editor.graph.id} onOpenGraph={(graphId) => { void openGraph(graphId); }} />}
             </section>
             <Inspector tab={inspectorTab} onTab={setInspectorTab} node={selectedNode} pack={pack} input={input} open={inspectorOpen} onToggle={() => setInspectorOpen((value) => !value)} onInput={setInput} onUpdateNode={updateNode} onSelectFixture={selectFixture} />
-            <RunConsole run={run} busy={busy} onDecision={(approved) => void decide(approved)} onExport={() => void exportAudit()} />
+            <RunConsole run={run} busy={busy} onDecision={(approved) => void decide(approved)} onResume={() => void resumeWait()} onExport={() => void exportAudit()} />
           </div>
         ) : null}
         {view === 'runs' ? <RunHistory runs={bootstrap.runs} selectedRunId={run?.runId} onSelect={(selected) => { setRun(selected); setView('editor'); }} /> : null}
-        {view === 'context' ? <ContextExplorer runs={bootstrap.runs} /> : null}
+        {view === 'context' ? <ContextExplorer context={bootstrap.context} /> : null}
+        {view === 'team' ? <TeamManager actors={bootstrap.actors} currentActor={bootstrap.actor} roles={bootstrap.activePack.manifest.roles} busy={teamBusy} onActivate={(actorId) => { void switchIdentity(actorId); }} onSave={(actor) => { void persistActor(actor); }} onRemove={(actorId) => { void updateIdentity(() => removeActor(actorId), 'Identity removed.'); }} /> : null}
         {view === 'models' ? <ProviderManager state={bootstrap.models} busy={modelsBusy} onSave={saveModelProvider} onTest={checkModelProvider} /> : null}
         {view === 'packs' ? <PackManager catalog={bootstrap.catalog} registries={registries} registriesLoading={registriesLoading} activePackId={bootstrap.activePackId} installedPackIds={bootstrap.installedPackIds} busyPackId={busyPackId} onInspectArtifact={inspectPackArtifact} onImportArtifact={importPackArtifact} onInstallRegistry={(registryId, packId, version) => void installFromRegistry(registryId, packId, version)} onInstall={(id) => void mutatePack(id, 'install')} onActivate={(id) => void mutatePack(id, 'activate')} onUninstall={(id) => void mutatePack(id, 'uninstall')} /> : null}
       </div>

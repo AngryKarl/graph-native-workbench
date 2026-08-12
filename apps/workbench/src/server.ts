@@ -1,13 +1,20 @@
-import { createReadStream } from 'node:fs';
+import { createReadStream, mkdirSync } from 'node:fs';
 import { access, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { extname, resolve } from 'node:path';
+import { dirname, extname, resolve } from 'node:path';
 import { platform, tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { inspectPackArtifact, installPackArtifact } from '@graph-workbench/pack-sdk';
-import { defaultToolPolicy, parseToolPolicy, type ToolPolicy } from '@graph-workbench/core';
+import {
+  defaultToolPolicy,
+  parseToolPolicy,
+  PostgresContextGraphStore,
+  SQLiteContextGraphStore,
+  type ContextGraphStore,
+  type ToolPolicy,
+} from '@graph-workbench/core';
 import { bundledPackCatalog, discoverInstalledPackRuntimes } from './catalog.js';
 import { WorkbenchService } from './service.js';
 import { WorkbenchRegistryService } from './registry-service.js';
@@ -37,9 +44,14 @@ const trustFile = process.env.GRAPH_WORKBENCH_TRUST
   ?? resolve(workspaceDirectory, '.graph-workbench/trust.json');
 const policyFile = process.env.GRAPH_WORKBENCH_POLICY
   ?? resolve(workspaceDirectory, '.graph-workbench/policy.json');
+const contextDatabase = process.env.GRAPH_WORKBENCH_CONTEXT_DATABASE;
 const httpSecurity = createWorkbenchHttpSecurity(host, process.env.GRAPH_WORKBENCH_AUTH_TOKEN);
 const discovery = await discoverInstalledPackRuntimes(packRoot);
-const service = new WorkbenchService({ dataFile, toolPolicy: await loadToolPolicy(policyFile) });
+const service = new WorkbenchService({
+  dataFile,
+  toolPolicy: await loadToolPolicy(policyFile),
+  ...(contextDatabase ? { contextStore: createContextStore(contextDatabase) } : {}),
+});
 const registryService = await WorkbenchRegistryService.fromConfigFile(trustFile, packRoot);
 const clientDirectory = resolve(appDirectory, 'dist/client');
 
@@ -51,6 +63,13 @@ async function loadToolPolicy(path: string): Promise<ToolPolicy> {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Invalid tool policy at ${path}: ${message}`);
   }
+}
+
+function createContextStore(database: string): ContextGraphStore {
+  if (/^postgres(?:ql)?:\/\//i.test(database)) return new PostgresContextGraphStore(database);
+  const filePath = resolve(database);
+  mkdirSync(dirname(filePath), { recursive: true });
+  return new SQLiteContextGraphStore(filePath);
 }
 
 const mediaTypes: Record<string, string> = {
@@ -129,12 +148,21 @@ function artifactPreview(filePath: string) {
 }
 
 async function api(request: IncomingMessage, response: ServerResponse, pathname: string): Promise<boolean> {
+  if ((request.method === 'POST' || request.method === 'PUT' || request.method === 'PATCH') && pathname.startsWith('/hooks/')) {
+    json(response, 201, await service.triggerWebhookPath(
+      request.method,
+      pathname.slice('/hooks'.length),
+      await body(request),
+      typeof request.headers['idempotency-key'] === 'string' ? request.headers['idempotency-key'] : undefined,
+    ));
+    return true;
+  }
   if (request.method === 'GET' && pathname === '/api/health') {
     json(response, 200, { status: 'ok' });
     return true;
   }
   if (request.method === 'GET' && pathname === '/api/workbench') {
-    json(response, 200, service.describeWorkbench());
+    json(response, 200, await service.describeWorkbench());
     return true;
   }
   if (request.method === 'PUT' && pathname === '/api/model-provider') {
@@ -146,7 +174,7 @@ async function api(request: IncomingMessage, response: ServerResponse, pathname:
     if (typeof payload.providerId !== 'string' || typeof payload.model !== 'string') {
       throw new Error('Model provider configuration requires providerId and model.');
     }
-    json(response, 200, service.configureModelProvider({
+    json(response, 200, await service.configureModelProvider({
       providerId: payload.providerId,
       model: payload.model,
       ...(typeof payload.baseUrl === 'string' && payload.baseUrl.trim()
@@ -157,6 +185,37 @@ async function api(request: IncomingMessage, response: ServerResponse, pathname:
   }
   if (request.method === 'POST' && pathname === '/api/model-provider/test') {
     json(response, 200, await service.testModelProvider());
+    return true;
+  }
+  if (request.method === 'POST' && pathname === '/api/events') {
+    json(response, 202, await service.publishEvent(await body(request) as Parameters<WorkbenchService['publishEvent']>[0]));
+    return true;
+  }
+  const scheduleTrigger = pathname.match(/^\/api\/triggers\/([^/]+)\/([^/]+)\/schedule$/);
+  if (request.method === 'POST' && scheduleTrigger) {
+    const occurrence = await body(request) as Parameters<WorkbenchService['triggerSchedule']>[2];
+    json(response, 201, await service.triggerSchedule(
+      decodeURIComponent(scheduleTrigger[1]!),
+      decodeURIComponent(scheduleTrigger[2]!),
+      occurrence,
+    ));
+    return true;
+  }
+  const actor = pathname.match(/^\/api\/actors\/([^/]+)$/);
+  if (request.method === 'PUT' && actor) {
+    const actorId = decodeURIComponent(actor[1]!);
+    const payload = await body(request) as Parameters<WorkbenchService['upsertActor']>[0];
+    if (payload.id !== actorId) throw new Error('Actor id does not match the request path.');
+    json(response, 200, await service.upsertActor(payload));
+    return true;
+  }
+  if (request.method === 'DELETE' && actor) {
+    json(response, 200, await service.removeActor(decodeURIComponent(actor[1]!)));
+    return true;
+  }
+  const actorActivation = pathname.match(/^\/api\/actors\/([^/]+)\/activate$/);
+  if (request.method === 'POST' && actorActivation) {
+    json(response, 200, await service.activateActor(decodeURIComponent(actorActivation[1]!)));
     return true;
   }
   if (request.method === 'GET' && pathname === '/api/registries') {
@@ -175,8 +234,8 @@ async function api(request: IncomingMessage, response: ServerResponse, pathname:
       throw new Error(refreshed.errors.find((error) => error.includes(packId))
         ?? `Installed Pack "${packId}@${version}" could not be loaded.`);
     }
-    service.install(packId);
-    json(response, 201, service.activate(packId));
+    await service.install(packId);
+    json(response, 201, await service.activate(packId));
     return true;
   }
   if (request.method === 'POST' && pathname === '/api/packs/artifact/inspect') {
@@ -200,7 +259,7 @@ async function api(request: IncomingMessage, response: ServerResponse, pathname:
         throw new Error(refreshed.errors.find((error) => error.includes(preview.id))
           ?? `Installed Pack "${preview.id}@${preview.version}" could not be loaded.`);
       }
-      service.install(preview.id);
+      await service.install(preview.id);
       return service.activate(preview.id);
     });
     json(response, 201, next);
@@ -215,18 +274,26 @@ async function api(request: IncomingMessage, response: ServerResponse, pathname:
     json(response, 200, service.describePack(decodeURIComponent(pack[1]!)));
     return true;
   }
+  const packGraph = pathname.match(/^\/api\/packs\/([^/]+)\/graphs\/([^/]+)$/);
+  if (request.method === 'GET' && packGraph) {
+    json(response, 200, service.describePack(
+      decodeURIComponent(packGraph[1]!),
+      decodeURIComponent(packGraph[2]!),
+    ));
+    return true;
+  }
   const install = pathname.match(/^\/api\/packs\/([^/]+)\/install$/);
   if (request.method === 'POST' && install) {
-    json(response, 200, service.install(decodeURIComponent(install[1]!)));
+    json(response, 200, await service.install(decodeURIComponent(install[1]!)));
     return true;
   }
   if (request.method === 'DELETE' && install) {
-    json(response, 200, service.uninstall(decodeURIComponent(install[1]!)));
+    json(response, 200, await service.uninstall(decodeURIComponent(install[1]!)));
     return true;
   }
   const activate = pathname.match(/^\/api\/packs\/([^/]+)\/activate$/);
   if (request.method === 'POST' && activate) {
-    json(response, 200, service.activate(decodeURIComponent(activate[1]!)));
+    json(response, 200, await service.activate(decodeURIComponent(activate[1]!)));
     return true;
   }
   const draft = pathname.match(/^\/api\/packs\/([^/]+)\/graphs\/([^/]+)\/draft$/);
@@ -274,6 +341,15 @@ async function api(request: IncomingMessage, response: ServerResponse, pathname:
     const payload = await body(request) as { approved?: unknown };
     if (typeof payload.approved !== 'boolean') throw new Error('Decision must include boolean approved.');
     json(response, 200, await service.decide(decodeURIComponent(decision[1]!), payload.approved));
+    return true;
+  }
+  const waitingResume = pathname.match(/^\/api\/runs\/([^/]+)\/resume$/);
+  if (request.method === 'POST' && waitingResume) {
+    const payload = await body(request) as { event?: Parameters<WorkbenchService['resumeWaiting']>[1] };
+    json(response, 200, await service.resumeWaiting(
+      decodeURIComponent(waitingResume[1]!),
+      payload.event,
+    ));
     return true;
   }
   const audit = pathname.match(/^\/api\/runs\/([^/]+)\/audit$/);
@@ -363,3 +439,13 @@ server.listen(port, host, () => {
   for (const error of discovery.errors) console.warn(`Skipped installed Pack: ${error}`);
   if (process.env.GRAPH_WORKBENCH_OPEN === 'true') openWorkbench(url);
 });
+
+let shuttingDown = false;
+async function shutdown(): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
+  await service.close();
+}
+process.once('SIGINT', () => { void shutdown(); });
+process.once('SIGTERM', () => { void shutdown(); });

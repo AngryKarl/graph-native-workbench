@@ -9,8 +9,10 @@ import {
   type GraphCheckpoint,
   type GraphEvent,
   type GraphRunStatus,
+  type PortableArtifact,
 } from '@graph-workbench/contracts';
 import type { GraphState } from './state.js';
+import { verifyPortableArtifact } from './artifact.js';
 import { sha256Json } from './integrity.js';
 
 export interface AuditRunSnapshot {
@@ -29,6 +31,7 @@ export interface RunAuditSource {
   readonly run: AuditRunSnapshot;
   readonly events: readonly GraphEvent[];
   readonly checkpoint?: GraphCheckpoint;
+  readonly artifacts?: readonly PortableArtifact[];
   readonly context?: {
     readonly objects: readonly ContextObject[];
     readonly relations: readonly ContextRelation[];
@@ -72,10 +75,12 @@ function validateSource(source: RunAuditSource): RunAuditSource {
     objects: source.context.objects.map((item) => contextObjectSchema.parse(item)),
     relations: source.context.relations.map((item) => contextRelationSchema.parse(item)),
   } : undefined;
+  const artifacts = source.artifacts?.map(verifyPortableArtifact);
   return {
     run: structuredClone(run),
     events,
     ...(checkpoint ? { checkpoint } : {}),
+    ...(artifacts ? { artifacts } : {}),
     ...(context ? { context } : {}),
   };
 }
@@ -108,6 +113,9 @@ export function verifyRunAuditBundle(input: unknown): RunAuditBundle {
   }
   const run = record(root.run, 'Audit bundle run') as unknown as AuditRunSnapshot;
   if (!Array.isArray(root.events)) throw new Error('Audit bundle events must be an array.');
+  if (root.artifacts !== undefined && !Array.isArray(root.artifacts)) {
+    throw new Error('Audit bundle artifacts must be an array.');
+  }
   const contextRoot = root.context === undefined
     ? undefined
     : record(root.context, 'Audit bundle context');
@@ -118,6 +126,7 @@ export function verifyRunAuditBundle(input: unknown): RunAuditBundle {
     run,
     events: root.events as GraphEvent[],
     ...(root.checkpoint ? { checkpoint: root.checkpoint as GraphCheckpoint } : {}),
+    ...(root.artifacts ? { artifacts: root.artifacts as PortableArtifact[] } : {}),
     ...(contextRoot ? {
       context: {
         objects: contextRoot.objects as ContextObject[],

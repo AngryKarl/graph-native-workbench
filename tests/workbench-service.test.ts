@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { verifyRunAuditBundle } from '@graph-workbench/core';
+import { InMemoryContextGraphStore, verifyRunAuditBundle } from '@graph-workbench/core';
 import { researchPack } from '@graph-workbench/pack-research';
 import { bundledPackCatalog } from '../apps/workbench/src/catalog.js';
 import { WorkbenchService } from '../apps/workbench/src/service.js';
@@ -25,13 +25,165 @@ describe('Workbench service', () => {
     expect(paused.status).toBe('paused');
     expect(paused.state.concept_directions).toHaveLength(2);
     expect(paused.events.some((event) => event.type === 'human.requested')).toBe(true);
+    expect(paused.pendingApproval).toMatchObject({
+      requiredRoleId: 'design_reviewer',
+      requiredRoleLabel: 'Design reviewer',
+      actingActorId: 'local.user',
+      actorAuthorized: true,
+    });
 
     const completed = await service.decide(paused.runId, true);
     expect(completed.status).toBe('completed');
     expect(completed.state.deliverable).toContain('# 概念设计简报');
     expect(completed.context?.objects.some((object) => object.type === 'deliverable')).toBe(true);
     expect(completed.context?.relations.some((relation) => relation.type === 'decision_governs')).toBe(true);
+    expect(completed.artifacts).toEqual([
+      expect.objectContaining({
+        artifactType: 'concept_design_brief',
+        approval: expect.objectContaining({ actorId: 'local.user' }),
+      }),
+    ]);
+    expect(completed.events.find((event) => event.type === 'human.resolved')).toMatchObject({
+      detail: { resolvedByActorId: 'local.user', resolvedByActorName: 'Local user' },
+    });
     expect(service.get(paused.runId)).toEqual(completed);
+  });
+
+  it('keeps an approval paused when the current member lacks its responsible role', async () => {
+    const service = new WorkbenchService({
+      actor: {
+        id: 'member.researcher',
+        kind: 'human',
+        displayName: 'Research member',
+        workspaceRole: 'member',
+        roleIds: ['researcher'],
+      },
+    });
+    const paused = await service.start(service.describePack().input);
+    expect(paused.pendingApproval).toMatchObject({
+      requiredRoleId: 'design_reviewer',
+      actingActorId: 'member.researcher',
+      actorAuthorized: false,
+    });
+
+    await expect(service.decide(paused.runId, true)).rejects.toThrow(/role "design_reviewer" is required/);
+    expect(service.get(paused.runId)?.status).toBe('paused');
+  });
+
+  it('persists team identities and enforces their Pack approval responsibilities', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'graph-workbench-team-'));
+    const dataFile = join(directory, 'workbench.json');
+    let first: WorkbenchService | undefined;
+    let second: WorkbenchService | undefined;
+    try {
+      first = new WorkbenchService({ dataFile });
+      await first.upsertActor({
+        id: 'member.designer',
+        kind: 'human',
+        displayName: 'Design member',
+        workspaceRole: 'member',
+        roleIds: ['design_reviewer'],
+      });
+      expect(() => first?.upsertActor({
+        id: 'local.user',
+        kind: 'human',
+        displayName: 'Local user',
+        workspaceRole: 'member',
+        roleIds: [],
+      })).toThrow(/retain at least one owner/);
+      await first.activateActor('member.designer');
+      const paused = await first.start(first.describePack().input);
+      expect(paused.pendingApproval).toMatchObject({
+        actingActorId: 'member.designer',
+        actorAuthorized: true,
+      });
+      expect(() => first?.upsertActor({
+        id: 'member.other',
+        kind: 'human',
+        displayName: 'Other member',
+        workspaceRole: 'member',
+        roleIds: [],
+      })).toThrow(/owner permission/);
+
+      second = new WorkbenchService({ dataFile });
+      const restored = await second.describeWorkbench();
+      expect(restored.actor.id).toBe('member.designer');
+      expect(restored.actors).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'member.designer', roleIds: ['design_reviewer'] }),
+      ]));
+      const completed = await second.decide(paused.runId, true);
+      expect(completed.artifacts?.[0]?.approval?.actorId).toBe('member.designer');
+    } finally {
+      await Promise.all([first?.close(), second?.close()]);
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('reads externally supplied records from the shared Context authority', async () => {
+    const contextStore = new InMemoryContextGraphStore();
+    await contextStore.appendObject({
+      id: 'external.case',
+      type: 'external_case',
+      version: 1,
+      status: 'confirmed',
+      data: { title: 'Shared team case' },
+      validFrom: '2026-08-11T00:00:00.000Z',
+      validTo: null,
+      provenance: {
+        sourceIds: ['external.system'],
+        actorId: 'service.sync',
+        recordedAt: '2026-08-11T00:00:00.000Z',
+      },
+    });
+    const service = new WorkbenchService({ contextStore });
+    expect((await service.describeWorkbench()).context.objects).toEqual([
+      expect.objectContaining({ id: 'external.case', type: 'external_case' }),
+    ]);
+  });
+
+  it('dispatches Pack triggers and resumes correlated waits through the Workbench service', async () => {
+    const service = new WorkbenchService();
+    const paused = await service.triggerWebhook('architecture', 'architecture.feedback_followup', 'POST', {
+      project_name: 'Civic hub',
+      feedback_case_id: 'feedback-service-1',
+    });
+    expect(paused).toMatchObject({
+      status: 'paused',
+      pendingWait: { mode: 'event', eventType: 'design.feedback.received', correlationKey: 'feedback-service-1' },
+    });
+    const feedback = await service.publishEvent({
+      id: 'feedback-service-event-1',
+      type: 'design.feedback.received',
+      correlationKey: 'feedback-service-1',
+      payload: { decision: 'approved with notes' },
+      occurredAt: '2026-08-11T02:00:00.000Z',
+    });
+    expect(feedback.resumed[0]).toMatchObject({ status: 'completed', state: { summary: expect.stringContaining('approved with notes') } });
+
+    await service.install('customer_success');
+    const scheduled = await service.triggerSchedule('customer_success', 'customer_success.scheduled_health_scan', { id: 'health-scan-service-1', scheduledFor: '2026-08-11T08:00:00.000Z' });
+    expect(scheduled).toMatchObject({ status: 'completed', state: { scan_attempt: 2 } });
+    const scheduledReplay = await service.triggerSchedule('customer_success', 'customer_success.scheduled_health_scan', { id: 'health-scan-service-1', scheduledFor: '2026-08-11T08:00:00.000Z' });
+    expect(scheduledReplay.runId).toBe(scheduled.runId);
+    const critical = await service.publishEvent({
+      id: 'critical-service-event-1',
+      type: 'customer.health_critical',
+      correlationKey: 'account-service-1',
+      payload: { severity: 'critical', simulate_failure: true },
+      occurredAt: '2026-08-11T02:05:00.000Z',
+    });
+    expect(critical.started[0]).toMatchObject({ status: 'completed', state: { recovered: true } });
+    expect(critical.started[0]?.events.map((event) => event.type)).toEqual(expect.arrayContaining([
+      'escalation.raised', 'compensation.completed',
+    ]));
+    const replay = await service.publishEvent({
+      id: 'critical-service-event-1',
+      type: 'customer.health_critical',
+      correlationKey: 'account-service-1',
+      payload: { severity: 'critical', simulate_failure: true },
+      occurredAt: '2026-08-11T02:05:00.000Z',
+    });
+    expect(replay.started).toEqual([]);
   });
 
   it('records a rejected review without publishing a deliverable', async () => {
@@ -57,11 +209,12 @@ describe('Workbench service', () => {
       status: 'completed',
     });
     expect(audit.context?.objects.some((item) => item.type === 'deliverable')).toBe(true);
+    expect(audit.artifacts?.[0]).toMatchObject({ artifactType: 'concept_design_brief' });
   });
 
   it('installs and runs another bundled Pack through the same workbench contract', async () => {
     const service = new WorkbenchService();
-    const installed = service.install('research');
+    const installed = await service.install('research');
     expect(installed.installedPackIds).toContain('research');
     expect(installed.activePackId).toBe('research');
     expect(installed.activePack.graph.id).toBe('research.workflow');
@@ -71,6 +224,31 @@ describe('Workbench service', () => {
     const completed = await service.decide(paused.runId, true);
     expect(completed.state.deliverable).toContain('# Approved research deliverable');
     expect(completed.context?.objects.some((object) => object.type === 'deliverable')).toBe(true);
+  });
+
+  it('installs and completes the finance, healthcare and robotics standard Packs', async () => {
+    const service = new WorkbenchService();
+    const standardPacks = [
+      { id: 'quantitative_finance', contextType: 'finance_record', approvals: 3 },
+      { id: 'healthcare_diagnostics', contextType: 'diagnostic_record', approvals: 2 },
+      { id: 'robotics_fleet', contextType: 'fleet_record', approvals: 1 },
+    ] as const;
+
+    for (const expected of standardPacks) {
+      const installed = await service.install(expected.id);
+      let run = await service.start(installed.activePack.input);
+      let approvals = 0;
+      while (run.status === 'paused' && run.pendingApproval) {
+        run = await service.decide(run.runId, true);
+        approvals += 1;
+      }
+
+      expect(run.status).toBe('completed');
+      expect(approvals).toBe(expected.approvals);
+      expect(run.artifacts?.length).toBeGreaterThan(0);
+      expect(run.context?.objects.some((object) => object.type === expected.contextType)).toBe(true);
+      expect(run.context?.relations.length).toBeGreaterThan(0);
+    }
   });
 
   it('runs a model-enabled Agent through a selected compatible provider and projects its usage', async () => {
@@ -114,9 +292,9 @@ describe('Workbench service', () => {
       modelEnvironment: { GRAPH_WORKBENCH_MODEL_API_KEY: secret },
       modelFetch: request,
     });
-    service.install('research');
-    const workspace = service.activate('research');
-    service.configureModelProvider({
+    await service.install('research');
+    const workspace = await service.activate('research');
+    await service.configureModelProvider({
       providerId: 'custom',
       model: 'test-model',
       baseUrl: 'http://127.0.0.1:9876/v1',
@@ -178,9 +356,9 @@ describe('Workbench service', () => {
 
     try {
       const service = new WorkbenchService({ modelFetch: request });
-      service.install('research');
-      const workspace = service.activate('research');
-      service.configureModelProvider({
+      await service.install('research');
+      const workspace = await service.activate('research');
+      await service.configureModelProvider({
         providerId: 'custom',
         model: 'governed-model',
         baseUrl: 'http://127.0.0.1:9876/v1',
@@ -208,11 +386,11 @@ describe('Workbench service', () => {
     }
   });
 
-  it('exposes provider readiness without returning environment secret values', () => {
+  it('exposes provider readiness without returning environment secret values', async () => {
     const service = new WorkbenchService({
       modelEnvironment: { OPENAI_API_KEY: 'private-provider-key' },
     });
-    const models = service.describeWorkbench().models;
+    const models = (await service.describeWorkbench()).models;
     expect(models.selection.providerId).toBe('deterministic');
     expect(models.providers.find((provider) => provider.id === 'openai')?.configured).toBe(true);
     expect(JSON.stringify(models)).not.toContain('private-provider-key');
@@ -258,21 +436,89 @@ describe('Workbench service', () => {
   it('persists installed Packs, the active Pack, drafts and runs across service restarts', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'graph-workbench-'));
     const dataFile = join(directory, 'workbench.json');
+    let first: WorkbenchService | undefined;
+    let second: WorkbenchService | undefined;
     try {
-      const first = new WorkbenchService({ dataFile });
-      first.install('research');
-      const workspace = first.activate('research');
+      first = new WorkbenchService({ dataFile });
+      await first.install('research');
+      const workspace = await first.activate('research');
       const graph = { ...workspace.activePack.graph, name: 'Persistent research workflow' };
       first.saveDraft('research', graph, { start: { x: 20, y: 40 } });
       const paused = await first.start(workspace.activePack.input);
 
-      const second = new WorkbenchService({ dataFile });
-      const restored = second.describeWorkbench();
+      second = new WorkbenchService({ dataFile });
+      const restored = await second.describeWorkbench();
       expect(restored.activePackId).toBe('research');
       expect(restored.installedPackIds).toEqual(['architecture', 'research']);
       expect(restored.activePack.graph.name).toBe('Persistent research workflow');
       expect(second.get(paused.runId)?.status).toBe('paused');
     } finally {
+      await Promise.all([first?.close(), second?.close()]);
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('describes every graph in a multi-graph Pack and keeps the selected draft', () => {
+    const service = new WorkbenchService();
+    const pack = service.describePack('customer_success', 'customer_success.scheduled_health_scan');
+    expect(pack.graph.id).toBe('customer_success.scheduled_health_scan');
+    expect(pack.graph.trigger).toMatchObject({ type: 'schedule' });
+    expect(pack.fixtures.every((fixture) => fixture.graphId === pack.graph.id)).toBe(true);
+
+    const edited = { ...pack.graph, name: 'Edited scheduled health scan' };
+    service.saveDraft(pack.id, edited, { start: { x: 40, y: 80 } });
+    expect(service.describePack(pack.id, edited.id)).toMatchObject({
+      graph: { name: 'Edited scheduled health scan' },
+      positions: { start: { x: 40, y: 80 } },
+    });
+    expect(service.describePack(pack.id).graph.id).not.toBe(edited.id);
+
+    const child = service.describePack(pack.id, 'customer_success.scan_preparation');
+    expect(child.fixtures).toEqual([]);
+    expect(child.input).toEqual({});
+  });
+
+  it('aggregates confirmed context from multiple Packs across a service restart', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'graph-workbench-context-'));
+    const dataFile = join(directory, 'workbench.json');
+    let first: WorkbenchService | undefined;
+    let second: WorkbenchService | undefined;
+    try {
+      first = new WorkbenchService({ dataFile });
+      const architecturePaused = await first.start(first.describePack().input);
+      const architectureCompleted = await first.decide(architecturePaused.runId, true);
+
+      await first.install('research');
+      const researchInput = first.describePack('research').input;
+      const researchPaused = await first.start(researchInput);
+      const researchCompleted = await first.decide(researchPaused.runId, true);
+
+      await first.close();
+      first = undefined;
+      const persisted = JSON.parse(await readFile(dataFile, 'utf8')) as {
+        runs: Record<string, Record<string, unknown>>;
+      };
+      for (const session of Object.values(persisted.runs)) delete session.context;
+      await writeFile(dataFile, `${JSON.stringify(persisted, null, 2)}\n`, 'utf8');
+
+      second = new WorkbenchService({ dataFile });
+      const restored = await second.describeWorkbench();
+      expect(restored.context.sourceRunIds).toEqual(expect.arrayContaining([
+        architectureCompleted.runId,
+        researchCompleted.runId,
+      ]));
+      expect(restored.context.sourceRunIds).toHaveLength(2);
+      expect(restored.context.objects).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          provenance: expect.objectContaining({ producedByRunId: architectureCompleted.runId }),
+        }),
+        expect.objectContaining({
+          provenance: expect.objectContaining({ producedByRunId: researchCompleted.runId }),
+        }),
+      ]));
+      expect(restored.context.relations.length).toBeGreaterThan(0);
+    } finally {
+      await Promise.all([first?.close(), second?.close()]);
       await rm(directory, { recursive: true, force: true });
     }
   });

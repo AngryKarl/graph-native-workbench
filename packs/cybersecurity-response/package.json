@@ -1,0 +1,12 @@
+{
+  "name": "@graph-workbench/pack-cybersecurity-response",
+  "version": "0.3.0",
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@graph-workbench/contracts": "workspace:*",
+    "@graph-workbench/core": "workspace:*"
+  }
+}

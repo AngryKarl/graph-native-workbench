@@ -7,9 +7,24 @@ export const nodeKindLabel: Record<GraphNode['kind'], string> = {
   join: 'Join',
   human: 'Human',
   router: 'Router',
+  wait: 'Wait',
+  subgraph: 'Subgraph',
+  loop: 'Loop',
+  map: 'Map',
+  escalation: 'Escalation',
+  compensation: 'Compensation',
 };
 
 export type NodeRunStatus = 'idle' | 'running' | 'complete' | 'waiting' | 'failed';
+
+export interface GraphStageBand {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 export function nodeRunStatus(run: RunSnapshot | null, nodeId: string): NodeRunStatus {
   if (!run) return 'idle';
@@ -17,6 +32,8 @@ export function nodeRunStatus(run: RunSnapshot | null, nodeId: string): NodeRunS
   if (events.some((event) => event.type === 'node.failed' || event.type === 'node.timed_out')) return 'failed';
   if (events.some((event) => event.type === 'human.requested')
     && !events.some((event) => event.type === 'human.resolved')) return 'waiting';
+  if (events.some((event) => event.type === 'wait.scheduled' || event.type === 'event.waiting')
+    && !events.some((event) => event.type === 'wait.resumed' || event.type === 'event.received')) return 'waiting';
   if (events.some((event) => event.type === 'node.completed')) return 'complete';
   if (events.some((event) => event.type === 'node.started')) return 'running';
   return 'idle';
@@ -39,19 +56,80 @@ export function createAutomaticLayout(graph: GraphDefinition): Record<string, { 
       if (incoming.get(target) === 0) queue.push(target);
     }
   }
-  const grouped = new Map<number, string[]>();
+  const maxLevel = Math.max(0, ...level.values());
+  const stageCount = Math.min(6, Math.max(1, Math.ceil((maxLevel + 1) / 3)));
+  const grouped = new Map<number, GraphNode[]>();
   graph.nodes.forEach((node, index) => {
-    const value = level.get(node.id) ?? index;
-    grouped.set(value, [...(grouped.get(value) ?? []), node.id]);
+    const nodeLevel = level.get(node.id) ?? maxLevel + index + 1;
+    const stage = Math.min(stageCount - 1, Math.floor((nodeLevel * stageCount) / Math.max(1, maxLevel + 1)));
+    grouped.set(stage, [...(grouped.get(stage) ?? []), node]);
   });
   const positions: Record<string, { x: number; y: number }> = {};
-  for (const [column, ids] of grouped) {
-    const totalHeight = Math.max(0, (ids.length - 1) * 148);
-    ids.forEach((id, index) => {
-      positions[id] = { x: column * 260 + 56, y: index * 148 - totalHeight / 2 + 280 };
+  for (const [stage, nodes] of grouped) {
+    const ordered = nodes.sort((left, right) => {
+      const recovery = (node: GraphNode) => node.kind === 'escalation' || node.kind === 'compensation' ? 1 : 0;
+      return recovery(left) - recovery(right)
+        || (level.get(left.id) ?? 0) - (level.get(right.id) ?? 0)
+        || graph.nodes.indexOf(left) - graph.nodes.indexOf(right);
+    });
+    let y = 116;
+    ordered.forEach((node) => {
+      positions[node.id] = { x: stage * 340 + 92, y };
+      y += estimatedNodeHeight(node.kind) + 42;
     });
   }
   return positions;
+}
+
+function estimatedNodeHeight(kind: GraphNode['kind']): number {
+  if (kind === 'agent') return 132;
+  if (kind === 'router') return 116;
+  if (kind === 'map' || kind === 'loop' || kind === 'subgraph') return 118;
+  if (kind === 'human') return 108;
+  return 88;
+}
+
+const stageNames: Record<number, string[]> = {
+  1: ['Workflow'],
+  2: ['Ingress', 'Delivery'],
+  3: ['Ingress', 'Execution', 'Delivery'],
+  4: ['Ingress', 'Understand', 'Govern', 'Delivery'],
+  5: ['Ingress', 'Understand', 'Decide', 'Execute', 'Delivery'],
+  6: ['Ingress', 'Understand', 'Decide', 'Execute', 'Govern', 'Delivery'],
+};
+
+export function deriveStageBands(
+  graph: GraphDefinition,
+  positions: Readonly<Record<string, { x: number; y: number }>>,
+): GraphStageBand[] {
+  const placed = graph.nodes.flatMap((node) => positions[node.id]
+    ? [{ node, position: positions[node.id]! }]
+    : []);
+  if (!placed.length) return [];
+  const minX = Math.min(...placed.map((item) => item.position.x)) - 72;
+  const maxX = Math.max(...placed.map((item) => item.position.x)) + 270;
+  const minY = Math.min(...placed.map((item) => item.position.y)) - 72;
+  const maxY = Math.max(...placed.map((item) => item.position.y + estimatedNodeHeight(item.node.kind))) + 92;
+  const count = Math.min(6, Math.max(1, Math.ceil(graph.nodes.length / 4)));
+  const width = Math.max(300, (maxX - minX) / count);
+  const names = stageNames[count] ?? stageNames[6]!;
+  return Array.from({ length: count }, (_, index) => {
+    const nodes = placed.filter(({ position }) => {
+      const band = Math.min(count - 1, Math.floor((position.x - minX) / width));
+      return band === index;
+    }).map(({ node }) => node);
+    const recovery = nodes.some((node) => node.kind === 'escalation' || node.kind === 'compensation');
+    const orchestration = nodes.some((node) => node.kind === 'map' || node.kind === 'loop' || node.kind === 'subgraph');
+    const label = recovery ? 'Recovery' : orchestration && index > 0 && index < count - 1 ? 'Orchestrate' : names[index]!;
+    return {
+      id: `stage-${index}`,
+      label,
+      x: minX + index * width,
+      y: minY,
+      width,
+      height: Math.max(460, maxY - minY),
+    };
+  });
 }
 
 export function nextNodeId(graph: GraphDefinition, kind: GraphNode['kind']): string {

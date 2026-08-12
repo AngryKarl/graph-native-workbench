@@ -6,13 +6,22 @@
   },
   "packs": [
     {
-      "source": "../packs/research/src/index.ts"
+      "source": "../packs/robotics-fleet/src/index.ts"
     },
     {
-      "source": "../packs/architecture/src/index.ts"
+      "source": "../packs/healthcare-diagnostics/src/index.ts"
     },
     {
-      "source": "../packs/customer-success/src/index.ts"
+      "source": "../packs/quantitative-finance/src/index.ts"
+    },
+    {
+      "source": "../packs/cybersecurity-response/src/index.ts"
+    },
+    {
+      "source": "../packs/data-mlops/src/index.ts"
+    },
+    {
+      "source": "../packs/software-delivery/src/index.ts"
     }
   ]
 }

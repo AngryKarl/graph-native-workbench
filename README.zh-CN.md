@@ -8,7 +8,7 @@ Graph Workbench 是一个面向复杂行业工作的开源 Graph Engineering
 框架。它把 Agent 执行图与组织上下文图连接起来，使企业能够把自己的
 SOP、角色、工具、知识、质量标准和交付物封装成可安装的 Industry Pack。
 
-![Customer Success Renewal Pack 在 Workbench 中运行](docs/assets/customer-success-output.png)
+![Quantitative Finance Governance Pack 在 Workbench 中运行](docs/assets/pack-graphs/quantitative-finance-governance.png)
 
 ## 核心模型
 
@@ -52,18 +52,23 @@ Demo 会并行运行两条证据分支，在 Join 节点汇合，通过质量检
 pnpm dlx graph-workbench demo --pause
 ```
 
-## 三个可安装示例
+## 六个标准行业 Pack
 
 在 **Packs** 中安装后，同一个 Industry Pack 会立即获得图编辑器、运行时、
 审批入口、交付物控制台和上下文浏览器：
 
-![Research、Architecture 与 Customer Success 示例 Pack](docs/assets/reference-packs.png)
+![Graph Workbench 示例 Pack](docs/assets/reference-packs.png)
+
+[查看六个第一方 Pack 的真实可执行节点图 →](docs/PACK_GALLERY.md)
 
 | Industry Pack | 直接产出 | 验证重点 |
 | --- | --- | --- |
-| Customer Success Renewal | 经审批的续约风险评估与责任明确的成功计划 | 常见企业 SOP 无需修改内核即可得到完整工作台 |
-| Architecture Concept Design | 证据可追溯、经过评审的概念设计简报 | 深度垂直行业的约束、证据和决策能够保持关联 |
-| Cross-industry Research | 经审批的证据综合报告 | 零密钥完成第一次运行并检查全过程 |
+| Professional Software Delivery | 需求到发布的可追溯记录，以及部署健康或回滚证据 | 连接需求、代码、CI/CD 与运维系统，同时不替代这些专业系统 |
+| Data and MLOps Asset Release | 经审批的数据/模型注册发布、受控回填记录与质量恢复证据 | 连接编排、目录、血缘和注册系统，同时保留专业系统的执行权威 |
+| Cybersecurity Incident Response | 可追溯的信号关闭记录，或经审批的事件响应与恢复记录 | 连接 SIEM、EDR、身份、证据和遏制系统，并明确治理高影响动作 |
+| Quantitative Finance Governance | 经独立审批的策略执行意图，以及成交匹配或异常对账记录 | 连接研究、风控、合规、OMS 与账簿系统，但不变成交易引擎 |
+| Healthcare Diagnostic Coordination | 经过同意授权和专科医生审批的诊断协调与安全随访记录 | 连接 FHIR/PACS 证据和辅助 AI，同时保留临床决策权 |
+| Robotics and Fleet Operations | 经安全审批的调度记录，以及正常或降级任务证据 | 连接竞价、资源、遥测、重规划和维护，但不直接控制机器人 |
 
 ### 一次运行的完整结果
 
@@ -92,13 +97,15 @@ pnpm workbench
 定位的来源证据，也可以直接编辑工作流本身：
 
 1. 在 **Packs** 中安装并打开内置的 Industry Pack。
-2. 从左侧节点库拖入节点，在画布上移动、连线或删除节点。
-3. 在右侧检查器修改节点名称、处理器、状态读写范围、配置和执行策略。
-4. 在 **Input** 中载入 Pack 样例或编辑输入，然后运行经过保存和验证的真实执行图。
-5. 审批或拒绝人工检查点与策略要求确认的工具调用，并在底部查看事件、状态、
+2. 打开 **System map** 查看 Pack 中的全部工作流、外部入口、复用子图与交付物，
+   再从系统图或工作流选择器进入任意一张图。
+3. 从左侧节点库拖入节点，在画布上移动、连线或删除节点。
+4. 在右侧检查器修改节点名称、处理器、状态读写范围、配置和执行策略。
+5. 在 **Input** 中载入 Pack 样例或编辑输入，然后运行经过保存和验证的真实执行图。
+6. 审批或拒绝人工检查点与策略要求确认的工具调用，并在底部查看事件、状态、
    Markdown 交付物和上下文摘要。
-6. 在 **Runs** 中回看历史运行，在 **Context** 中检查对象、关系和完整来源信息。
-7. 在 **Packs** 中选择 **Import .gpack**，检查兼容范围、权限和 SHA-256 指纹后，
+7. 在 **Runs** 中回看历史运行，在 **Context** 中检查对象、关系和完整来源信息。
+8. 在 **Packs** 中选择 **Import .gpack**，检查兼容范围、权限和 SHA-256 指纹后，
    显式信任并安装制品。
 
 打开 **Models** 可以继续使用内置的零密钥运行时，也可以连接 OpenAI、
@@ -112,8 +119,7 @@ xAI Grok、Mistral AI、Groq、OpenRouter、Ollama 或自定义 OpenAI-compatibl
 节点范围、角色权限、风险授权和密钥隔离检查，并作为有序事件显示在运行控制台。
 
 图草稿、已安装 Pack、当前 Pack、运行记录和人工检查点会持久化到本地
-`.graph-workbench/workbench.json`。Architecture、Customer Success 与 Research 是内置 Pack；可信的
-`.gpack` 可以直接从 Packs 页面导入，也可以通过 CLI 安装，并保存在
+`.graph-workbench/workbench.json`。Software Delivery、Data and MLOps、Cybersecurity Incident Response、Quantitative Finance、Healthcare Diagnostics 与 Robotics/Fleet Operations 是六个标准行业 Pack；Architecture、Customer Success 与 Research 也作为开发示例内置。可信的 `.gpack` 可以直接从 Packs 页面导入，也可以通过 CLI 安装，并保存在
 `.graph-workbench/packs`。
 
 可选的声明式工具策略位于 `.graph-workbench/policy.json`。暂停或完成的运行可以从控制台
@@ -148,13 +154,14 @@ pnpm graph-workbench pack run customer_success --installed --set "topic=renewal 
 独立配置，签名索引会在下载前绑定 Pack 身份、校验和、兼容范围与权限：
 
 公开的 [Graph Workbench Reference Registry](https://angrykarl.github.io/graph-workbench/registry/registry.json)
-已经提供三个示例 Pack。仓库中的发布者公钥和指纹见
+已经提供六个标准行业 Pack。Architecture、Customer Success 和 Research 仍作为
+仓库内的额外开发示例。发布者公钥和指纹见
 [Registry 发布指南](docs/REGISTRY_PUBLISHING.md)。
 
 ```bash
 pnpm graph-workbench pack registry verify https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
-pnpm graph-workbench pack registry install customer_success@0.3.0 \
+pnpm graph-workbench pack registry install quantitative_finance@0.3.0 \
   --registry https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
 ```

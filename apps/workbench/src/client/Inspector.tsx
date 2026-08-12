@@ -103,7 +103,7 @@ function NodeInspector({ node, pack, onUpdate }: {
       <label className="inspector-field"><span>Description</span><textarea rows={4} value={node.description} onChange={(event) => update({ description: event.target.value })} /></label>
       <label className="inspector-field"><span>Kind</span>
         <select value={node.kind} onChange={(event) => update({ kind: event.target.value as GraphNode['kind'] })}>
-          {(['trigger', 'function', 'agent', 'join', 'human', 'router'] as const).map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+          {(['trigger', 'function', 'agent', 'join', 'human', 'router', 'wait', 'subgraph', 'loop', 'map', 'escalation', 'compensation'] as const).map((kind) => <option key={kind} value={kind}>{kind}</option>)}
         </select>
       </label>
       <label className="inspector-field"><span>Handler</span>
@@ -152,7 +152,7 @@ function PolicyInspector({ pack }: { pack: PackDescription }) {
     <div className="inspector-scroll policy-inspector">
       <div className="inspector-title"><span>Pack contract</span><h2>Governance</h2><p>Roles, tools and blocking evaluations travel with the Pack.</p></div>
       <section><h3><ShieldCheck size={15} />Roles</h3>{pack.manifest.roles.map((role) => <article key={role.id}><strong>{role.label}</strong><p>{role.mission}</p><code>{role.id}</code></article>)}</section>
-      <section><h3><Database size={15} />Tools</h3>{pack.manifest.tools.map((tool) => <article key={tool.id}><strong>{tool.label}</strong><span className={`risk risk-${tool.risk}`}>{tool.risk}</span><p>{tool.description}</p></article>)}</section>
+      <section><h3><Database size={15} />Tools</h3>{pack.manifest.tools.map((tool) => <article key={tool.id}><strong>{tool.label}</strong><span className={`risk risk-${tool.risk}`}>{tool.risk}</span><p>{tool.description}</p>{tool.operation ? <code>{tool.operation} · {tool.idempotency} · typed I/O</code> : null}</article>)}</section>
       <section><h3><AlertCircle size={15} />Evaluations</h3>{pack.manifest.evaluations.map((evaluation) => <article key={evaluation.id}><strong>{evaluation.label}</strong>{evaluation.blocking ? <span className="blocking">blocking</span> : null}<p>{evaluation.description}</p></article>)}</section>
     </div>
   );

@@ -9,12 +9,15 @@ import {
 } from 'node:fs';
 import { dirname } from 'node:path';
 import type {
+  ActorIdentity,
   ContextObject,
   ContextRelation,
   GraphCheckpoint,
   GraphDefinition,
   GraphEvent,
+  PortableArtifact,
 } from '@graph-workbench/contracts';
+import { actorIdentitySchema } from '@graph-workbench/contracts';
 import type { GraphState } from '@graph-workbench/core';
 
 export interface StoredGraphDraft {
@@ -32,6 +35,7 @@ export interface StoredRunSession {
   readonly events: readonly GraphEvent[];
   readonly checkpoint?: GraphCheckpoint;
   readonly error?: string;
+  readonly artifacts?: readonly PortableArtifact[];
   readonly context?: {
     readonly objects: readonly ContextObject[];
     readonly relations: readonly ContextRelation[];
@@ -45,7 +49,7 @@ export interface StoredModelProvider {
 }
 
 export interface WorkbenchWorkspaceState {
-  readonly formatVersion: 2;
+  readonly formatVersion: 3;
   readonly workspaceId: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -53,13 +57,23 @@ export interface WorkbenchWorkspaceState {
   readonly activePackId: string;
   readonly drafts: Readonly<Record<string, StoredGraphDraft>>;
   readonly runs: Readonly<Record<string, StoredRunSession>>;
+  readonly actors: Readonly<Record<string, ActorIdentity>>;
+  readonly currentActorId: string;
   readonly modelProvider?: StoredModelProvider;
 }
 
 export interface WorkspaceMigrationResult {
   readonly state: WorkbenchWorkspaceState;
-  readonly migratedFrom?: 1;
+  readonly migratedFrom?: 1 | 2;
 }
+
+const localOwner = actorIdentitySchema.parse({
+  id: 'local.user',
+  kind: 'human',
+  displayName: 'Local user',
+  workspaceRole: 'owner',
+  roleIds: [],
+});
 
 function object(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -87,12 +101,26 @@ function workspaceFields(root: Record<string, unknown>) {
   };
 }
 
+function identityFields(root: Record<string, unknown>) {
+  const actorRoot = object(root.actors, 'Workspace actors');
+  const actors = Object.fromEntries(Object.entries(actorRoot).map(([id, value]) => {
+    const actor = actorIdentitySchema.parse(value);
+    if (actor.id !== id) throw new Error(`Workspace actor key "${id}" must match actor id "${actor.id}".`);
+    return [id, actor];
+  }));
+  if (Object.keys(actors).length === 0) throw new Error('Workspace must contain at least one actor.');
+  if (typeof root.currentActorId !== 'string' || !actors[root.currentActorId]) {
+    throw new Error('Workspace currentActorId must reference a declared actor.');
+  }
+  return { actors, currentActorId: root.currentActorId };
+}
+
 export function migrateWorkbenchWorkspace(
   input: unknown,
   options: { readonly now?: Date; readonly workspaceId?: string } = {},
 ): WorkspaceMigrationResult {
   const root = object(input, 'Workspace data');
-  if (root.formatVersion === 2) {
+  if (root.formatVersion === 3) {
     if (typeof root.workspaceId !== 'string' || !root.workspaceId) throw new Error('Workspace id is missing.');
     if (typeof root.createdAt !== 'string' || !Number.isFinite(Date.parse(root.createdAt))) {
       throw new Error('Workspace createdAt must be an ISO timestamp.');
@@ -102,26 +130,50 @@ export function migrateWorkbenchWorkspace(
     }
     return {
       state: {
-        formatVersion: 2,
+        formatVersion: 3,
         workspaceId: root.workspaceId,
         createdAt: root.createdAt,
         updatedAt: root.updatedAt,
         ...workspaceFields(root),
+        ...identityFields(root),
+      },
+    };
+  }
+  if (root.formatVersion === 2) {
+    if (typeof root.workspaceId !== 'string' || !root.workspaceId) throw new Error('Workspace id is missing.');
+    if (typeof root.createdAt !== 'string' || !Number.isFinite(Date.parse(root.createdAt))) {
+      throw new Error('Workspace createdAt must be an ISO timestamp.');
+    }
+    if (typeof root.updatedAt !== 'string' || !Number.isFinite(Date.parse(root.updatedAt))) {
+      throw new Error('Workspace updatedAt must be an ISO timestamp.');
+    }
+    return {
+      migratedFrom: 2,
+      state: {
+        formatVersion: 3,
+        workspaceId: root.workspaceId,
+        createdAt: root.createdAt,
+        updatedAt: root.updatedAt,
+        ...workspaceFields(root),
+        actors: { [localOwner.id]: localOwner },
+        currentActorId: localOwner.id,
       },
     };
   }
   if (root.version !== 1) {
-    throw new Error('Unsupported workspace data format. This Graph Workbench release can migrate version 1 or open formatVersion 2.');
+    throw new Error('Unsupported workspace data format. This Graph Workbench release can migrate version 1/2 or open formatVersion 3.');
   }
   const now = (options.now ?? new Date()).toISOString();
   return {
     migratedFrom: 1,
     state: {
-      formatVersion: 2,
+      formatVersion: 3,
       workspaceId: options.workspaceId ?? `workspace-${randomUUID()}`,
       createdAt: now,
       updatedAt: now,
       ...workspaceFields(root),
+      actors: { [localOwner.id]: localOwner },
+      currentActorId: localOwner.id,
     },
   };
 }
@@ -129,7 +181,7 @@ export function migrateWorkbenchWorkspace(
 function initialState(): WorkbenchWorkspaceState {
   const now = new Date().toISOString();
   return {
-    formatVersion: 2,
+    formatVersion: 3,
     workspaceId: `workspace-${randomUUID()}`,
     createdAt: now,
     updatedAt: now,
@@ -137,6 +189,8 @@ function initialState(): WorkbenchWorkspaceState {
     activePackId: 'architecture',
     drafts: {},
     runs: {},
+    actors: { [localOwner.id]: localOwner },
+    currentActorId: localOwner.id,
   };
 }
 
@@ -161,7 +215,7 @@ export class WorkbenchWorkspaceStore {
   update(mutator: (state: WorkbenchWorkspaceState) => WorkbenchWorkspaceState): WorkbenchWorkspaceState {
     this.state = {
       ...mutator(this.snapshot()),
-      formatVersion: 2,
+      formatVersion: 3,
       updatedAt: new Date().toISOString(),
     };
     this.persist();

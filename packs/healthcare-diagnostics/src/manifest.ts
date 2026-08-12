@@ -1,0 +1,185 @@
+import type { GraphDefinition, IndustryPackManifest } from '@graph-workbench/contracts';
+
+const budget = { maxSteps: 70, maxDurationMs: 60_000, maxConcurrency: 6 };
+
+const diagnosticGraph: GraphDefinition = {
+  id: 'healthcare_diagnostics.diagnostic_coordination', version: 1, name: 'Consent-aware diagnostic coordination',
+  description: 'Coordinates a request, consent-scoped access, parallel study analysis, specialist review, report publication and follow-up.',
+  state: { fields: {
+    request_id: { type: 'string', required: true, description: 'FHIR ServiceRequest identifier.' },
+    case_id: { type: 'string', required: true, description: 'De-identified case correlation key.' },
+    service_code: { type: 'string', required: true, description: 'Requested diagnostic service.' },
+    reason: { type: 'string', required: true, description: 'Clinical reason for request.' },
+    requesting_practitioner: { type: 'string', required: true, description: 'Requesting practitioner identifier.' },
+    priority: { type: 'string', required: true, description: 'Request priority.' },
+    consent: { type: 'object', required: true, description: 'Consent resource projection.' },
+    access_context: { type: 'object', required: true, description: 'Practitioner and purpose-of-use context.' },
+    studies: { type: 'array', required: true, description: 'ImagingStudy or specimen references.' },
+    observed_at: { type: 'string', required: true, description: 'Point-in-time observation.' },
+    service_request: { type: 'object', required: false, description: 'Normalized ServiceRequest.' },
+    consent_check: { type: 'object', required: false, description: 'Consent and access decision evidence.' },
+    access_approved: { type: 'boolean', required: false, description: 'Authorized access decision.' },
+    study_worklist: { type: 'array', required: false, description: 'Bounded study analysis worklist.' },
+    study_analyses: { type: 'array', required: false, description: 'Advisory study evidence.' },
+    draft_findings: { type: 'object', required: false, description: 'Advisory synthesis.' },
+    urgent_finding: { type: 'boolean', required: false, description: 'Urgent review marker.' },
+    clinician_conclusion: { type: 'string', required: true, description: 'Specialist-owned conclusion entered for the fixture.' },
+    specialist_approved: { type: 'boolean', required: false, description: 'Specialist report decision.' },
+    diagnostic_report: { type: 'object', required: false, description: 'FHIR-shaped DiagnosticReport projection.' },
+    followup_plan: { type: 'object', required: false, description: 'Specialist-owned follow-up plan.' },
+    diagnostic_coordination_record: { type: 'string', required: false, description: 'Portable coordination record.' },
+    rejection_reason: { type: 'string', required: false, description: 'Access or clinical rejection.' },
+  } },
+  nodes: [
+    { id: 'start', kind: 'trigger', label: 'Service request', description: 'Accept a structured diagnostic request and consent context.', reads: ['request_id', 'case_id', 'service_code', 'reason', 'requesting_practitioner', 'priority', 'consent', 'access_context', 'studies', 'observed_at', 'clinician_conclusion'], writes: [], config: {} },
+    { id: 'normalize_request', kind: 'function', label: 'Normalize ServiceRequest', description: 'Create a stable de-identified case boundary.', handler: 'healthcare_diagnostics.normalize_request', reads: ['request_id', 'case_id', 'service_code', 'reason', 'requesting_practitioner', 'priority'], writes: ['service_request'], config: { roleId: 'care_coordinator', toolIds: ['fhir_request_read'] } },
+    { id: 'verify_consent', kind: 'function', label: 'Verify consent scope', description: 'Check active consent, practitioner and treatment purpose.', handler: 'healthcare_diagnostics.verify_consent', reads: ['consent', 'access_context'], writes: ['consent_check'], config: { roleId: 'privacy_officer', evaluationId: 'consent_scope' } },
+    { id: 'access_approval', kind: 'human', label: 'Authorize clinical access', description: 'Pause for accountable consent-scoped access approval.', reads: ['service_request', 'consent_check'], writes: ['access_approved'], config: { decisionField: 'access_approved', roleId: 'authorized_practitioner', evaluationId: 'access_authorization' } },
+    { id: 'access_route', kind: 'router', label: 'Route access decision', description: 'Prevent data processing when access is rejected.', reads: ['access_approved'], writes: [], config: {} },
+    { id: 'prepare_studies', kind: 'function', label: 'Prepare study worklist', description: 'Create bounded ImagingStudy or specimen tasks.', handler: 'healthcare_diagnostics.prepare_studies', reads: ['case_id', 'studies'], writes: ['study_worklist'], config: { roleId: 'care_coordinator' } },
+    { id: 'analyze_studies', kind: 'map', label: 'Analyze studies', description: 'Run advisory analysis concurrently while preserving study evidence.', reads: ['study_worklist'], writes: ['study_analyses'], config: { graphId: 'healthcare_diagnostics.analyze_study', itemsField: 'study_worklist', itemField: 'study', resultField: 'result', outputField: 'study_analyses', inputMapping: {}, maxItems: 50, maxConcurrency: 4 } },
+    { id: 'synthesize_findings', kind: 'agent', label: 'Synthesize advisory findings', description: 'Summarize evidence and limitations without issuing a diagnosis.', handler: 'healthcare_diagnostics.synthesize_findings', reads: ['service_request', 'study_analyses'], writes: ['draft_findings', 'urgent_finding'], config: { roleId: 'diagnostic_assistant' } },
+    { id: 'specialist_review', kind: 'human', label: 'Specialist interpretation', description: 'Require the accountable specialist to accept or reject the draft evidence.', reads: ['service_request', 'study_analyses', 'draft_findings', 'clinician_conclusion'], writes: ['specialist_approved'], config: { decisionField: 'specialist_approved', roleId: 'clinical_specialist', evaluationId: 'specialist_approval' } },
+    { id: 'specialist_route', kind: 'router', label: 'Route clinical decision', description: 'Publish only specialist-approved work.', reads: ['specialist_approved'], writes: [], config: {} },
+    { id: 'prepare_report', kind: 'function', label: 'Prepare DiagnosticReport', description: 'Create a FHIR-shaped report and follow-up plan from the specialist conclusion.', handler: 'healthcare_diagnostics.prepare_report', reads: ['request_id', 'case_id', 'observed_at', 'draft_findings', 'urgent_finding', 'clinician_conclusion', 'specialist_approved'], writes: ['diagnostic_report', 'followup_plan'], config: { roleId: 'clinical_specialist' } },
+    { id: 'publish_report', kind: 'function', label: 'Publish report and follow-up', description: 'Write the specialist-approved report through the EHR/FHIR boundary.', handler: 'healthcare_diagnostics.publish_report', reads: ['request_id', 'case_id', 'service_code', 'urgent_finding', 'diagnostic_report', 'followup_plan'], writes: ['diagnostic_coordination_record'], config: { roleId: 'clinical_specialist', toolIds: ['diagnostic_report_write'] } },
+    { id: 'record_rejection', kind: 'function', label: 'Record stopped work', description: 'Preserve an access or specialist rejection.', handler: 'healthcare_diagnostics.record_rejection', reads: ['access_approved', 'specialist_approved'], writes: ['rejection_reason'], config: {} },
+  ],
+  edges: [
+    { id: 'start.normalize', source: 'start', target: 'normalize_request', on: 'success' },
+    { id: 'normalize.consent', source: 'normalize_request', target: 'verify_consent', on: 'success' },
+    { id: 'consent.access', source: 'verify_consent', target: 'access_approval', on: 'success' },
+    { id: 'access.route', source: 'access_approval', target: 'access_route', on: 'success' },
+    { id: 'access.studies', source: 'access_route', target: 'prepare_studies', on: 'success', condition: { field: 'access_approved', operator: 'equals', value: true } },
+    { id: 'access.reject', source: 'access_route', target: 'record_rejection', on: 'success', condition: { field: 'access_approved', operator: 'equals', value: false } },
+    { id: 'studies.analyze', source: 'prepare_studies', target: 'analyze_studies', on: 'success' },
+    { id: 'analyze.synthesize', source: 'analyze_studies', target: 'synthesize_findings', on: 'success' },
+    { id: 'synthesize.review', source: 'synthesize_findings', target: 'specialist_review', on: 'success' },
+    { id: 'review.route', source: 'specialist_review', target: 'specialist_route', on: 'success' },
+    { id: 'route.report', source: 'specialist_route', target: 'prepare_report', on: 'success', condition: { field: 'specialist_approved', operator: 'equals', value: true } },
+    { id: 'route.reject', source: 'specialist_route', target: 'record_rejection', on: 'success', condition: { field: 'specialist_approved', operator: 'equals', value: false } },
+    { id: 'report.publish', source: 'prepare_report', target: 'publish_report', on: 'success' },
+  ], budget,
+};
+
+const analyzeStudyGraph: GraphDefinition = {
+  id: 'healthcare_diagnostics.analyze_study', version: 1, name: 'Advisory study analysis', description: 'Produces bounded advisory evidence for one referenced study.',
+  state: { fields: { study: { type: 'object', required: true, description: 'Study reference.' }, result: { type: 'object', required: false, description: 'Advisory evidence.' } } },
+  nodes: [
+    { id: 'start', kind: 'trigger', label: 'Study reference', description: 'Accept one study.', reads: ['study'], writes: [], config: {} },
+    { id: 'analyze', kind: 'agent', label: 'Run advisory analysis', description: 'Call specialist imaging or pathology AI as advisory evidence.', handler: 'healthcare_diagnostics.analyze_study', reads: ['study'], writes: ['result'], config: { roleId: 'diagnostic_assistant', toolIds: ['study_metadata_read', 'diagnostic_ai_infer'] } },
+  ], edges: [{ id: 'start.analyze', source: 'start', target: 'analyze', on: 'success' }], budget,
+};
+
+const followupGraph: GraphDefinition = {
+  id: 'healthcare_diagnostics.followup_observation', version: 1, name: 'Follow-up observation and specialist escalation',
+  description: 'Accepts follow-up observations and schedules specialist review for an unexpected course.',
+  trigger: { type: 'event', eventType: 'diagnostic.followup_observed', correlationField: 'case_id' },
+  state: { fields: {
+    case_id: { type: 'string', required: true, description: 'Case correlation key.' },
+    report_id: { type: 'string', required: true, description: 'DiagnosticReport identifier.' },
+    followup_observations: { type: 'array', required: true, description: 'Observed follow-up evidence.' },
+    followup_expected: { type: 'boolean', required: false, description: 'Expected-course result.' },
+    followup_assessment: { type: 'object', required: false, description: 'Assessment evidence.' },
+    review_scheduled: { type: 'boolean', required: false, description: 'Specialist review status.' },
+    review_reference: { type: 'string', required: false, description: 'Review appointment evidence.' },
+    followup_record: { type: 'string', required: false, description: 'Portable follow-up record.' },
+  } },
+  nodes: [
+    { id: 'start', kind: 'trigger', label: 'Follow-up event', description: 'Accept correlated follow-up evidence.', reads: ['case_id', 'report_id', 'followup_observations'], writes: [], config: {} },
+    { id: 'assess_followup', kind: 'function', label: 'Assess follow-up', description: 'Identify an unexpected course without prescribing treatment.', handler: 'healthcare_diagnostics.assess_followup', reads: ['case_id', 'followup_observations'], writes: ['followup_expected', 'followup_assessment'], config: { roleId: 'care_coordinator', evaluationId: 'followup_safety' } },
+    { id: 'followup_route', kind: 'router', label: 'Route follow-up', description: 'Escalate only unexpected observations.', reads: ['followup_expected'], writes: [], config: {} },
+    { id: 'escalate_review', kind: 'escalation', label: 'Escalate to specialist', description: 'Raise an accountable clinical review request.', reads: ['case_id', 'followup_assessment'], writes: [], config: { reason: 'Follow-up course differs from the approved plan; specialist reassessment is required.', severity: 'critical', roleId: 'clinical_specialist' } },
+    { id: 'schedule_review', kind: 'function', label: 'Schedule specialist review', description: 'Request an external appointment without making a clinical decision.', handler: 'healthcare_diagnostics.schedule_review', reads: ['case_id', 'report_id'], writes: ['review_scheduled', 'review_reference'], config: { roleId: 'care_coordinator', toolIds: ['clinical_review_schedule'] } },
+    { id: 'review_join', kind: 'join', label: 'Join review response', description: 'Wait for escalation and scheduling evidence.', reads: ['review_scheduled', 'review_reference'], writes: [], config: { mode: 'all' } },
+    { id: 'publish_followup', kind: 'function', label: 'Publish follow-up record', description: 'Preserve normal or escalated follow-up evidence.', handler: 'healthcare_diagnostics.publish_followup', reads: ['case_id', 'followup_expected', 'followup_assessment', 'review_scheduled', 'review_reference'], writes: ['followup_record'], config: {} },
+  ],
+  edges: [
+    { id: 'start.assess', source: 'start', target: 'assess_followup', on: 'success' },
+    { id: 'assess.route', source: 'assess_followup', target: 'followup_route', on: 'success' },
+    { id: 'route.publish', source: 'followup_route', target: 'publish_followup', on: 'success', condition: { field: 'followup_expected', operator: 'equals', value: true } },
+    { id: 'route.escalate', source: 'followup_route', target: 'escalate_review', on: 'success', condition: { field: 'followup_expected', operator: 'equals', value: false } },
+    { id: 'route.schedule', source: 'followup_route', target: 'schedule_review', on: 'success', condition: { field: 'followup_expected', operator: 'equals', value: false } },
+    { id: 'escalate.join', source: 'escalate_review', target: 'review_join', on: 'success' },
+    { id: 'schedule.join', source: 'schedule_review', target: 'review_join', on: 'success' },
+    { id: 'join.publish', source: 'review_join', target: 'publish_followup', on: 'success' },
+  ], budget,
+};
+
+const requiredString = (description: string) => ({ type: 'string' as const, required: true, description });
+
+export const healthcareDiagnosticsPack: IndustryPackManifest = {
+  id: 'healthcare_diagnostics', version: '0.3.0', name: 'Healthcare Diagnostic Coordination Pack', license: 'MIT',
+  description: 'A non-clinical reference Pack for consent-aware diagnostic coordination. It connects FHIR-shaped requests, study evidence, advisory AI, accountable specialist decisions, reports and follow-up while keeping identity, EHR/FHIR, PACS/LIS, scheduling and clinical authority outside the kernel.',
+  ontology: {
+    objectTypes: [
+      { id: 'service_request', label: 'ServiceRequest', description: 'FHIR-shaped diagnostic request.', fields: { request_id: requiredString('Request identifier.'), service_code: requiredString('Service code.'), reason: requiredString('Reason.') } },
+      { id: 'consent_record', label: 'Consent', description: 'Consent and purpose-of-use evidence.', fields: { consent_id: requiredString('Consent.'), status: requiredString('Status.'), purpose_of_use: requiredString('Purpose.') } },
+      { id: 'study', label: 'ImagingStudy or specimen', description: 'Referenced diagnostic evidence.', fields: { study_id: requiredString('Study.'), modality: requiredString('Modality.'), evidence_uri: requiredString('Evidence locator.') } },
+      { id: 'observation', label: 'Observation', description: 'Advisory evidence derived from a study.', fields: { study_id: requiredString('Study.'), summary: requiredString('Summary.'), advisory_only: { type: 'boolean', required: true, description: 'Advisory flag.' } } },
+      { id: 'practitioner_decision', label: 'Practitioner decision', description: 'Accountable access or specialist decision.', fields: { gate: requiredString('Decision gate.'), approved: { type: 'boolean', required: true, description: 'Decision.' } } },
+      { id: 'diagnostic_report', label: 'DiagnosticReport', description: 'Specialist-approved FHIR-shaped report.', fields: { report_id: requiredString('Report.'), status: requiredString('Status.'), conclusion: requiredString('Specialist conclusion.') } },
+      { id: 'followup_plan', label: 'Follow-up plan', description: 'Specialist-owned next steps.', fields: { case_id: requiredString('Case.'), priority: requiredString('Priority.'), next_step: requiredString('Next step.') } },
+      { id: 'followup_observation', label: 'Follow-up observation', description: 'Observed course after report publication.', fields: { case_id: requiredString('Case.'), expected: { type: 'boolean', required: true, description: 'Expected course.' } } },
+      { id: 'clinical_review', label: 'Clinical review', description: 'External specialist reassessment request.', fields: { case_id: requiredString('Case.'), scheduled: { type: 'boolean', required: true, description: 'Scheduled.' }, reference: requiredString('Appointment reference.') } },
+      { id: 'diagnostic_record', label: 'Diagnostic coordination record', description: 'Portable non-clinical coordination record.', fields: { record_type: requiredString('Record type.'), content: requiredString('Markdown content.') } },
+    ],
+    relationTypes: [
+      { id: 'authorized_by', label: 'Authorized by', description: 'Request is authorized by consent.', sourceTypes: ['service_request'], targetTypes: ['consent_record'] },
+      { id: 'fulfills_request', label: 'Fulfills request', description: 'Study fulfills request.', sourceTypes: ['study'], targetTypes: ['service_request'] },
+      { id: 'derived_from_study', label: 'Derived from study', description: 'Observation derives from study.', sourceTypes: ['observation'], targetTypes: ['study'] },
+      { id: 'governs_report', label: 'Governs report', description: 'Decision governs report.', sourceTypes: ['practitioner_decision'], targetTypes: ['diagnostic_report'] },
+      { id: 'includes_observation', label: 'Includes observation', description: 'Report includes observations.', sourceTypes: ['diagnostic_report'], targetTypes: ['observation'] },
+      { id: 'responds_to_request', label: 'Responds to request', description: 'Report responds to request.', sourceTypes: ['diagnostic_report'], targetTypes: ['service_request'] },
+      { id: 'defines_followup', label: 'Defines follow-up', description: 'Report defines plan.', sourceTypes: ['diagnostic_report'], targetTypes: ['followup_plan'] },
+      { id: 'observes_plan', label: 'Observes plan', description: 'Follow-up observation relates to plan.', sourceTypes: ['followup_observation'], targetTypes: ['followup_plan'] },
+      { id: 'triggers_review', label: 'Triggers review', description: 'Unexpected observation triggers specialist review.', sourceTypes: ['followup_observation'], targetTypes: ['clinical_review'] },
+      { id: 'documents_diagnostic_work', label: 'Documents diagnostic work', description: 'Record documents coordinated work.', sourceTypes: ['diagnostic_record'], targetTypes: ['service_request', 'diagnostic_report', 'followup_observation'] },
+    ],
+  },
+  roles: [
+    { id: 'care_coordinator', label: 'Care coordinator', mission: 'Coordinate requests, evidence and follow-up.', allowedTools: ['fhir_request_read', 'clinical_review_schedule'], forbiddenActions: ['Issue a diagnosis'] },
+    { id: 'privacy_officer', label: 'Privacy officer', mission: 'Verify consent and purpose-of-use.', allowedTools: [], forbiddenActions: ['Interpret study evidence'] },
+    { id: 'authorized_practitioner', label: 'Authorized practitioner', mission: 'Approve consent-scoped access.', allowedTools: [], forbiddenActions: ['Bypass consent'] },
+    { id: 'diagnostic_assistant', label: 'Diagnostic AI assistant', mission: 'Produce advisory, attributable evidence only.', allowedTools: ['study_metadata_read', 'diagnostic_ai_infer'], forbiddenActions: ['Issue a final diagnosis', 'Approve its own output'] },
+    { id: 'clinical_specialist', label: 'Clinical specialist', mission: 'Interpret evidence, own conclusions and approve reports.', allowedTools: ['diagnostic_report_write'], forbiddenActions: ['Delegate final clinical authority to an Agent'] },
+  ],
+  tools: [
+    { id: 'fhir_request_read', label: 'FHIR ServiceRequest query', risk: 'read', description: 'Read a diagnostic ServiceRequest.', operation: 'query', inputSchema: { type: 'object', properties: { request_id: { type: 'string' } }, required: ['request_id'], additionalProperties: false }, outputSchema: { type: 'object', properties: { resource_type: { type: 'string' }, resource_id: { type: 'string' }, status: { type: 'string' } }, required: ['resource_type', 'resource_id', 'status'], additionalProperties: false }, idempotency: 'intrinsic' },
+    { id: 'study_metadata_read', label: 'PACS/LIS metadata query', risk: 'read', description: 'Read study metadata without copying source records.', operation: 'query', inputSchema: { type: 'object', properties: { study_id: { type: 'string' } }, required: ['study_id'], additionalProperties: false }, outputSchema: { type: 'object', properties: { study_id: { type: 'string' }, status: { type: 'string' } }, required: ['study_id', 'status'], additionalProperties: false }, idempotency: 'intrinsic' },
+    { id: 'diagnostic_ai_infer', label: 'Diagnostic AI inference', risk: 'draft', description: 'Produce advisory analysis for specialist review.', operation: 'query', inputSchema: { type: 'object', properties: { study_id: { type: 'string' } }, required: ['study_id'], additionalProperties: false }, outputSchema: { type: 'object', properties: { inference_id: { type: 'string' }, advisory_only: { type: 'boolean' } }, required: ['inference_id', 'advisory_only'], additionalProperties: false }, idempotency: 'intrinsic' },
+    { id: 'diagnostic_report_write', label: 'FHIR DiagnosticReport writer', risk: 'external', description: 'Write a specialist-approved report.', operation: 'command', inputSchema: { type: 'object', properties: { idempotency_key: { type: 'string' }, report: { type: 'object' } }, required: ['idempotency_key', 'report'], additionalProperties: false }, outputSchema: { type: 'object', properties: { report_id: { type: 'string' }, status: { type: 'string' } }, required: ['report_id', 'status'], additionalProperties: false }, idempotency: 'keyed', idempotencyKeyField: 'idempotency_key' },
+    { id: 'clinical_review_schedule', label: 'Clinical review scheduler', risk: 'external', description: 'Schedule specialist reassessment.', operation: 'command', inputSchema: { type: 'object', properties: { idempotency_key: { type: 'string' }, case_id: { type: 'string' } }, required: ['idempotency_key', 'case_id'], additionalProperties: false }, outputSchema: { type: 'object', properties: { appointment_id: { type: 'string' }, status: { type: 'string' } }, required: ['appointment_id', 'status'], additionalProperties: false }, idempotency: 'keyed', idempotencyKeyField: 'idempotency_key' },
+  ],
+  graphs: [diagnosticGraph, analyzeStudyGraph, followupGraph],
+  evaluations: [
+    { id: 'consent_scope', label: 'Consent scope', description: 'Requires active consent and treatment purpose.', blocking: true },
+    { id: 'access_authorization', label: 'Access authorization', description: 'Requires accountable practitioner access approval.', blocking: true },
+    { id: 'specialist_approval', label: 'Specialist approval', description: 'Requires specialist ownership of final clinical interpretation.', blocking: true },
+    { id: 'followup_safety', label: 'Follow-up safety', description: 'Escalates unexpected observations for specialist review.', blocking: true },
+  ],
+  deliverables: [
+    { id: 'diagnostic_coordination_record', label: 'Diagnostic coordination record', description: 'Consent, evidence, specialist decision and follow-up record.', graphId: diagnosticGraph.id, stateField: 'diagnostic_coordination_record', mediaType: 'text/markdown', artifactType: 'diagnostic_coordination_record', evidenceFields: ['consent_check', 'study_analyses', 'draft_findings', 'diagnostic_report', 'followup_plan'], approvalField: 'specialist_approved' },
+    { id: 'followup_record', label: 'Diagnostic follow-up record', description: 'Expected or escalated follow-up evidence.', graphId: followupGraph.id, stateField: 'followup_record', mediaType: 'text/markdown', artifactType: 'diagnostic_followup_record', evidenceFields: ['followup_assessment'] },
+  ],
+  fixtures: [
+    { id: 'routine_imaging_review', label: 'Routine imaging review', description: 'Exercises consent, two study analyses and specialist publication.', graphId: diagnosticGraph.id, input: { request_id: 'sr-1001', case_id: 'case-1001', service_code: 'XR-CHEST', reason: 'Persistent cough', requesting_practitioner: 'practitioner-12', priority: 'routine', consent: { consent_id: 'consent-1001', status: 'active', scope: ['diagnostic-imaging'] }, access_context: { practitioner_id: 'practitioner-44', purpose_of_use: 'treatment' }, studies: [{ study_id: 'study-1001-a', modality: 'XR', body_site: 'chest', urgent_marker: false }, { study_id: 'study-1001-b', modality: 'XR', body_site: 'chest', urgent_marker: false }], observed_at: '2026-08-11T08:00:00.000Z', clinician_conclusion: 'No acute cardiopulmonary abnormality in the supplied reference evidence.' }, decisions: { access_approval: true, specialist_review: true }, expectations: [
+      { field: 'study_analyses', operator: 'min_items', value: 2, description: 'Preserves both study analyses.' },
+      { field: 'diagnostic_report', operator: 'exists', description: 'Produces a specialist-approved report.' },
+      { field: 'diagnostic_coordination_record', operator: 'includes', value: 'Clinical interpretation', description: 'Publishes the accountable record.' },
+    ] },
+    { id: 'urgent_specialist_review', label: 'Urgent specialist review', description: 'Exercises an urgent advisory marker while retaining specialist authority.', graphId: diagnosticGraph.id, input: { request_id: 'sr-1002', case_id: 'case-1002', service_code: 'CT-HEAD', reason: 'Acute neurological symptoms', requesting_practitioner: 'practitioner-18', priority: 'urgent', consent: { consent_id: 'consent-1002', status: 'active', scope: ['diagnostic-imaging'] }, access_context: { practitioner_id: 'practitioner-51', purpose_of_use: 'treatment' }, studies: [{ study_id: 'study-1002-a', modality: 'CT', body_site: 'head', urgent_marker: true }], observed_at: '2026-08-11T08:30:00.000Z', clinician_conclusion: 'Urgent specialist assessment is required based on the reviewed reference evidence.' }, decisions: { access_approval: true, specialist_review: true }, expectations: [
+      { field: 'urgent_finding', operator: 'equals', value: true, description: 'Surfaces the urgent marker.' },
+      { field: 'diagnostic_coordination_record', operator: 'includes', value: 'Specialist-led urgent follow-up', description: 'Creates an urgent specialist-owned plan.' },
+    ] },
+    { id: 'access_rejected', label: 'Consent-scoped access rejected', description: 'Proves that rejected access stops study processing.', graphId: diagnosticGraph.id, input: { request_id: 'sr-1003', case_id: 'case-1003', service_code: 'MR-KNEE', reason: 'Persistent knee pain', requesting_practitioner: 'practitioner-20', priority: 'routine', consent: { consent_id: 'consent-1003', status: 'inactive', scope: [] }, access_context: { practitioner_id: 'practitioner-60', purpose_of_use: 'research' }, studies: [{ study_id: 'study-1003-a', modality: 'MR', body_site: 'knee', urgent_marker: false }], observed_at: '2026-08-11T09:00:00.000Z', clinician_conclusion: 'Not reviewed.' }, decisions: { access_approval: false }, expectations: [
+      { field: 'access_approved', operator: 'equals', value: false, description: 'Preserves access rejection.' },
+      { field: 'rejection_reason', operator: 'includes', value: 'consent-scoped access', description: 'Stops before study analysis.' },
+    ] },
+    { id: 'unexpected_followup', label: 'Unexpected follow-up', description: 'Exercises typed event, escalation and external specialist scheduling.', graphId: followupGraph.id, input: { case_id: 'case-1002', report_id: 'report-sr-1002', followup_observations: [{ name: 'symptom_course', status: 'worsened' }, { name: 'new_finding', status: 'unexpected' }] }, decisions: {}, expectations: [
+      { field: 'followup_expected', operator: 'equals', value: false, description: 'Detects unexpected course.' },
+      { field: 'review_scheduled', operator: 'equals', value: true, description: 'Schedules specialist reassessment.' },
+      { field: 'followup_record', operator: 'includes', value: 'No autonomous clinical action', description: 'Preserves the clinical safety boundary.' },
+    ] },
+  ],
+};

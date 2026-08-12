@@ -41,11 +41,20 @@ An Industry Pack should be independently installable and should contain enough
 ontology, workflow and evaluation material to produce a useful domain-specific
 experience without modifying the kernel.
 
-## First reference Packs
+## Standard industry Packs
 
-1. Evidence Research: a cross-industry demonstration of parallel research,
-   synthesis, independent verification, approval and publication.
-2. Architecture: the first deep vertical Pack for requirements, evidence,
-   design decisions, review and deliverable production.
-3. Customer Success Renewal: an enterprise operating workflow for attributable
-   account evidence, renewal-risk decisions, owned interventions and approval.
+1. Professional Software Delivery: governed issue-to-release work with parallel
+   verification, independent approvals, deployment observation and rollback.
+2. Data and MLOps Asset Release: governed partition quality, lineage, registry
+   publication, bounded backfill and post-release recovery.
+3. Cybersecurity Incident Response: attributable evidence, incident declaration,
+   approved containment, verified recovery and post-incident improvement.
+4. Quantitative Finance Governance: research fan-out, portfolio construction,
+   independent risk/compliance/execution decisions and fill reconciliation.
+5. Healthcare Diagnostic Coordination: consent-scoped evidence access,
+   advisory analysis, specialist authority, report coordination and follow-up.
+6. Robotics and Fleet Operations: task bidding, allocation, resource and safety
+   approval, dispatch, telemetry, bounded replanning and maintenance.
+
+Evidence Research, Architecture Concept Design and Customer Success Renewal
+remain bundled as additional authoring examples.
