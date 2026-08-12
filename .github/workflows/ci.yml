@@ -15,7 +15,7 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 11.17.0
@@ -34,7 +34,7 @@ jobs:
   container:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker build -t graph-workbench:test .
       - run: docker run --rm graph-workbench:test --version
       - run: POSTGRES_PASSWORD=ci-test-password GRAPH_WORKBENCH_AUTH_TOKEN=ci-test-auth-token-at-least-32-characters docker compose -f deploy/compose.yml config --quiet
@@ -42,7 +42,7 @@ jobs:
   browser-e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 11.17.0
