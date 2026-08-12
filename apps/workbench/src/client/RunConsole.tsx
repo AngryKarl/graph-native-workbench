@@ -47,8 +47,9 @@ function eventSummary(event: GraphEvent): string {
   return Object.keys(event.detail).length ? JSON.stringify(event.detail) : '—';
 }
 
-export function RunConsole({ run, busy, onDecision, onResume, onExport }: {
+export function RunConsole({ run, deliverable, busy, onDecision, onResume, onExport }: {
   run: RunSnapshot | null;
+  deliverable: string;
   busy: boolean;
   onDecision: (approved: boolean) => void;
   onResume: () => void;
@@ -57,7 +58,6 @@ export function RunConsole({ run, busy, onDecision, onResume, onExport }: {
   const [open, setOpen] = useState(run?.status === 'paused');
   const [tab, setTab] = useState<ConsoleTab>('events');
   const previousRunId = useRef(run?.runId);
-  const deliverable = typeof run?.state.deliverable === 'string' ? run.state.deliverable : '';
   const artifacts = run?.artifacts ?? [];
   const artifactEvidenceCount = artifacts.reduce((total, artifact) => total + artifact.evidence.length, 0);
   const events = useMemo(() => [...(run?.events ?? [])].reverse(), [run?.events]);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GraphDefinition, GraphNode } from '@graph-workbench/contracts';
-import { createAutomaticLayout, deriveStageBands } from '../apps/workbench/src/client/graph-model.js';
+import { createAutomaticLayout, deriveStageBands, resolveRunDeliverable } from '../apps/workbench/src/client/graph-model.js';
+import type { RunSnapshot } from '../apps/workbench/src/client/types.js';
 
 function linearGraph(kinds: GraphNode['kind'][]): GraphDefinition {
   const nodes = kinds.map((kind, index): GraphNode => ({
@@ -54,5 +55,29 @@ describe('Workbench graph visual model', () => {
     expect(stages).toHaveLength(2);
     expect(stages.every((stage) => stage.width >= 300 && stage.height >= 460)).toBe(true);
     expect(stages.some((stage) => stage.label === 'Recovery')).toBe(true);
+  });
+
+  it('resolves Pack-declared deliverables without assuming a shared state field', () => {
+    const run = {
+      runId: 'run-robotics',
+      packId: 'robotics_fleet',
+      graphId: 'robotics_fleet.task_dispatch',
+      status: 'completed',
+      state: { dispatch_record: '# Governed fleet dispatch' },
+      events: [],
+    } satisfies RunSnapshot;
+
+    expect(resolveRunDeliverable([
+      {
+        id: 'dispatch_record',
+        label: 'Fleet dispatch record',
+        description: 'Approved fleet dispatch evidence.',
+        graphId: 'robotics_fleet.task_dispatch',
+        stateField: 'dispatch_record',
+        mediaType: 'text/markdown',
+        artifactType: 'fleet_dispatch_record',
+        evidenceFields: [],
+      },
+    ], run)).toBe('# Governed fleet dispatch');
   });
 });

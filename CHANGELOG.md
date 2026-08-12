@@ -5,6 +5,8 @@ versioning once public packages begin publishing.
 
 ## Unreleased
 
+## 0.4.0 - 2026-08-12
+
 ### Added
 
 - Added standard Quantitative Finance, Healthcare Diagnostic Coordination and
@@ -21,6 +23,17 @@ versioning once public packages begin publishing.
 - Made join semantics explicit and executable for both `all` and `any` modes.
 - Kept node movement synchronized throughout pointer drag while preserving the
   saved graph and undo history.
+- Resolved each run's portable deliverable through the Industry Pack manifest,
+  so Packs that publish to domain-specific state fields render their output.
+- Bounded test-worker concurrency so Pack build and Registry integrity tests do
+  not contend for enough CPU and filesystem capacity to trip false timeouts.
+
+### Documentation
+
+- Reframed the English, Chinese and npm READMEs around the execution-graph plus
+  organizational-context-graph product loop, with current product screenshots.
+- Replaced legacy Customer Success screenshots and added a real Robotics and
+  Fleet Operations approval-to-artifact-to-context journey.
 
 ## 0.3.0 - 2026-08-10
 

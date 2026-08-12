@@ -1,7 +1,7 @@
 {
   "name": "graph-workbench",
-  "version": "0.3.0",
-  "description": "Open-source graph engineering workbench for executable agent workflows and installable Industry Packs.",
+  "version": "0.4.0",
+  "description": "Build governed AI workflows that connect Agent and human execution graphs to durable organizational context.",
   "type": "module",
   "license": "MIT",
   "bin": {
@@ -16,14 +16,14 @@
     "node": ">=24.0.0"
   },
   "keywords": [
-    "agents",
-    "agent-workflow",
-    "workflow",
-    "graph",
+    "ai-agents",
+    "agentic-workflow",
+    "workflow-automation",
+    "human-in-the-loop",
+    "context-graph",
     "graph-engineering",
     "industry-pack",
-    "workbench",
-    "ai"
+    "self-hosted"
   ],
   "repository": {
     "type": "git",
