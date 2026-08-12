@@ -35,10 +35,13 @@ const manifestPaths = [
   'packages/pack-sdk/package.json',
   'packs/cybersecurity-response/package.json',
   'packs/data-mlops/package.json',
+  'packs/healthcare-diagnostics/package.json',
+  'packs/quantitative-finance/package.json',
   'packs/software-delivery/package.json',
   'packs/architecture/package.json',
   'packs/customer-success/package.json',
   'packs/research/package.json',
+  'packs/robotics-fleet/package.json',
 ];
 const manifests = await Promise.all(manifestPaths.map(async (path) => ({
   path,
@@ -80,10 +83,10 @@ const referenceSources = referenceRegistry.packs?.map((pack) => pack.source).sor
 for (const source of [
   '../packs/cybersecurity-response/src/index.ts',
   '../packs/data-mlops/src/index.ts',
+  '../packs/healthcare-diagnostics/src/index.ts',
+  '../packs/quantitative-finance/src/index.ts',
   '../packs/software-delivery/src/index.ts',
-  '../packs/architecture/src/index.ts',
-  '../packs/customer-success/src/index.ts',
-  '../packs/research/src/index.ts',
+  '../packs/robotics-fleet/src/index.ts',
 ]) {
   if (!referenceSources.includes(source)) throw new Error(`Reference Registry is missing ${source}.`);
 }

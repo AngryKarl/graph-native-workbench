@@ -3,6 +3,7 @@ import {
   industryPackManifestSchema,
   compensationNodeConfigSchema,
   escalationNodeConfigSchema,
+  joinNodeConfigSchema,
   loopNodeConfigSchema,
   mapNodeConfigSchema,
   subgraphNodeConfigSchema,
@@ -119,8 +120,15 @@ export function compileGraph(input: unknown): CompiledGraph {
         issues.push(`Human node "${node.id}" must declare decisionField "${decisionField}" in writes.`);
       }
     }
-    if (node.kind === 'join' && (incoming.get(node.id)?.length ?? 0) < 2) {
-      issues.push(`Join node "${node.id}" requires at least two incoming edges.`);
+    if (node.kind === 'join') {
+      const incomingSources = new Set((incoming.get(node.id) ?? []).map((edge) => edge.source));
+      if (incomingSources.size < 2) {
+        issues.push(`Join node "${node.id}" requires at least two incoming branches.`);
+      }
+      const config = joinNodeConfigSchema.safeParse(node.config);
+      if (!config.success) {
+        issues.push(`Join node "${node.id}" has invalid config: ${config.error.issues[0]?.message ?? 'unknown error'}.`);
+      }
     }
     if (node.kind === 'wait') {
       const config = waitNodeConfigSchema.safeParse(node.config);

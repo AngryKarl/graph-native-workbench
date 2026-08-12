@@ -34,6 +34,24 @@ import {
   researchTools,
 } from '@graph-workbench/pack-research';
 import {
+  projectQuantitativeFinanceRun,
+  quantitativeFinanceHandlers,
+  quantitativeFinancePack,
+  quantitativeFinanceTools,
+} from '@graph-workbench/pack-quantitative-finance';
+import {
+  healthcareDiagnosticsHandlers,
+  healthcareDiagnosticsPack,
+  healthcareDiagnosticsTools,
+  projectHealthcareDiagnosticsRun,
+} from '@graph-workbench/pack-healthcare-diagnostics';
+import {
+  projectRoboticsFleetRun,
+  roboticsFleetHandlers,
+  roboticsFleetPack,
+  roboticsFleetTools,
+} from '@graph-workbench/pack-robotics-fleet';
+import {
   projectSoftwareDeliveryRun,
   softwareDeliveryHandlers,
   softwareDeliveryPack,
@@ -58,6 +76,39 @@ export interface PackRuntimeDefinition {
 }
 
 export const bundledPackCatalog = new Map<string, PackRuntimeDefinition>([
+  [
+    roboticsFleetPack.id,
+    {
+      manifest: roboticsFleetPack,
+      handlers: roboticsFleetHandlers,
+      tools: roboticsFleetTools,
+      projector: projectRoboticsFleetRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
+  [
+    healthcareDiagnosticsPack.id,
+    {
+      manifest: healthcareDiagnosticsPack,
+      handlers: healthcareDiagnosticsHandlers,
+      tools: healthcareDiagnosticsTools,
+      projector: projectHealthcareDiagnosticsRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
+  [
+    quantitativeFinancePack.id,
+    {
+      manifest: quantitativeFinancePack,
+      handlers: quantitativeFinanceHandlers,
+      tools: quantitativeFinanceTools,
+      projector: projectQuantitativeFinanceRun,
+      executionMode: 'in-process',
+      trustSource: 'bundled',
+    },
+  ],
   [
     cybersecurityResponsePack.id,
     {

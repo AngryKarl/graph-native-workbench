@@ -50,6 +50,10 @@ export const waitNodeConfigSchema = z.discriminatedUnion('mode', [
   }).strict(),
 ]);
 
+export const joinNodeConfigSchema = z.object({
+  mode: z.enum(['all', 'any']).default('all'),
+}).strict();
+
 const stateMappingSchema = z.record(identifierSchema, identifierSchema);
 
 export const subgraphNodeConfigSchema = z.object({
@@ -92,6 +96,7 @@ export type GraphTrigger = z.infer<typeof graphTriggerSchema>;
 export type ExternalEvent = z.infer<typeof externalEventSchema>;
 export type ScheduleOccurrence = z.infer<typeof scheduleOccurrenceSchema>;
 export type WaitNodeConfig = z.infer<typeof waitNodeConfigSchema>;
+export type JoinNodeConfig = z.infer<typeof joinNodeConfigSchema>;
 export type SubgraphNodeConfig = z.infer<typeof subgraphNodeConfigSchema>;
 export type LoopNodeConfig = z.infer<typeof loopNodeConfigSchema>;
 export type MapNodeConfig = z.infer<typeof mapNodeConfigSchema>;

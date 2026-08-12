@@ -12,6 +12,7 @@ import {
   externalEventSchema,
   escalationNodeConfigSchema,
   compensationNodeConfigSchema,
+  joinNodeConfigSchema,
   loopNodeConfigSchema,
   mapNodeConfigSchema,
   parseJsonSchemaValue,
@@ -979,7 +980,12 @@ export class GraphRuntime {
       const target = this.graph.nodeById.get(edge.target);
       if (!target || mutable.completed.has(target.id) || mutable.ready.includes(target.id)) continue;
       const required = new Set((this.graph.incomingByNode.get(target.id) ?? []).map((item) => item.source));
-      const ready = target.kind !== 'join' || [...required].every((source) => arrivals.has(source));
+      const joinMode = target.kind === 'join'
+        ? joinNodeConfigSchema.parse(target.config).mode
+        : undefined;
+      const ready = target.kind !== 'join'
+        || joinMode === 'any'
+        || [...required].every((source) => arrivals.has(source));
       if (ready) mutable.ready.push(target.id);
     }
     return advanced;

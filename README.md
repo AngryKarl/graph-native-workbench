@@ -11,7 +11,7 @@ gates) to a durable **context graph** (sources, evidence, artifacts, versions
 and decisions). Teams ship their own domain behavior as installable Industry
 Packs without forking the kernel.
 
-![Customer Success Renewal Pack running in the Workbench](docs/assets/customer-success-output.png)
+![Quantitative Finance Governance Pack in the Workbench](docs/assets/pack-graphs/quantitative-finance-governance.png)
 
 ```mermaid
 flowchart LR
@@ -61,7 +61,7 @@ Pause at the human gate instead:
 pnpm dlx graph-workbench demo --pause
 ```
 
-## Six installable examples
+## Six standard industry Packs
 
 From **Packs**, a workflow installs into the same editor, runtime, approval
 inbox, deliverable console and context explorer:
@@ -75,9 +75,9 @@ inbox, deliverable console and context explorer:
 | Professional Software Delivery | A requirement-to-release record plus deployment health or rollback evidence | Proves governed delivery can connect issue tracking, source control, CI/CD and operations without replacing them |
 | Data and MLOps Asset Release | An approved data/model registry release, bounded backfill record and quality-recovery evidence | Connects orchestration, catalog, lineage and registry systems while keeping their execution authority intact |
 | Cybersecurity Incident Response | An attributable triage closure or approved incident-to-recovery record | Connects SIEM, EDR, identity, evidence and containment systems with explicit high-impact decisions |
-| Customer Success Renewal | An approved renewal-risk assessment and owned success plan | Shows a common enterprise SOP becoming a complete workbench without kernel changes |
-| Architecture Concept Design | A source-linked concept brief with reviewed design directions | Proves a deep vertical can keep evidence, constraints and decisions traceable |
-| Cross-industry Research | An approved evidence synthesis | Keeps the first run zero-key and easy to inspect |
+| Quantitative Finance Governance | An independently approved strategy intent plus matched-fill or exception reconciliation | Connects research, risk, compliance, OMS and books without becoming a trading engine |
+| Healthcare Diagnostic Coordination | A consent-scoped, specialist-approved diagnostic coordination record and safe follow-up | Connects FHIR/PACS evidence and advisory AI while retaining clinical authority |
+| Robotics and Fleet Operations | An approved dispatch record plus normal or degraded mission evidence | Connects fleet bidding, resources, telemetry, replanning and maintenance without controlling robots |
 
 ### One run, end to end
 
@@ -108,16 +108,18 @@ Open `http://127.0.0.1:4311`. The Workbench is a visual editor over the same
 versioned contracts used by the compiler and runtime:
 
 1. Install and open a bundled Industry Pack from **Packs**.
-2. Drag nodes onto the canvas, connect or delete them, and edit their handlers,
+2. Open **System map** to see every workflow, ingress, reusable graph and
+   deliverable in the Pack, then open any workflow from the map or selector.
+3. Drag nodes onto the canvas, connect or delete them, and edit their handlers,
    state access and execution policies in the inspector.
-3. Load a Pack fixture or edit graph input from the **Input** inspector.
-4. Run the saved graph, inspect its ordered event stream, and approve or reject
+4. Load a Pack fixture or edit graph input from the **Input** inspector.
+5. Run the saved graph, inspect its ordered event stream, and approve or reject
    human checkpoints or policy-gated tool calls.
-5. Open **Runs** to revisit execution history and **Context** to inspect the
+6. Open **Runs** to revisit execution history and **Context** to inspect the
    confirmed objects, relations and provenance produced by approved work.
-6. Open **Team** to add human, service or Agent identities, assign Pack roles
+7. Open **Team** to add human, service or Agent identities, assign Pack roles
    and select the identity responsible for approvals.
-7. Open **Packs**, choose **Import .gpack**, review compatibility, permissions
+8. Open **Packs**, choose **Import .gpack**, review compatibility, permissions
    and the SHA-256 fingerprint, then explicitly trust and install the artifact.
 
 Open **Models** to keep the built-in zero-key runtime or connect OpenAI,
@@ -134,8 +136,11 @@ checkpoints are stored locally in `.graph-workbench/workbench.json`. Confirmed
 cross-run context is independently stored in `.graph-workbench/context.sqlite`.
 Set `GRAPH_WORKBENCH_CONTEXT_DATABASE` to a PostgreSQL URL to share that context
 authority across Workbench instances, or to another SQLite file path. Software Delivery,
-Data and MLOps, Cybersecurity Incident Response, Architecture, Customer Success and Research are bundled; trusted `.gpack` artifacts can be imported from the
-Packs view or installed through the CLI and are stored under `.graph-workbench/packs`.
+Data and MLOps, Cybersecurity Incident Response, Quantitative Finance,
+Healthcare Diagnostics and Robotics/Fleet Operations are the six standard
+industry Packs. Architecture, Customer Success and Research are also bundled as
+authoring examples. Trusted `.gpack` artifacts can be imported from the Packs
+view or installed through the CLI and are stored under `.graph-workbench/packs`.
 
 Optional declarative tool policy lives at `.graph-workbench/policy.json`. Completed
 or paused runs can be exported from the run console as portable, integrity-
@@ -185,13 +190,14 @@ Registry. Publisher keys are configured out of band; the signed index binds the
 Pack identity, checksum, compatibility and permissions before download:
 
 The public [Graph Workbench Reference Registry](https://angrykarl.github.io/graph-workbench/registry/registry.json)
-contains the six bundled examples. Its source-controlled publisher key and
+contains the six standard industry Packs. Architecture, Customer Success and
+Research remain bundled authoring examples in the repository. Its source-controlled publisher key and
 fingerprint are documented in the [Registry publishing guide](docs/REGISTRY_PUBLISHING.md).
 
 ```bash
 pnpm graph-workbench pack registry verify https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
-pnpm graph-workbench pack registry install customer_success@0.3.0 \
+pnpm graph-workbench pack registry install quantitative_finance@0.3.0 \
   --registry https://packs.example.com/registry.json \
   --key acme.release=registry-public.pem
 ```
@@ -253,7 +259,10 @@ packs/architecture   Evidence-backed concept design Industry Pack
 packs/customer-success Evidence-based renewal workflow Industry Pack
 packs/cybersecurity-response Governed signal-to-recovery incident response Pack
 packs/data-mlops     Governed data/model release, backfill and monitoring Pack
+packs/healthcare-diagnostics Consent-scoped diagnostic coordination Pack
+packs/quantitative-finance Governed research-to-reconciliation finance Pack
 packs/research       Zero-key cross-industry reference Pack
+packs/robotics-fleet Governed fleet dispatch and degraded-mission recovery Pack
 packs/software-delivery Governed issue-to-release and deployment recovery Pack
 apps/cli             graph-workbench CLI
 apps/workbench       Persistent local API and React graph editor
@@ -295,8 +304,8 @@ run the complete [release-readiness gate](docs/RELEASE_READINESS.md) locally.
 - Windows and Linux CI with a zero-key smoke demo.
 - responsive graph editor with node/edge authoring, contract and policy
   inspection, autosaved drafts, undo/redo and real runtime execution;
-- local Pack installation and switching for the bundled Software Delivery,
-  Data and MLOps, Cybersecurity Incident Response, Architecture, Customer Success and Research Packs;
+- local Pack installation and switching for all six standard industry Packs
+  plus the bundled Architecture, Customer Success and Research authoring examples;
 - persisted run history, human checkpoint resume, Markdown deliverables and
   cross-run context graph provenance exploration.
 

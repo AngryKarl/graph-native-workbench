@@ -20,6 +20,11 @@ test('moves a node continuously and persists its final position', async ({ page 
   }
   await page.mouse.up();
 
+  const finalFlowPosition = await node.evaluate((element) => {
+    const matrix = new DOMMatrix(getComputedStyle(element).transform);
+    return { x: matrix.m41, y: matrix.m42 };
+  });
+
   for (let index = 1; index < samples.length; index += 1) {
     expect(samples[index]!.x).toBeGreaterThan(samples[index - 1]!.x);
     expect(samples[index]!.y).toBeLessThan(samples[index - 1]!.y);
@@ -31,11 +36,19 @@ test('moves a node continuously and persists its final position', async ({ page 
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText('saved', { exact: true })).toBeVisible();
+  const workspace = await page.request.get('/api/workbench');
+  expect(workspace.ok()).toBe(true);
+  const saved = await workspace.json() as { activePack: { positions: Record<string, { x: number; y: number }> } };
+  expect(saved.activePack.positions.start?.x).toBeCloseTo(finalFlowPosition.x, 3);
+  expect(saved.activePack.positions.start?.y).toBeCloseTo(finalFlowPosition.y, 3);
+
   await page.reload();
-  const persisted = await node.boundingBox();
-  if (!persisted) throw new Error('Start node is missing after reloading the saved graph.');
-  expect(persisted.x).toBeCloseTo(final.x, 0);
-  expect(persisted.y).toBeCloseTo(final.y, 0);
+  const persistedFlowPosition = await node.evaluate((element) => {
+    const matrix = new DOMMatrix(getComputedStyle(element).transform);
+    return { x: matrix.m41, y: matrix.m42 };
+  });
+  expect(persistedFlowPosition.x).toBeCloseTo(finalFlowPosition.x, 3);
+  expect(persistedFlowPosition.y).toBeCloseTo(finalFlowPosition.y, 3);
 });
 
 test('runs, approves and preserves the default Industry Pack in a fresh Workbench', async ({ page }) => {
@@ -69,7 +82,7 @@ test('runs, approves and preserves the default Industry Pack in a fresh Workbenc
   await customerSuccessCard.getByRole('button', { name: 'Install Pack' }).click();
   await expect(page.getByRole('combobox').first()).toHaveValue('customer_success');
   await expect(page.getByText('Customer Success Renewal Pack installed and opened.')).toBeVisible();
-  await expect(page.getByText('Evidence-based renewal workflow')).toBeVisible();
+  await expect(page.getByLabel('Active workflow')).toHaveValue('customer_success.renewal_workflow');
   await page.getByRole('button', { name: 'Run graph' }).click();
   await expect(page.getByText('Human decision required')).toBeVisible();
   await expect(page.getByText('Assigned to Revenue owner. Approving as Local user.')).toBeVisible();

@@ -8,6 +8,7 @@ import {
   inspectPack,
   loadPackModule,
   scaffoldPack,
+  validatePackHandlerCoverage,
 } from '@graph-workbench/pack-sdk';
 import { researchPack } from '@graph-workbench/pack-research';
 
@@ -32,6 +33,16 @@ describe('Pack SDK', () => {
     expect(formatPackInspection(inspection)).toContain('human:1');
     expect(inspection.deliverables).toEqual(['approved_research']);
     expect(inspection.fixtures).toEqual(['graph_native_question']);
+  });
+
+  it('rejects a runnable Pack when any declared handler binding is missing', () => {
+    const required = researchPack.graphs
+      .flatMap((graph) => graph.nodes)
+      .find((node) => node.handler)?.handler;
+    if (!required) throw new Error('Research Pack must declare a handler.');
+    expect(() => validatePackHandlerCoverage(researchPack, {})).toThrow(
+      new RegExp(`missing executable handler binding.*${required}`),
+    );
   });
 
   it('scaffolds a valid Pack that can be loaded and run without kernel changes', async () => {

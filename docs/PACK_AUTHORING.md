@@ -129,6 +129,10 @@ compensation targets fail compilation.
     [Industry Pack Gallery](PACK_GALLERY.md).
 12. Prove the Pack without changing `packages/core`.
 
+`pack validate` checks both the serialized graph contracts and every declared
+executable handler binding. The detailed node-by-node acceptance criteria are in
+[Node runtime conformance](NODE_RUNTIME_CONFORMANCE.md).
+
 See [`.gpack` Package Format](PACK_FORMAT.md) for compatibility, integrity,
 permissions, side-by-side versions and rollback behavior. Installed third-party
 handlers and projectors run in network-denied, read-only containers by default; see
@@ -141,7 +145,8 @@ Registry operators can use the reusable release definition and CI flow in the
 - One trigger per graph.
 - Top-level execution graphs are directed acyclic graphs. Bounded repetition is
   encapsulated by `loop` and `map` nodes.
-- `join` waits for every statically declared incoming source.
+- `join` uses `mode: "all"` to synchronize every incoming branch (the default),
+  or `mode: "any"` to merge mutually exclusive routes after the first arrival.
 - A human decision is supplied by node ID and written to its declared field.
 - Context stores include in-memory, local SQLite and shared PostgreSQL adapters.
 - Nodes may declare bounded `execution.timeoutMs` and

@@ -29,9 +29,18 @@ importers:
       '@graph-workbench/pack-data-mlops':
         specifier: workspace:*
         version: link:packs/data-mlops
+      '@graph-workbench/pack-healthcare-diagnostics':
+        specifier: workspace:*
+        version: link:packs/healthcare-diagnostics
+      '@graph-workbench/pack-quantitative-finance':
+        specifier: workspace:*
+        version: link:packs/quantitative-finance
       '@graph-workbench/pack-research':
         specifier: workspace:*
         version: link:packs/research
+      '@graph-workbench/pack-robotics-fleet':
+        specifier: workspace:*
+        version: link:packs/robotics-fleet
       '@graph-workbench/pack-sdk':
         specifier: workspace:*
         version: link:packages/pack-sdk
@@ -116,9 +125,18 @@ importers:
       '@graph-workbench/pack-data-mlops':
         specifier: workspace:*
         version: link:../../packs/data-mlops
+      '@graph-workbench/pack-healthcare-diagnostics':
+        specifier: workspace:*
+        version: link:../../packs/healthcare-diagnostics
+      '@graph-workbench/pack-quantitative-finance':
+        specifier: workspace:*
+        version: link:../../packs/quantitative-finance
       '@graph-workbench/pack-research':
         specifier: workspace:*
         version: link:../../packs/research
+      '@graph-workbench/pack-robotics-fleet':
+        specifier: workspace:*
+        version: link:../../packs/robotics-fleet
       '@graph-workbench/pack-sdk':
         specifier: workspace:*
         version: link:../../packages/pack-sdk
@@ -233,7 +251,34 @@ importers:
         specifier: workspace:*
         version: link:../../packages/core
 
+  packs/healthcare-diagnostics:
+    dependencies:
+      '@graph-workbench/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@graph-workbench/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
+  packs/quantitative-finance:
+    dependencies:
+      '@graph-workbench/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@graph-workbench/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
   packs/research:
+    dependencies:
+      '@graph-workbench/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@graph-workbench/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
+  packs/robotics-fleet:
     dependencies:
       '@graph-workbench/contracts':
         specifier: workspace:*

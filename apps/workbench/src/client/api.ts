@@ -80,6 +80,10 @@ export function loadPack(packId: string): Promise<PackDescription> {
   return request(`/api/packs/${encodeURIComponent(packId)}`);
 }
 
+export function loadPackGraph(packId: string, graphId: string): Promise<PackDescription> {
+  return request(`/api/packs/${encodeURIComponent(packId)}/graphs/${encodeURIComponent(graphId)}`);
+}
+
 export function installPack(packId: string): Promise<WorkbenchBootstrap> {
   return request(`/api/packs/${encodeURIComponent(packId)}/install`, { method: 'POST' });
 }

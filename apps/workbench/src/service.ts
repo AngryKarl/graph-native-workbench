@@ -249,13 +249,16 @@ export class WorkbenchService {
     }
   }
 
-  describePack(packId = this.store.snapshot().activePackId) {
+  describePack(packId = this.store.snapshot().activePackId, graphId?: string) {
     const runtime = requirePackRuntime(packId);
-    const graph = runtime.manifest.graphs[0]!;
+    const graph = graphId
+      ? runtime.manifest.graphs.find((item) => item.id === graphId)
+      : runtime.manifest.graphs[0];
+    if (!graph) throw new Error(`Graph "${graphId ?? ''}" does not exist in Pack "${packId}".`);
     const draft = this.store.snapshot().drafts[draftKey(packId, graph.id)];
     const selected = draft?.graph ?? graph;
-    const fixture = runtime.manifest.fixtures.find((item) => item.graphId === selected.id)
-      ?? runtime.manifest.fixtures[0];
+    const fixtures = runtime.manifest.fixtures.filter((item) => item.graphId === selected.id);
+    const fixture = fixtures[0];
     return {
       id: runtime.manifest.id,
       name: runtime.manifest.name,
@@ -266,7 +269,7 @@ export class WorkbenchService {
       graph: selected,
       positions: draft?.positions ?? {},
       input: structuredClone(fixture?.input ?? {}),
-      fixtures: runtime.manifest.fixtures,
+      fixtures,
       handlers: Object.keys(runtime.handlers).sort(),
     };
   }
@@ -424,7 +427,7 @@ export class WorkbenchService {
       ...state,
       drafts: { ...state.drafts, [draftKey(packId, graph.id)]: draft },
     }));
-    return this.describePack(packId);
+    return this.describePack(packId, graph.id);
   }
 
   resetDraft(packId: string, graphId: string) {
@@ -434,7 +437,7 @@ export class WorkbenchService {
       delete drafts[draftKey(packId, graphId)];
       return { ...state, drafts };
     });
-    return this.describePack(packId);
+    return this.describePack(packId, graphId);
   }
 
   async start(input: GraphState, options: StartRunOptions = {}): Promise<WorkbenchRunSnapshot> {

@@ -56,6 +56,48 @@ function waitGraph(mode: 'timer' | 'event'): GraphDefinition {
 }
 
 describe('durable orchestration', () => {
+  it('merges mutually exclusive router paths through an any-join', async () => {
+    const graph: GraphDefinition = {
+      id: 'router.any_join', version: 1, name: 'Exclusive routing', description: 'Merges one selected route.',
+      state: { fields: {
+        route: { type: 'string', required: true, description: 'Selected route.' },
+        branch_result: { type: 'string', required: false, description: 'Selected branch result.' },
+        delivered: { type: 'boolean', required: false, description: 'Downstream delivery status.' },
+      } },
+      nodes: [
+        { id: 'start', kind: 'trigger', label: 'Start', description: 'Starts.', reads: [], writes: [], config: {} },
+        { id: 'choose', kind: 'router', label: 'Choose route', description: 'Selects one branch.', reads: ['route'], writes: [], config: {} },
+        { id: 'left', kind: 'function', label: 'Left branch', description: 'Runs the left branch.', handler: 'left', reads: [], writes: ['branch_result'], config: {} },
+        { id: 'right', kind: 'function', label: 'Right branch', description: 'Runs the right branch.', handler: 'right', reads: [], writes: ['branch_result'], config: {} },
+        { id: 'merge', kind: 'join', label: 'Merge route', description: 'Continues after the selected branch.', reads: [], writes: [], config: { mode: 'any' } },
+        { id: 'deliver', kind: 'function', label: 'Deliver', description: 'Runs after the merge.', handler: 'deliver', reads: ['branch_result'], writes: ['delivered'], config: {} },
+      ],
+      edges: [
+        { id: 'start.choose', source: 'start', target: 'choose', on: 'success' },
+        { id: 'choose.left', source: 'choose', target: 'left', on: 'success', condition: { field: 'route', operator: 'equals', value: 'left' } },
+        { id: 'choose.right', source: 'choose', target: 'right', on: 'success', condition: { field: 'route', operator: 'equals', value: 'right' } },
+        { id: 'left.merge', source: 'left', target: 'merge', on: 'success' },
+        { id: 'right.merge', source: 'right', target: 'merge', on: 'success' },
+        { id: 'merge.deliver', source: 'merge', target: 'deliver', on: 'success' },
+      ],
+      budget,
+    };
+    const calls: string[] = [];
+    const result = await new GraphRuntime(compileGraph(graph), {
+      handlers: {
+        left: () => { calls.push('left'); return { branch_result: 'left' }; },
+        right: () => { calls.push('right'); return { branch_result: 'right' }; },
+        deliver: () => { calls.push('deliver'); return { delivered: true }; },
+      },
+    }).run({ route: 'left' });
+
+    expect(result).toMatchObject({ status: 'completed', state: { branch_result: 'left', delivered: true } });
+    expect(calls).toEqual(['left', 'deliver']);
+    expect(result.events).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'node.completed', nodeId: 'merge' }),
+    ]));
+  });
+
   it('persists a timer suspension and resumes it only after its due time', async () => {
     let now = new Date('2026-08-11T00:00:00.000Z');
     const runtime = new GraphRuntime(compileGraph(waitGraph('timer')), { clock: () => now });

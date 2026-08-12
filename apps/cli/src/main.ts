@@ -45,6 +45,7 @@ import {
   runPackFixture,
   scaffoldPack,
   uninstallInstalledPack,
+  validatePackHandlerCoverage,
   type IsolatedPackPolicy,
 } from '@graph-workbench/pack-sdk';
 import {
@@ -405,8 +406,10 @@ async function packCommand(): Promise<void> {
   if (action === 'validate') {
     const loaded = await resolvePack(subject);
     const compiled = compilePack(loaded.pack);
+    const handlerCoverage = validatePackHandlerCoverage(loaded.pack, loaded.handlers);
     console.log(`✓ ${compiled.manifest.id}@${compiled.manifest.version} is valid (${loaded.source})`);
     console.log(`  ${compiled.graphs.size} graph(s), ${compiled.manifest.ontology.objectTypes.length} context object type(s)`);
+    console.log(`  ${handlerCoverage.required.length} executable handler binding(s)`);
     return;
   }
   if (action === 'inspect') {

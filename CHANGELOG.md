@@ -5,6 +5,23 @@ versioning once public packages begin publishing.
 
 ## Unreleased
 
+### Added
+
+- Added standard Quantitative Finance, Healthcare Diagnostic Coordination and
+  Robotics/Fleet Operations Packs with zero-key success, rejection and recovery
+  fixtures, typed tools and connected context projections.
+- Added a Pack system map, semantic node treatments and stage-aware layout for
+  reading multi-graph workflows, Agent nodes, human gates, routing, joins,
+  bounded loops, Map fan-out, escalation and compensation directly on canvas.
+- Added handler-coverage conformance checks so Pack validation rejects declared
+  executable nodes that do not have a real implementation.
+
+### Fixed
+
+- Made join semantics explicit and executable for both `all` and `any` modes.
+- Kept node movement synchronized throughout pointer drag while preserving the
+  saved graph and undo history.
+
 ## 0.3.0 - 2026-08-10
 
 ### Changed

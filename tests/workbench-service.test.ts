@@ -226,6 +226,31 @@ describe('Workbench service', () => {
     expect(completed.context?.objects.some((object) => object.type === 'deliverable')).toBe(true);
   });
 
+  it('installs and completes the finance, healthcare and robotics standard Packs', async () => {
+    const service = new WorkbenchService();
+    const standardPacks = [
+      { id: 'quantitative_finance', contextType: 'finance_record', approvals: 3 },
+      { id: 'healthcare_diagnostics', contextType: 'diagnostic_record', approvals: 2 },
+      { id: 'robotics_fleet', contextType: 'fleet_record', approvals: 1 },
+    ] as const;
+
+    for (const expected of standardPacks) {
+      const installed = await service.install(expected.id);
+      let run = await service.start(installed.activePack.input);
+      let approvals = 0;
+      while (run.status === 'paused' && run.pendingApproval) {
+        run = await service.decide(run.runId, true);
+        approvals += 1;
+      }
+
+      expect(run.status).toBe('completed');
+      expect(approvals).toBe(expected.approvals);
+      expect(run.artifacts?.length).toBeGreaterThan(0);
+      expect(run.context?.objects.some((object) => object.type === expected.contextType)).toBe(true);
+      expect(run.context?.relations.length).toBeGreaterThan(0);
+    }
+  });
+
   it('runs a model-enabled Agent through a selected compatible provider and projects its usage', async () => {
     const secret = 'server-only-secret';
     let modelRound = 0;
@@ -431,6 +456,26 @@ describe('Workbench service', () => {
       await Promise.all([first?.close(), second?.close()]);
       await rm(directory, { recursive: true, force: true });
     }
+  });
+
+  it('describes every graph in a multi-graph Pack and keeps the selected draft', () => {
+    const service = new WorkbenchService();
+    const pack = service.describePack('customer_success', 'customer_success.scheduled_health_scan');
+    expect(pack.graph.id).toBe('customer_success.scheduled_health_scan');
+    expect(pack.graph.trigger).toMatchObject({ type: 'schedule' });
+    expect(pack.fixtures.every((fixture) => fixture.graphId === pack.graph.id)).toBe(true);
+
+    const edited = { ...pack.graph, name: 'Edited scheduled health scan' };
+    service.saveDraft(pack.id, edited, { start: { x: 40, y: 80 } });
+    expect(service.describePack(pack.id, edited.id)).toMatchObject({
+      graph: { name: 'Edited scheduled health scan' },
+      positions: { start: { x: 40, y: 80 } },
+    });
+    expect(service.describePack(pack.id).graph.id).not.toBe(edited.id);
+
+    const child = service.describePack(pack.id, 'customer_success.scan_preparation');
+    expect(child.fixtures).toEqual([]);
+    expect(child.input).toEqual({});
   });
 
   it('aggregates confirmed context from multiple Packs across a service restart', async () => {

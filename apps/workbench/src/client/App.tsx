@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import {
   activateActor, activatePack, configureModelProvider, decideRun, downloadRunAudit, inspectPackArtifact, installPack, installPackArtifact, installRegistryPack,
-  loadRegistries, loadWorkbench, resetGraphDraft,
+  loadPackGraph, loadRegistries, loadWorkbench, resetGraphDraft,
   removeActor, resumeWaitingRun, saveActor, saveGraphDraft, startRun, testModelProvider, uninstallPack,
 } from './api.js';
 import { ContextExplorer } from './ContextExplorer.js';
@@ -14,6 +14,7 @@ import { FlowCanvas } from './FlowCanvas.js';
 import { createAutomaticLayout, nextNodeId, nodeKindLabel } from './graph-model.js';
 import { Inspector } from './Inspector.js';
 import { PackManager } from './PackManager.js';
+import { PackOverview } from './PackOverview.js';
 import { ProviderManager } from './ProviderManager.js';
 import { RunConsole } from './RunConsole.js';
 import { RunHistory } from './RunHistory.js';
@@ -29,6 +30,7 @@ interface EditorSnapshot {
 }
 
 type SaveState = 'saved' | 'saving' | 'dirty' | 'invalid';
+type CanvasMode = 'workflow' | 'system';
 
 const palette = [
   { kind: 'trigger', icon: CircleDot, description: 'Entry point' },
@@ -70,6 +72,7 @@ export function App() {
   const [future, setFuture] = useState<EditorSnapshot[]>([]);
   const [input, setInput] = useState<Record<string, unknown>>({});
   const [view, setView] = useState<PrimaryView>('editor');
+  const [canvasMode, setCanvasMode] = useState<CanvasMode>('workflow');
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('node');
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -234,6 +237,35 @@ export function App() {
       return null;
     }
   }, [editor, pack]);
+
+  const openGraph = useCallback(async (graphId: string) => {
+    if (!pack || graphId === editor?.graph.id) {
+      setCanvasMode('workflow');
+      return;
+    }
+    if (saveState === 'saving') {
+      setNotice('Wait for the current workflow to finish saving.');
+      return;
+    }
+    if (saveState === 'dirty' || saveState === 'invalid') {
+      const saved = await persist(true);
+      if (!saved) {
+        setNotice('Save the current graph before opening another workflow.');
+        return;
+      }
+    }
+    setBusy(true);
+    try {
+      const next = await loadPackGraph(pack.id, graphId);
+      acceptPack(next);
+      setRun(bootstrap?.runs.find((item) => item.packId === pack.id && item.graphId === graphId) ?? null);
+      setCanvasMode('workflow');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }, [acceptPack, bootstrap?.runs, editor?.graph.id, pack, persist, saveState]);
 
   useEffect(() => {
     if (!initialized.current || saveState !== 'dirty') return;
@@ -438,8 +470,21 @@ export function App() {
               <div className="palette-footer"><GitFork size={15} /><span><strong>{editor.graph.nodes.length} nodes</strong><small>{editor.graph.edges.length} connections</small></span></div>
             </aside>
             <section className="canvas-region">
-              <div className="canvas-title"><span><strong>{editor.graph.name}</strong><small>{editor.graph.id} · version {editor.graph.version}</small></span><div><button className="active">Execution</button><button onClick={() => setView('context')}>Context</button></div></div>
-              <FlowCanvas graph={editor.graph} positions={editor.positions} run={run} selectedNodeId={selectedNodeId} onSelectNode={(id) => { setSelectedNodeId(id); if (id) { setInspectorTab('node'); setInspectorOpen(true); } }} onChange={commitEditor} />
+              <div className="canvas-title">
+                <span className="graph-heading">
+                  <select aria-label="Active workflow" value={editor.graph.id} disabled={busy || saveState === 'saving'} onChange={(event) => { void openGraph(event.target.value); }}>
+                    {pack.manifest.graphs.map((graph) => <option key={graph.id} value={graph.id}>{graph.name}</option>)}
+                  </select>
+                  <small>{editor.graph.id} · version {editor.graph.version}</small>
+                </span>
+                <div className="canvas-actions">
+                  {canvasMode === 'workflow' ? <button className="auto-layout" onClick={() => commitEditor(editor.graph, createAutomaticLayout(editor.graph))} title="Arrange workflow">Arrange</button> : null}
+                  <span className="canvas-view-switch"><button className={canvasMode === 'workflow' ? 'active' : ''} onClick={() => setCanvasMode('workflow')}>Execution</button><button className={canvasMode === 'system' ? 'active' : ''} onClick={() => setCanvasMode('system')}>System map</button><button onClick={() => setView('context')}>Context</button></span>
+                </div>
+              </div>
+              {canvasMode === 'workflow'
+                ? <FlowCanvas graph={editor.graph} positions={editor.positions} run={run} selectedNodeId={selectedNodeId} manifest={pack.manifest} modelLabel={bootstrap.models.mode === 'model' ? bootstrap.models.selection.model : 'deterministic'} onSelectNode={(id) => { setSelectedNodeId(id); if (id) { setInspectorTab('node'); setInspectorOpen(true); } }} onChange={commitEditor} />
+                : <PackOverview pack={pack} activeGraphId={editor.graph.id} onOpenGraph={(graphId) => { void openGraph(graphId); }} />}
             </section>
             <Inspector tab={inspectorTab} onTab={setInspectorTab} node={selectedNode} pack={pack} input={input} open={inspectorOpen} onToggle={() => setInspectorOpen((value) => !value)} onInput={setInput} onUpdateNode={updateNode} onSelectFixture={selectFixture} />
             <RunConsole run={run} busy={busy} onDecision={(approved) => void decide(approved)} onResume={() => void resumeWait()} onExport={() => void exportAudit()} />

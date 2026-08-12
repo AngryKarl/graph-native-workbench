@@ -274,6 +274,14 @@ async function api(request: IncomingMessage, response: ServerResponse, pathname:
     json(response, 200, service.describePack(decodeURIComponent(pack[1]!)));
     return true;
   }
+  const packGraph = pathname.match(/^\/api\/packs\/([^/]+)\/graphs\/([^/]+)$/);
+  if (request.method === 'GET' && packGraph) {
+    json(response, 200, service.describePack(
+      decodeURIComponent(packGraph[1]!),
+      decodeURIComponent(packGraph[2]!),
+    ));
+    return true;
+  }
   const install = pathname.match(/^\/api\/packs\/([^/]+)\/install$/);
   if (request.method === 'POST' && install) {
     json(response, 200, await service.install(decodeURIComponent(install[1]!)));

@@ -1,48 +1,53 @@
 # Industry Pack Gallery
 
-Every first-party Industry Pack runs in the same Graph Workbench editor,
-runtime, approval inbox, deliverable console and context explorer. These images
-show each Pack's primary execution graph after **Fit View**; they are screenshots
-of the executable Pack definitions, not separate concept diagrams.
+The six standard Industry Packs run in the same Graph Workbench editor,
+runtime, approval inbox, deliverable console and context explorer. Each Pack
+contains executable success, rejection or recovery fixtures plus a typed
+information graph projection. The images below are captured from the real
+primary workflow definitions after **Fit View**, not redrawn concept diagrams.
 
 ## Professional Software Delivery
 
-Issue intake, parallel verification, independent release decisions and
-post-deployment recovery.
+Issue intake, change planning, concurrent verification, independent code and
+release decisions, immutable deployment request and post-deployment rollback.
 
 ![Professional Software Delivery workflow](assets/pack-graphs/software-delivery.png)
 
 ## Data and MLOps Asset Release
 
-Partition quality, lineage, data/model approvals, registry publication and
-controlled failure paths.
+Partition Map, schema and quality evidence, lineage, independent data/model
+approval, registry publication, bounded backfill and quality rollback.
 
 ![Data and MLOps Asset Release workflow](assets/pack-graphs/data-mlops-asset-release.png)
 
 ## Cybersecurity Incident Response
 
-Evidence preservation, incident declaration, approved containment, recovery
-and lessons learned.
+Concurrent evidence preservation, incident declaration, containment and
+recovery approvals, notification, recovery observation and compensation.
 
 ![Cybersecurity Incident Response workflow](assets/pack-graphs/cybersecurity-incident-response.png)
 
-## Architecture Concept Design
+## Quantitative Finance Governance
 
-Structured intake, parallel evidence, alternative concepts, quality review and
-an approved design brief.
+Falsifiable hypothesis, concurrent instrument backtests, portfolio proposal,
+independent risk/compliance/execution gates, OMS intent and fill reconciliation.
 
-![Architecture Concept Design workflow](assets/pack-graphs/architecture-concept-design.png)
+![Quantitative Finance Governance workflow](assets/pack-graphs/quantitative-finance-governance.png)
 
-## Customer Success Renewal
+## Healthcare Diagnostic Coordination
 
-Account evidence, health assessment, interventions, revenue-owner approval and
-a renewal success plan.
+FHIR-shaped request and consent, parallel advisory study analysis, accountable
+specialist interpretation, DiagnosticReport publication and safe follow-up.
 
-![Customer Success Renewal workflow](assets/pack-graphs/customer-success-renewal.png)
+![Healthcare Diagnostic Coordination workflow](assets/pack-graphs/healthcare-diagnostic-coordination.png)
 
-## Cross-industry Research
+## Robotics and Fleet Operations
 
-Parallel evidence collection, synthesis, quality review, approval and
-publication.
+Event-driven task intake, concurrent robot bidding, resource reservation,
+safety approval, external dispatch, telemetry, bounded replanning and maintenance.
 
-![Cross-industry Research workflow](assets/pack-graphs/research-workflow.png)
+![Robotics and Fleet Operations workflow](assets/pack-graphs/robotics-fleet-dispatch.png)
+
+Architecture Concept Design, Customer Success Renewal and Cross-industry
+Research remain bundled as additional authoring examples. The signed Reference
+Registry intentionally publishes the six standard industry Packs above.

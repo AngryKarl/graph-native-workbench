@@ -70,4 +70,17 @@ describe('graph compiler', () => {
     duplicateWebhook.graphs.push(duplicate);
     expect(() => compilePack(duplicateWebhook)).toThrow(/Duplicate webhook trigger/);
   });
+
+  it('rejects invalid joins and duplicate incoming sources', () => {
+    const invalidMode = structuredClone(researchPack.graphs[0]!);
+    const join = invalidMode.nodes.find((node) => node.kind === 'join')!;
+    join.config.mode = 'sometimes';
+    expect(() => compileGraph(invalidMode)).toThrow(/Join node .* has invalid config/);
+
+    const duplicateSource = structuredClone(researchPack.graphs[0]!);
+    const duplicateJoin = duplicateSource.nodes.find((node) => node.kind === 'join')!;
+    const incoming = duplicateSource.edges.filter((edge) => edge.target === duplicateJoin.id);
+    incoming[1]!.source = incoming[0]!.source;
+    expect(() => compileGraph(duplicateSource)).toThrow(/requires at least two incoming branches/);
+  });
 });
