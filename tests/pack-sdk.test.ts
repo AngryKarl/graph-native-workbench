@@ -70,6 +70,11 @@ describe('Pack SDK', () => {
     expect(scaffold.files).toContain('src/index.mjs');
     const packageJson = JSON.parse(await readFile(resolve(directory, 'package.json'), 'utf8')) as Record<string, unknown>;
     expect(packageJson.dependencies).toBeUndefined();
+    const readme = await readFile(resolve(directory, 'README.md'), 'utf8');
+    expect(readme).toContain('npx graph-workbench pack test');
+    expect(readme).toContain('npx graph-workbench pack run');
+    expect(readme).not.toContain('pnpm graph-workbench');
+    expect(readme).not.toContain('From the repository root');
 
     const loaded = await loadPackModule(resolve(directory, 'src/index.mjs'));
     const graph = compilePack(loaded.pack).graphs.get('standalone_ops.workflow');

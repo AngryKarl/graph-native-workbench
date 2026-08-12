@@ -460,7 +460,9 @@ async function packCommand(): Promise<void> {
     for (const file of result.files) console.log(`  ${file}`);
     const sourceFile = result.files.find((file) => file.startsWith('src/index.'))!;
     const modulePath = relative(process.cwd(), resolve(result.directory, sourceFile)).replaceAll('\\', '/');
-    console.log(`\nNext: pnpm graph-workbench pack validate ${modulePath}`);
+    const runner = packagedDistribution ? 'npx graph-workbench' : 'pnpm graph-workbench';
+    console.log(`\nNext: ${runner} pack test "${modulePath}"`);
+    console.log(`Then: ${runner} pack run "${modulePath}" --set topic=hello`);
     return;
   }
   if (action === 'schema') {

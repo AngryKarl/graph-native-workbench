@@ -57,7 +57,7 @@ The Workbench opens in your browser and stores everything locally under
 npx graph-workbench demo
 ```
 
-The `0.4.0` public alpha includes the complete six-Pack catalog and Pack system
+The `0.4.1` public alpha includes the complete six-Pack catalog and Pack system
 map. To work from source:
 
 ```bash
@@ -67,6 +67,20 @@ corepack enable
 pnpm install
 pnpm workbench
 ```
+
+## Create your first Industry Pack
+
+The public CLI also scaffolds a standalone Pack outside this repository:
+
+```bash
+npx graph-workbench pack init claims_operations
+npx graph-workbench pack test packs/claims_operations/src/index.mjs
+npx graph-workbench pack run packs/claims_operations/src/index.mjs --set topic=claim-1042
+```
+
+The generated Pack already contains an executable graph, a real handler, a
+zero-key fixture, a deliverable and a context projector. No repository clone
+or model key is required.
 
 ## One run becomes reusable organizational context
 

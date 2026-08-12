@@ -63,10 +63,17 @@ try {
   const demo = await run(['demo'], workspace);
   if (!demo.stdout.includes('Context graph: 7 objects, 9 typed relations')) throw new Error('Packaged demo output is incomplete.');
 
-  await run(['pack', 'init', 'distribution_smoke'], workspace);
+  const initialized = await run(['pack', 'init', 'distribution_smoke'], workspace);
+  if (!initialized.stdout.includes('Next: npx graph-workbench pack test')) {
+    throw new Error(`Standalone Pack instructions do not use the public CLI.\n${initialized.stdout}`);
+  }
   const packDirectory = resolve(workspace, 'packs/distribution_smoke');
   const manifest = JSON.parse(await readFile(resolve(packDirectory, 'package.json'), 'utf8'));
   if (manifest.dependencies) throw new Error('Standalone scaffold unexpectedly requires package dependencies.');
+  const scaffoldReadme = await readFile(resolve(packDirectory, 'README.md'), 'utf8');
+  if (scaffoldReadme.includes('pnpm graph-workbench') || !scaffoldReadme.includes('npx graph-workbench pack run')) {
+    throw new Error('Standalone scaffold README does not provide a zero-install authoring path.');
+  }
   const source = resolve(packDirectory, 'src/index.mjs');
   await stat(source);
   await run(['pack', 'validate', source], workspace);
