@@ -58,6 +58,4 @@ jobs:
       - name: Publish graph-workbench
         if: ${{ inputs.publish }}
         working-directory: apps/distribution
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public --provenance --tag "${{ inputs.npm_tag }}"
+        run: npm publish --access public --tag "${{ inputs.npm_tag }}"

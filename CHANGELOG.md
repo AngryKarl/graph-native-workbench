@@ -5,6 +5,11 @@ versioning once public packages begin publishing.
 
 ## Unreleased
 
+### Operations
+
+- Replaced the expiring npm publish token with GitHub Actions trusted
+  publishing through short-lived OIDC credentials.
+
 ## 0.4.1 - 2026-08-12
 
 ### Fixed
