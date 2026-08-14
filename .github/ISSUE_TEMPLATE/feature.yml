@@ -1,7 +1,8 @@
 name: Mechanism proposal
 description: Propose a domain-neutral core or adapter capability
 title: "[Proposal]: "
-labels: [proposal]
+labels:
+  - enhancement
 body:
   - type: textarea
     id: problem

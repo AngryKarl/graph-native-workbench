@@ -29,6 +29,7 @@ import {
   type ToolAuthorizationEffect,
 } from './adapters.js';
 import type { RunStore } from './run-store.js';
+import { createContextQueryReader, type ContextQueryReader } from './context-query.js';
 import { sha256Json } from './integrity.js';
 import { assertValidPatch, assertValidState, type GraphState } from './state.js';
 
@@ -153,11 +154,13 @@ function asError(error: unknown): Error {
 
 export class GraphRuntime {
   private readonly subgraphs = new Map<string, CompiledGraph>();
+  private readonly context: ContextQueryReader | undefined;
 
   constructor(
     private readonly graph: CompiledGraph,
     private readonly bindings: RuntimeBindings = {},
   ) {
+    this.context = bindings.contextStore ? createContextQueryReader(bindings.contextStore) : undefined;
     for (const [id, child] of Object.entries(bindings.subgraphs ?? {})) this.subgraphs.set(id, child);
     for (const definition of bindings.pack?.graphs ?? []) {
       if (definition.id !== graph.definition.id && !this.subgraphs.has(definition.id)) {
@@ -568,6 +571,7 @@ export class GraphRuntime {
           node,
           state,
           signal,
+          ...(this.context ? { context: this.context } : {}),
           toolIds,
           tools,
           ...(mutable.suspensions.has(node.id) ? { resumeState: mutable.suspensions.get(node.id) } : {}),
@@ -593,7 +597,13 @@ export class GraphRuntime {
     }
 
     try {
-      const patch = await handler({ runId: mutable.runId, node, state, signal });
+      const patch = await handler({
+        runId: mutable.runId,
+        node,
+        state,
+        signal,
+        ...(this.context ? { context: this.context } : {}),
+      });
       assertValidPatch(this.graph.definition.state, node.writes, patch, node.id);
       return { patch, detail: {} };
     } catch (error) {

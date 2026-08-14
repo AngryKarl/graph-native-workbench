@@ -5,6 +5,31 @@ versioning once public packages begin publishing.
 
 ## Unreleased
 
+## 0.5.0 - 2026-08-13
+
+### Added
+
+- Added a typed, read-only Context query interface to runtime handlers and
+  Agents, allowing later runs to reuse approved objects, relations and
+  neighborhoods without introducing a second graph store or query language.
+- Added a complete Software Delivery follow-up: a deployment observation run
+  reads the approved Release from a prior run, records its ID, version and
+  source run, and links the new Deployment back to that Release.
+- Added a guided 60-second Workbench journey, structured review packets,
+  automatic Outcome discovery, focused canvas navigation and searchable
+  Context neighborhoods with readable provenance.
+- Added a first-class Connector request form and outcome-oriented Industry Pack
+  contribution templates.
+
+### Changed
+
+- Made Professional Software Delivery the default zero-key experience in both
+  the Workbench and CLI demo.
+- Refreshed the English and Chinese project pages around one coherent flagship
+  journey with verified screenshots from the real application.
+- Kept the node Inspector closed for a fresh guided run so the workflow remains
+  readable, while preserving direct access for editing.
+
 ### Operations
 
 - Replaced the expiring npm publish token with GitHub Actions trusted

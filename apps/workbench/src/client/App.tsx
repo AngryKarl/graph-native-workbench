@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bot, Box, Braces, Check, CircleDot, Cpu, GitFork, GitMerge,
   History, Hourglass, LayoutDashboard, ListTree, LoaderCircle, Network, PackageOpen, Play, Repeat2, RotateCcw,
-  Save, ShieldAlert, Undo2, Redo2, UserRoundCheck, UsersRound, Workflow,
+  Save, ShieldAlert, SlidersHorizontal, Undo2, Redo2, UserRoundCheck, UsersRound, Workflow,
 } from 'lucide-react';
 import {
   activateActor, activatePack, configureModelProvider, decideRun, downloadRunAudit, inspectPackArtifact, installPack, installPackArtifact, installRegistryPack,
@@ -11,6 +11,7 @@ import {
 } from './api.js';
 import { ContextExplorer } from './ContextExplorer.js';
 import { FlowCanvas } from './FlowCanvas.js';
+import { FirstRunJourney } from './FirstRunJourney.js';
 import { createAutomaticLayout, nextNodeId, nodeKindLabel, resolveRunDeliverable } from './graph-model.js';
 import { Inspector } from './Inspector.js';
 import { PackManager } from './PackManager.js';
@@ -108,7 +109,7 @@ export function App() {
   const acceptBootstrap = useCallback((next: WorkbenchBootstrap) => {
     setBootstrap(next);
     acceptPack(next.activePack);
-    setRun(next.runs.find((item) => item.packId === next.activePackId) ?? null);
+    setRun(next.runs.find((item) => item.packId === next.activePackId && item.graphId === next.activePack.graph.id) ?? null);
   }, [acceptPack]);
 
   useEffect(() => {
@@ -117,6 +118,29 @@ export function App() {
       initialized.current = true;
     }).catch((error: Error) => setNotice(error.message));
   }, [acceptBootstrap]);
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (!(event.ctrlKey || event.metaKey)) return;
+      if (event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        void persist();
+      } else if (event.key.toLowerCase() === 'z' && event.shiftKey) {
+        event.preventDefault();
+        redo();
+      } else if (event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        undo();
+      } else if (event.key.toLowerCase() === 'y') {
+        event.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  });
 
   const refreshRegistries = useCallback(async () => {
     setRegistriesLoading(true);
@@ -448,7 +472,7 @@ export function App() {
     <div className="workbench-shell">
       <aside className="app-nav">
         <Logo />
-        <nav>{navItems.map(({ view: itemView, label, icon: Icon }) => <button key={itemView} className={view === itemView ? 'active' : ''} onClick={() => setView(itemView)} title={label}><Icon size={18} /><span>{label}</span></button>)}</nav>
+        <nav aria-label="Workbench sections">{navItems.map(({ view: itemView, label, icon: Icon }) => <button key={itemView} className={view === itemView ? 'active' : ''} aria-current={view === itemView ? 'page' : undefined} onClick={() => setView(itemView)} title={label}><Icon size={18} /><span>{label}</span></button>)}</nav>
       </aside>
 
       <header className="topbar">
@@ -460,14 +484,14 @@ export function App() {
           <button className="icon-control" onClick={undo} disabled={!past.length} aria-label="Undo"><Undo2 size={16} /></button>
           <button className="icon-control" onClick={redo} disabled={!future.length} aria-label="Redo"><Redo2 size={16} /></button>
           <button className="icon-control" onClick={() => void resetDraft()} aria-label="Reset graph"><RotateCcw size={16} /></button>
-          <button className="button secondary" onClick={() => void persist()}><Save size={15} />Save</button>
-          <button className="button primary run-button" disabled={busy || saveState === 'invalid'} onClick={() => void runGraph()}>{busy ? <LoaderCircle className="spin" size={15} /> : <Play size={15} fill="currentColor" />}Run graph</button>
+          <button className="button secondary" aria-keyshortcuts="Control+S Meta+S" onClick={() => void persist()}><Save size={15} />Save</button>
+          <button className="button primary run-button" disabled={busy || saveState === 'invalid'} onClick={() => void runGraph()}>{busy ? <LoaderCircle className="spin" size={15} /> : <Play size={15} fill="currentColor" />}{run ? 'Run again' : 'Run sample'}</button>
         </div> : null}
       </header>
 
       <div className="main-surface">
         {view === 'editor' ? (
-          <div className="editor-layout">
+          <div className={`editor-layout ${inspectorOpen ? 'inspector-open' : ''}`}>
             <aside className="node-palette">
               <div className="palette-heading"><strong>Nodes</strong><span>Drag or click to add</span></div>
               <div className="palette-list">{palette.map(({ kind, icon: Icon, description }) => <button key={kind} draggable onClick={() => addNode(kind)} onDragStart={(event) => { event.dataTransfer.setData('application/graph-workbench-node', kind); event.dataTransfer.effectAllowed = 'copy'; }}><span className={`palette-icon kind-${kind}`}><Icon size={15} /></span><span><strong>{nodeKindLabel[kind]}</strong><small>{description}</small></span></button>)}</div>
@@ -483,15 +507,17 @@ export function App() {
                 </span>
                 <div className="canvas-actions">
                   {canvasMode === 'workflow' ? <button className="auto-layout" onClick={() => commitEditor(editor.graph, createAutomaticLayout(editor.graph))} title="Arrange workflow">Arrange</button> : null}
-                  <span className="canvas-view-switch"><button className={canvasMode === 'workflow' ? 'active' : ''} onClick={() => setCanvasMode('workflow')}>Execution</button><button className={canvasMode === 'system' ? 'active' : ''} onClick={() => setCanvasMode('system')}>System map</button><button onClick={() => setView('context')}>Context</button></span>
+                  <span className="canvas-view-switch" role="group" aria-label="Canvas view"><button aria-pressed={canvasMode === 'workflow'} className={canvasMode === 'workflow' ? 'active' : ''} onClick={() => setCanvasMode('workflow')}>Execution</button><button aria-pressed={canvasMode === 'system'} className={canvasMode === 'system' ? 'active' : ''} onClick={() => setCanvasMode('system')}>System map</button><button onClick={() => setView('context')}>Context</button></span>
+                  <button className="canvas-inspector-toggle" aria-label={inspectorOpen ? 'Close inspector' : 'Open inspector'} aria-pressed={inspectorOpen} onClick={() => setInspectorOpen((value) => !value)}><SlidersHorizontal size={15} /></button>
                 </div>
               </div>
+              <FirstRunJourney pack={pack} run={run} deliverable={runDeliverable} busy={busy} onRun={() => void runGraph()} onContext={() => setView('context')} />
               {canvasMode === 'workflow'
                 ? <FlowCanvas graph={editor.graph} positions={editor.positions} run={run} selectedNodeId={selectedNodeId} manifest={pack.manifest} modelLabel={bootstrap.models.mode === 'model' ? bootstrap.models.selection.model : 'deterministic'} onSelectNode={(id) => { setSelectedNodeId(id); if (id) { setInspectorTab('node'); setInspectorOpen(true); } }} onChange={commitEditor} />
                 : <PackOverview pack={pack} activeGraphId={editor.graph.id} onOpenGraph={(graphId) => { void openGraph(graphId); }} />}
             </section>
-            <Inspector tab={inspectorTab} onTab={setInspectorTab} node={selectedNode} pack={pack} input={input} open={inspectorOpen} onToggle={() => setInspectorOpen((value) => !value)} onInput={setInput} onUpdateNode={updateNode} onSelectFixture={selectFixture} />
-            <RunConsole run={run} deliverable={runDeliverable} busy={busy} onDecision={(approved) => void decide(approved)} onResume={() => void resumeWait()} onExport={() => void exportAudit()} />
+            <Inspector tab={inspectorTab} onTab={setInspectorTab} node={selectedNode} pack={pack} input={input} open={inspectorOpen} onClose={() => setInspectorOpen(false)} onInput={setInput} onUpdateNode={updateNode} onSelectFixture={selectFixture} />
+            <RunConsole run={run} deliverable={runDeliverable} busy={busy} onDecision={(approved) => void decide(approved)} onResume={() => void resumeWait()} onExport={() => void exportAudit()} onViewContext={() => setView('context')} />
           </div>
         ) : null}
         {view === 'runs' ? <RunHistory runs={bootstrap.runs} selectedRunId={run?.runId} onSelect={(selected) => { setRun(selected); setView('editor'); }} /> : null}
@@ -501,7 +527,7 @@ export function App() {
         {view === 'packs' ? <PackManager catalog={bootstrap.catalog} registries={registries} registriesLoading={registriesLoading} activePackId={bootstrap.activePackId} installedPackIds={bootstrap.installedPackIds} busyPackId={busyPackId} onInspectArtifact={inspectPackArtifact} onImportArtifact={importPackArtifact} onInstallRegistry={(registryId, packId, version) => void installFromRegistry(registryId, packId, version)} onInstall={(id) => void mutatePack(id, 'install')} onActivate={(id) => void mutatePack(id, 'activate')} onUninstall={(id) => void mutatePack(id, 'uninstall')} /> : null}
       </div>
 
-      {notice ? <button className="toast" onClick={() => setNotice('')}>{notice}<span>Dismiss</span></button> : null}
+      {notice ? <button className="toast" role="status" aria-live="polite" onClick={() => setNotice('')}>{notice}<span>Dismiss</span></button> : null}
     </div>
   );
 }

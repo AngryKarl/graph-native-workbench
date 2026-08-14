@@ -1,6 +1,6 @@
 # Graph Workbench
 
-**Build governed AI workflows that remember why every decision was made.**
+**Govern a software change from issue to release—and preserve why it was approved.**
 
 [![CI](https://img.shields.io/github/actions/workflow/status/AngryKarl/graph-workbench/ci.yml?branch=main&label=CI)](https://github.com/AngryKarl/graph-workbench/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/graph-workbench)](https://www.npmjs.com/package/graph-workbench)
@@ -11,14 +11,65 @@
 [简体中文](README.zh-CN.md) · [Pack Gallery](docs/PACK_GALLERY.md) · [Why two graphs?](docs/WHY_TWO_GRAPHS.md) · [Roadmap](ROADMAP.md)
 
 Graph Workbench is an open-source, graph-native workbench for complex industry
-work. It turns an SOP into an executable graph of **Agents, functions, tools,
-human decisions and recovery paths**, then projects approved work into a durable
-**organizational context graph** of evidence, decisions, artifacts and provenance.
+work. Its flagship journey turns a software issue into a governed release through
+parallel verification, accountable human gates, recovery paths and a portable
+release record. The same runtime can install complete operating models as
+**Industry Packs**.
 
-Package the complete operating model—ontology, roles, tools, workflows, quality
-rules, fixtures and deliverables—as an installable **Industry Pack**.
+Requires Node.js 24+.
 
-![A Robotics and Fleet Operations run paused at an accountable safety decision](docs/assets/product-journey-approval.png)
+```bash
+npx graph-workbench
+```
+
+No account, database or model key is required. A fresh workspace opens
+**Professional Software Delivery** with the **Standard feature release** fixture
+ready. Follow the 60-second guided run, approve the code-owner and release-manager
+gates, inspect the artifact under **Outcome**, then select **Explore why** for its
+connected context.
+
+![Graph Workbench opens on a readable Software Delivery workflow with a guided sample run](docs/assets/software-delivery-workbench.png)
+
+### One run, two connected graphs
+
+The **execution graph** coordinates Agents, deterministic functions, typed tools,
+human decisions and recovery. Once approved, the **context graph** preserves the
+work item, change, verification evidence, decisions, release and provenance as
+durable organizational context.
+
+Context is also executable input, not just history. The bundled follow-up flow
+reads the approved release created by Run A, uses its object ID, version and
+source run while evaluating Run B's deployment health, then links the new
+deployment observation back to that release.
+
+![Run B reuses the approved release context created by Run A](docs/assets/software-delivery-context-reuse.png)
+
+```text
+Issue → parallel checks → accountable approvals → release artifact
+  └──────────────── evidence, decisions and provenance ────────────────→ context
+```
+
+The bundled zero-key adapters are deterministic reference implementations. They
+make every standard Pack executable without credentials; production teams replace
+them with reviewed connectors to systems such as GitHub, CI/CD and observability
+while keeping the same Pack contracts and governance path.
+
+To run a terminal-only smoke test instead:
+
+```bash
+npx graph-workbench demo
+```
+
+The public `0.5.0` alpha includes the six-Pack catalog and Pack system maps. To
+work from source:
+
+```bash
+git clone https://github.com/AngryKarl/graph-workbench.git
+cd graph-workbench
+corepack enable
+pnpm install
+pnpm workbench
+```
 
 ## What makes it different
 
@@ -34,6 +85,8 @@ that performs the work to the graph that preserves what the organization learned
 
 - **Execution graph + context graph** — coordinate work and retain its evidence,
   provenance, versions, decisions and reusable artifacts.
+- **Cross-run context reuse** — typed read-only queries let a later node use
+  approved objects and relations from prior runs while preserving their source.
 - **Real governance** — role-owned human gates, tool-risk approvals, retries,
   durable checkpoints, escalation, compensation and integrity-checked audit bundles.
 - **Installable Industry Packs** — ship domain semantics without forking the
@@ -41,32 +94,6 @@ that performs the work to the graph that preserves what the organization learned
 - **Provider-neutral Agents** — use the zero-key deterministic runtime or connect
   OpenAI, Anthropic, Gemini, DeepSeek, Qwen, Kimi, Grok, Mistral, Groq,
   OpenRouter, Ollama or an OpenAI-compatible endpoint.
-
-## Quick start
-
-Requires Node.js 24+. No account, database or model key is required.
-
-```bash
-npx graph-workbench
-```
-
-The Workbench opens in your browser and stores everything locally under
-`.graph-workbench`. To run the zero-key terminal demo instead:
-
-```bash
-npx graph-workbench demo
-```
-
-The `0.4.1` public alpha includes the complete six-Pack catalog and Pack system
-map. To work from source:
-
-```bash
-git clone https://github.com/AngryKarl/graph-workbench.git
-cd graph-workbench
-corepack enable
-pnpm install
-pnpm workbench
-```
 
 ## Create your first Industry Pack
 
@@ -82,22 +109,22 @@ The generated Pack already contains an executable graph, a real handler, a
 zero-key fixture, a deliverable and a context projector. No repository clone
 or model key is required.
 
-## One run becomes reusable organizational context
+## The same governed loop across industries
 
-The screenshots below come from the real Robotics and Fleet Operations Pack:
-parallel robot bidding, Agent allocation, resource reservation, an accountable
-safety gate, external dispatch, a portable artifact and a typed context graph.
+The screenshots below follow the flagship Software Delivery journey from an
+accountable code-owner decision to a portable release record and the exact
+organizational context that explains why it was approved.
 
 | Human decision | Portable deliverable | Durable context graph |
 | --- | --- | --- |
-| ![Safety-supervisor approval](docs/assets/product-journey-approval.png) | ![SHA-256-bound fleet dispatch artifact](docs/assets/product-journey-output.png) | ![Fleet objects, relations and provenance](docs/assets/product-journey-context.png) |
+| ![Code-owner review packet](docs/assets/software-delivery-review.png) | ![SHA-256-bound release readiness record](docs/assets/software-delivery-outcome.png) | ![Release objects, direct relations and provenance](docs/assets/software-delivery-context.png) |
 
 ## Six executable industry Packs
 
-Every standard Pack includes real handlers, typed tools, success and rejection
-fixtures, recovery behavior, deliverables and a connected context projection.
-They run without external credentials and keep specialist execution authority
-outside Graph Workbench.
+Every standard Pack includes executable reference handlers, typed tools, success
+and rejection fixtures, recovery behavior, deliverables and a connected context
+projection. They run without external credentials. Their bundled adapters model
+the integration boundary; specialist systems retain production execution authority.
 
 ![Six standard Industry Packs in the Workbench](docs/assets/reference-packs.png)
 

@@ -26,8 +26,10 @@ test('moves a node continuously and persists its final position', async ({ page 
   });
 
   for (let index = 1; index < samples.length; index += 1) {
-    expect(samples[index]!.x).toBeGreaterThan(samples[index - 1]!.x);
-    expect(samples[index]!.y).toBeLessThan(samples[index - 1]!.y);
+    expect(samples[index]!.x).toBeGreaterThanOrEqual(samples[index - 1]!.x);
+    // React Flow applies pointer updates on animation frames, so one sample may
+    // briefly trail the pointer without indicating a visible drag reversal.
+    expect(samples[index]!.y).toBeLessThanOrEqual(samples[index - 1]!.y + 10);
   }
   const final = samples.at(-1)!;
   expect(final.x - before.x).toBeGreaterThanOrEqual(100);
@@ -51,7 +53,7 @@ test('moves a node continuously and persists its final position', async ({ page 
   expect(persistedFlowPosition.y).toBeCloseTo(finalFlowPosition.y, 3);
 });
 
-test('runs, approves and preserves the default Industry Pack in a fresh Workbench', async ({ page }) => {
+test('guides a fresh Workbench from sample run to outcome and context', async ({ page }) => {
   const browserErrors: string[] = [];
   page.on('console', (message) => {
     if (message.type() === 'error') browserErrors.push(message.text());
@@ -61,21 +63,47 @@ test('runs, approves and preserves the default Industry Pack in a fresh Workbenc
   await page.goto('/');
   await expect(page).toHaveTitle('Graph Workbench');
   await expect(page.getByLabel('Graph Workbench')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Run graph' })).toBeEnabled();
+  await expect(page.getByText('60-second guided run')).toBeVisible();
+  await expect(page.getByText('See exactly why a change is safe to release.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Run sample' }).first()).toBeEnabled();
+  const inspectorHandle = page.locator('.canvas-inspector-toggle');
+  const journeyAction = page.locator('.first-run-journey .journey-action');
+  const initialHandleBox = await inspectorHandle.boundingBox();
+  const initialActionBox = await journeyAction.boundingBox();
+  expect(initialHandleBox).not.toBeNull();
+  expect(initialActionBox).not.toBeNull();
+  expect((initialHandleBox?.y ?? 0) >= (initialActionBox?.y ?? 0) + (initialActionBox?.height ?? 0)
+    || (initialActionBox?.y ?? 0) >= (initialHandleBox?.y ?? 0) + (initialHandleBox?.height ?? 0)).toBe(true);
 
-  await page.getByRole('button', { name: 'Run graph' }).click();
-  await expect(page.getByText('Human decision required')).toBeVisible();
-  await expect(page.getByText('Assigned to Design reviewer. Approving as Local user.')).toBeVisible();
+  await page.getByRole('button', { name: 'Run sample' }).first().click();
+  await expect(page.getByText('Review packet', { exact: true })).toBeVisible();
+  await expect(page.getByText('Assigned to Code owner. Reviewing as Local user.')).toBeVisible();
   await page.getByRole('button', { name: 'Approve & resume' }).click();
-  await expect(page.getByText(/completed · \d+ events/)).toBeVisible();
+  await expect(page.getByText('Assigned to Release manager. Reviewing as Local user.')).toBeVisible();
+  await page.getByRole('button', { name: 'Approve & resume' }).click();
+  await expect(page.getByText('Run outcome', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Release readiness record/ })).toBeVisible();
+  await expect(page.getByText(/evidence records · SHA-256 bound/)).toBeVisible();
+  const outcomeHandleBox = await inspectorHandle.boundingBox();
+  const outcomeActionBox = await journeyAction.boundingBox();
+  expect((outcomeHandleBox?.y ?? 0) >= (outcomeActionBox?.y ?? 0) + (outcomeActionBox?.height ?? 0)
+    || (outcomeActionBox?.y ?? 0) >= (outcomeHandleBox?.y ?? 0) + (outcomeHandleBox?.height ?? 0)).toBe(true);
 
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Expand console' })).toBeVisible();
-  await expect(page.locator('.console-body')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Collapse console' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Release readiness record/ })).toBeVisible();
   await page.locator('.app-nav button[title="Context"]').click();
   await expect(page.getByRole('heading', { name: 'Context graph' })).toBeVisible();
   await expect(page.getByText('Objects', { exact: true })).toBeVisible();
-  await expect(page.getByText('Relations', { exact: true })).toBeVisible();
+  await expect(page.getByText('Neighborhood', { exact: true })).toBeVisible();
+
+  await page.locator('.app-nav button[title="Editor"]').click();
+  await page.getByLabel('Active workflow').selectOption('software_delivery.observe_deployment');
+  await page.getByRole('button', { name: 'Run sample' }).first().click();
+  await expect(page.getByRole('heading', { name: /Deployment observation/ })).toBeVisible();
+  await expect(page.getByText(/Prior approved release context: reused/)).toBeVisible();
+  await page.getByRole('button', { name: 'View context' }).click();
+  await expect(page.getByText('2 approved runs', { exact: true })).toBeVisible();
 
   await page.locator('.app-nav button[title="Packs"]').click();
   const customerSuccessCard = page.getByRole('article').filter({ hasText: 'Customer Success Renewal Pack' });
@@ -83,22 +111,25 @@ test('runs, approves and preserves the default Industry Pack in a fresh Workbenc
   await expect(page.getByRole('combobox').first()).toHaveValue('customer_success');
   await expect(page.getByText('Customer Success Renewal Pack installed and opened.')).toBeVisible();
   await expect(page.getByLabel('Active workflow')).toHaveValue('customer_success.renewal_workflow');
-  await page.getByRole('button', { name: 'Run graph' }).click();
-  await expect(page.getByText('Human decision required')).toBeVisible();
-  await expect(page.getByText('Assigned to Revenue owner. Approving as Local user.')).toBeVisible();
+  await page.getByRole('button', { name: /Run (sample|again)/ }).first().click();
+  await expect(page.getByText('Assigned to Revenue owner. Reviewing as Local user.')).toBeVisible();
   await page.getByRole('button', { name: 'Approve & resume' }).click();
-  await page.getByRole('button', { name: 'output', exact: true }).click();
-  await expect(page.getByText('1 portable artifact', { exact: true })).toBeVisible();
+  await expect(page.getByText('1 completed artifact', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Renewal success plan — Northstar Logistics' })).toBeVisible();
   await page.locator('.app-nav button[title="Context"]').click();
-  await expect(page.getByRole('heading', { name: 'Northstar Logistics' })).toBeVisible();
-  await expect(page.getByText('2 approved runs', { exact: true })).toBeVisible();
-  await expect(page.locator('.relation-list').getByText('decision_governs', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Renewal success plan — Northstar Logistics' })).toBeVisible();
+  await expect(page.getByText('3 approved runs', { exact: true })).toBeVisible();
+  await expect(page.getByText('Why it is connected', { exact: true })).toBeVisible();
+  await expect(page.locator('.relation-list article').first()).toBeVisible();
   expect(browserErrors).toEqual([]);
 });
 
 test('manages a team identity and attributes its approval', async ({ page }) => {
   await page.goto('/');
+  await page.locator('.app-nav button[title="Packs"]').click();
+  const customerSuccessCard = page.getByRole('article').filter({ hasText: 'Customer Success Renewal Pack' });
+  const customerPackAction = customerSuccessCard.getByRole('button', { name: /Install Pack|Open Pack/ });
+  if (await customerPackAction.count()) await customerPackAction.click();
   await page.locator('.app-nav button[title="Team"]').click();
   await expect(page.getByText('Team identities', { exact: true })).toBeVisible();
 
@@ -112,8 +143,8 @@ test('manages a team identity and attributes its approval', async ({ page }) => 
   await page.getByLabel('Active identity').selectOption('member.revenue');
   await expect(page.getByText('Active identity changed to Revenue reviewer.')).toBeVisible();
   await page.locator('.app-nav button[title="Editor"]').click();
-  await page.getByRole('button', { name: 'Run graph' }).click();
-  await expect(page.getByText('Assigned to Revenue owner. Approving as Revenue reviewer.')).toBeVisible();
+  await page.getByRole('button', { name: /Run (sample|again)/ }).first().click();
+  await expect(page.getByText('Assigned to Revenue owner. Reviewing as Revenue reviewer.')).toBeVisible();
   await page.getByRole('button', { name: 'Approve & resume' }).click();
   await expect(page.getByText(/completed · \d+ events/)).toBeVisible();
 });
@@ -152,4 +183,51 @@ test('accepts webhook, schedule and typed-event ingress through the Workbench AP
   });
   expect(schedule.ok()).toBe(true);
   expect(await schedule.json()).toMatchObject({ status: 'completed', state: { scan_attempt: 2 } });
+});
+
+test('keeps the run outcome and context readable at 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.request.post('/api/actors/local.user/activate');
+  await page.request.post('/api/packs/software_delivery/activate');
+  await page.goto('/');
+
+  await expect(page.getByRole('button', { name: /Run (sample|again)/ }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /inspector/i })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+  await page.getByLabel('Active workflow').selectOption('software_delivery.change_to_release');
+  await page.getByRole('button', { name: /Run (sample|again)/ }).first().click();
+  await expect(page.getByText('Review packet', { exact: true })).toBeVisible();
+  await expect(page.getByText('Assigned to Code owner. Reviewing as Local user.')).toBeVisible();
+  await expect(page.getByText('Recommendation', { exact: true })).toBeVisible();
+  await expect(page.getByText('Checks', { exact: true })).toBeVisible();
+  await expect(page.getByText('Risks', { exact: true })).toBeVisible();
+  await expect(page.getByText('Evidence', { exact: true })).toBeVisible();
+
+  const exportAudit = page.getByRole('button', { name: 'Export audit' });
+  const collapseConsole = page.getByRole('button', { name: 'Collapse console' });
+  await expect(exportAudit).toBeVisible();
+  await expect(collapseConsole).toBeVisible();
+  const exportBox = await exportAudit.boundingBox();
+  const collapseBox = await collapseConsole.boundingBox();
+  expect(exportBox).not.toBeNull();
+  expect(collapseBox).not.toBeNull();
+  expect(Math.abs((exportBox?.y ?? 0) - (collapseBox?.y ?? 0))).toBeLessThanOrEqual(2);
+  expect((collapseBox?.x ?? 0) + (collapseBox?.width ?? 0)).toBeLessThanOrEqual(390);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+  await page.getByRole('button', { name: 'Approve & resume' }).click();
+  await expect(page.getByText('Assigned to Release manager. Reviewing as Local user.')).toBeVisible();
+  await page.getByRole('button', { name: 'Approve & resume' }).click();
+  await expect(page.getByText('Run outcome', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Release readiness record/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'View context' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+  await page.getByRole('button', { name: 'View context' }).click();
+  await expect(page.getByRole('heading', { name: 'Context graph' })).toBeVisible();
+  await expect(page.getByLabel('Filter context objects')).toBeVisible();
+  await expect(page.getByText('Key facts', { exact: true })).toBeVisible();
+  await expect(page.getByText('Provenance chain', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

@@ -1,6 +1,6 @@
 # Graph Workbench
 
-**Build governed AI workflows that remember why every decision was made.**
+**Govern a software change from issue to release—and preserve why it was approved.**
 
 Graph Workbench connects an execution graph of Agents, functions, tools and
 human decisions to a durable organizational context graph of evidence,
@@ -29,6 +29,16 @@ npx graph-workbench workbench --port 4311 --no-open
 No account, database or model key is required. The default deterministic
 runtime produces a visible result immediately; provider-neutral Agents can
 later connect to hosted or local models.
+
+A fresh workspace opens **Professional Software Delivery** with a guided,
+zero-key sample. Run parallel verification, approve the code-owner and
+release-manager gates, inspect the release readiness record, then follow its
+evidence and provenance in the Context graph.
+
+The follow-up **Deployment health and recovery** workflow demonstrates the
+closed loop: Run B queries the approved Release created by Run A, records its
+object ID, version and source run, and links the new deployment observation
+back to it.
 
 ## See the graph runtime work
 

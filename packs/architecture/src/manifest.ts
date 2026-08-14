@@ -2,7 +2,7 @@ import type { IndustryPackManifest } from '@graph-workbench/contracts';
 
 export const architecturePack: IndustryPackManifest = {
   id: 'architecture',
-  version: '0.4.1',
+  version: '0.5.0',
   name: 'Architecture Concept Design Pack',
   description:
     'An evidence-backed workflow that turns project requirements, site context, constraints, and source material into reviewed concept directions and a traceable design brief.',

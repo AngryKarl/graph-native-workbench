@@ -1,6 +1,6 @@
 # Graph Workbench
 
-**构建可治理、可追溯，而且能记住每一次决策依据的 AI 工作流。**
+**把软件变更从 Issue 治理到发布，并保留“为什么可以批准”的完整依据。**
 
 [![CI](https://img.shields.io/github/actions/workflow/status/AngryKarl/graph-workbench/ci.yml?branch=main&label=CI)](https://github.com/AngryKarl/graph-workbench/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/graph-workbench)](https://www.npmjs.com/package/graph-workbench)
@@ -10,15 +10,58 @@
 
 [English](README.md) · [Pack 图集](docs/PACK_GALLERY.md) · [为什么需要两张图？](docs/WHY_TWO_GRAPHS.md) · [路线图](ROADMAP.md)
 
-Graph Workbench 是一个面向复杂行业工作的开源 Graph-native Workbench。
-它把企业 SOP 变成由 **Agent、函数、工具、人工决策和恢复路径**组成的真实
-执行图，再把经过批准的工作投影为包含证据、决策、交付物和来源信息的持久化
-**组织上下文图**。
+Graph Workbench 是一个面向复杂行业工作的开源 Graph-native Workbench。它的旗舰
+体验把软件 Issue 变成经过并行验证、责任人审批和恢复路径治理的发布，并生成可移植
+发布记录。同一套运行时可以通过 **Industry Pack** 安装完整的行业工作框架。
 
-企业可以把完整的工作框架——领域对象、角色、工具、工作流、质量标准、样例和
-交付物——封装成可安装的 **Industry Pack**。
+需要 Node.js 24+：
 
-![机器人与车队运营流程暂停在安全负责人审批节点](docs/assets/product-journey-approval.png)
+```bash
+npx graph-workbench
+```
+
+不需要账号、数据库或模型密钥。全新工作区会直接打开
+**Professional Software Delivery**，并准备好 **Standard feature release** 样例。
+跟随 60 秒引导运行，依次批准代码负责人和发布负责人两个关卡，在 **Outcome**
+查看交付物，然后选择 **Explore why** 查看相互连接的组织上下文。
+
+![Graph Workbench 默认打开可读的软件交付流程与引导示例](docs/assets/software-delivery-workbench.png)
+
+### 一次运行，两张相互连接的图
+
+**执行图**协调 Agent、确定性函数、类型化工具、人工决策和恢复路径；工作经过批准后，
+**上下文图**会持久保存工作项、变更、验证证据、决策、发布和来源信息。
+
+上下文不只是历史记录，也可以成为后续执行的输入。内置的后续流程会让 Run B
+读取 Run A 生成的已批准发布对象，使用其对象 ID、版本和来源运行评估部署健康，
+再把新的部署观测连接回该发布。
+
+![Run B 复用 Run A 生成的已批准发布上下文](docs/assets/software-delivery-context-reuse.png)
+
+```text
+Issue → 并行检查 → 责任人审批 → 发布交付物
+  └────────────── 证据、决策和来源 ──────────────→ 组织上下文
+```
+
+内置的零密钥适配器是确定性的参考实现，让所有标准 Pack 无需凭证即可运行。生产团队
+需要用经过审查的 GitHub、CI/CD、可观测性等系统连接器替换这些参考适配器，同时保留
+相同的 Pack 契约和治理路径。
+
+如果只想在终端运行一次冒烟体验：
+
+```bash
+npx graph-workbench demo
+```
+
+`0.5.0` 公开 Alpha 已包含六行业 Pack 目录和 Pack System Map。也可以从源码运行：
+
+```bash
+git clone https://github.com/AngryKarl/graph-workbench.git
+cd graph-workbench
+corepack enable
+pnpm install
+pnpm workbench
+```
 
 ## 它真正不同在哪里
 
@@ -33,36 +76,13 @@ Graph Workbench 是一个面向复杂行业工作的开源 Graph-native Workbenc
 | 能否导出一张流程图？ | 能否安装一整套行业工作框架？ |
 
 - **执行图 + 上下文图**：既协调工作，也保存证据、来源、版本、决策和可复用交付物。
+- **跨运行上下文复用**：类型化只读查询允许后续节点使用此前获批的对象与关系，
+  同时保留来源运行。
 - **真实治理**：角色负责的人工门、工具风险审批、重试、持久化检查点、升级、补偿和完整性审计包。
 - **可安装 Industry Pack**：行业语义不需要侵入内核，也不替代专业业务系统。
 - **模型中立 Agent**：可以使用零密钥确定性运行时，也可以连接 OpenAI、Anthropic、
   Gemini、DeepSeek、通义千问、Kimi、Grok、Mistral、Groq、OpenRouter、Ollama
   或 OpenAI-compatible 端点。
-
-## 快速体验
-
-需要 Node.js 24+，不需要账号、数据库或模型密钥：
-
-```bash
-npx graph-workbench
-```
-
-Workbench 会自动在浏览器中打开，并把数据保存在本地 `.graph-workbench`。
-如果只想在终端运行零密钥 Demo：
-
-```bash
-npx graph-workbench demo
-```
-
-`0.4.1` 公开 Alpha 已包含完整六行业 Pack 和 Pack System Map。也可以从源码运行：
-
-```bash
-git clone https://github.com/AngryKarl/graph-workbench.git
-cd graph-workbench
-corepack enable
-pnpm install
-pnpm workbench
-```
 
 ## 创建你的第一个 Industry Pack
 
@@ -77,19 +97,20 @@ npx graph-workbench pack run packs/claims_operations/src/index.mjs --set topic=c
 生成结果已经包含可执行图、真实处理器、零密钥样例、交付物和上下文投影器，
 不需要克隆本仓库，也不需要模型密钥。
 
-## 一次运行，变成可复用的组织上下文
+## 同一个治理闭环，适用于不同行业
 
-下面三张图来自真实的机器人与车队运营 Pack：并行机器人竞价、Agent 分配、
-资源预留、安全负责人审批、外部调度、可移植交付物和类型化上下文图。
+下面三张图沿着旗舰软件交付旅程展开：从代码负责人作出可追责决策，
+到生成可移植的发布记录，再到查看解释“为什么获批”的组织上下文。
 
 | 人工决策 | 可移植交付物 | 持久化上下文图 |
 | --- | --- | --- |
-| ![安全负责人审批](docs/assets/product-journey-approval.png) | ![受 SHA-256 约束的调度交付物](docs/assets/product-journey-output.png) | ![车队对象、关系和来源信息](docs/assets/product-journey-context.png) |
+| ![代码负责人审查包](docs/assets/software-delivery-review.png) | ![受 SHA-256 约束的发布就绪记录](docs/assets/software-delivery-outcome.png) | ![发布对象、直接关系和来源信息](docs/assets/software-delivery-context.png) |
 
-## 六个真实可运行的行业 Pack
+## 六个可执行的行业 Pack
 
-每个标准 Pack 都包含真实处理器、类型化工具、成功与拒绝样例、恢复路径、交付物
-和相互连接的上下文投影。所有 Pack 都可以零密钥运行，同时把专业系统的执行权留在外部。
+每个标准 Pack 都包含可执行的参考处理器、类型化工具、成功与拒绝样例、恢复路径、
+交付物和相互连接的上下文投影。所有 Pack 都可以零密钥运行；内置适配器负责示范
+集成边界，生产执行权仍由专业系统掌握。
 
 ![Workbench 中的六个标准 Industry Pack](docs/assets/reference-packs.png)
 

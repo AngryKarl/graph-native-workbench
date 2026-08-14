@@ -1,13 +1,42 @@
 name: Bug report
-description: Report reproducible incorrect behavior
+description: Report reproducible incorrect behavior in Graph Workbench or a first-party Pack
 title: "[Bug]: "
-labels: [bug]
+labels:
+  - bug
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Graph Workbench. Remove secrets and proprietary data before submitting logs or artifacts.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Workbench UI
+        - CLI or npm distribution
+        - Runtime, approvals or recovery
+        - Context graph or persistence
+        - Pack SDK, packaging or Registry
+        - First-party Industry Pack
+        - Documentation
+        - Not sure
+    validations:
+      required: true
   - type: textarea
     id: summary
     attributes:
       label: What happened?
-      description: Include the smallest graph or Pack that reproduces the behavior.
+      description: Describe the incorrect behavior and its user impact.
+      placeholder: I expected the run to pause at the release gate, but it...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the smallest graph, Pack, fixture and exact commands needed to reproduce the problem.
+      render: shell
     validations:
       required: true
   - type: textarea
@@ -19,14 +48,29 @@ body:
   - type: textarea
     id: trace
     attributes:
-      label: Event trace and error output
+      label: Event trace or error output
+      description: Paste the relevant event sequence or error. Redact tokens, credentials and private business data.
       render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Graph Workbench version
+      placeholder: 0.4.1 or commit SHA
     validations:
       required: true
   - type: input
     id: environment
     attributes:
       label: Environment
-      placeholder: Windows 11, Node 24, pnpm 11
+      placeholder: Windows 11, Node 24.5.0, npm 11
     validations:
       required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched existing issues for the same behavior.
+          required: true
+        - label: I removed secrets and unnecessary personal or proprietary data.
+          required: true

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, Database, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { AlertCircle, Database, ShieldCheck, SlidersHorizontal, X } from 'lucide-react';
 import type {
   GraphNode,
   InspectorTab,
@@ -158,23 +158,23 @@ function PolicyInspector({ pack }: { pack: PackDescription }) {
   );
 }
 
-export function Inspector({ tab, onTab, node, pack, input, open, onToggle, onInput, onUpdateNode, onSelectFixture }: {
+export function Inspector({ tab, onTab, node, pack, input, open, onClose, onInput, onUpdateNode, onSelectFixture }: {
   tab: InspectorTab;
   onTab: (tab: InspectorTab) => void;
   node: GraphNode | null;
   pack: PackDescription;
   input: Record<string, unknown>;
   open: boolean;
-  onToggle: () => void;
+  onClose: () => void;
   onInput: (input: Record<string, unknown>) => void;
   onUpdateNode: (node: GraphNode) => void;
   onSelectFixture: (fixtureId: string) => void;
 }) {
   return (
-    <aside className={`editor-inspector ${open ? 'mobile-open' : ''}`}>
-      <button className="inspector-handle" onClick={onToggle} aria-label={open ? 'Close inspector' : 'Open inspector'}><SlidersHorizontal size={16} /></button>
+    <aside className={`editor-inspector ${open ? 'is-open mobile-open' : ''}`}>
       <div className="inspector-tabs">
         {(['node', 'input', 'policy'] as const).map((value) => <button key={value} className={tab === value ? 'active' : ''} onClick={() => onTab(value)}>{value}</button>)}
+        <button className="inspector-close" onClick={onClose} aria-label="Close inspector"><X size={15} /></button>
       </div>
       {tab === 'node' ? <NodeInspector node={node} pack={pack} onUpdate={onUpdateNode} /> : null}
       {tab === 'input' ? <InputInspector pack={pack} input={input} onChange={onInput} onSelectFixture={onSelectFixture} /> : null}

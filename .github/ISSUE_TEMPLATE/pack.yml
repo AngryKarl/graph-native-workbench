@@ -1,31 +1,76 @@
 name: Industry Pack proposal
-description: Propose a new vertical workflow or ontology
+description: Propose a repeatable industry workflow, its governance and connected context
 title: "[Pack]: "
-labels: [industry-pack]
+labels:
+  - enhancement
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Industry Packs own domain semantics. Generic execution mechanisms belong in the core only when credible workflows in more than one domain need them.
   - type: input
     id: industry
     attributes:
-      label: Industry or function
+      label: Industry or business function
+      placeholder: Insurance claims operations
+    validations:
+      required: true
+  - type: textarea
+    id: users
+    attributes:
+      label: Primary users and outcome
+      description: Who performs this work, and what useful result should the Pack produce?
     validations:
       required: true
   - type: textarea
     id: workflow
     attributes:
       label: Repeatable workflow
-      description: Describe the SOP, roles, inputs, quality gates and deliverable.
+      description: Describe the entry event, major steps, branches, waits and recovery path as a concrete SOP.
+      placeholder: Claim received -> evidence collection -> coverage review -> approval -> settlement record
     validations:
       required: true
   - type: textarea
-    id: ontology
+    id: governance
     attributes:
-      label: Core objects and relations
+      label: Roles, tools and human gates
+      description: Name the accountable roles, external systems and decisions that must not be delegated to an Agent.
     validations:
       required: true
   - type: textarea
-    id: evidence
+    id: context
+    attributes:
+      label: Context objects and relations
+      description: What approved objects, evidence, decisions and provenance should survive the run?
+    validations:
+      required: true
+  - type: textarea
+    id: deliverable
+    attributes:
+      label: Deliverable and zero-key fixture
+      description: Define the portable output and one deterministic fixture that proves a useful success, rejection or recovery path.
+    validations:
+      required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Specialist authority boundary
+      description: Which record or execution systems remain authoritative outside Graph Workbench?
+    validations:
+      required: true
+  - type: textarea
+    id: validation
     attributes:
       label: Real-world validation
-      description: Who performs this work and how will usefulness be evaluated?
+      description: What public reference or domain practitioner evidence supports this SOP, and how will usefulness be evaluated?
     validations:
       required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: This proposal contains no proprietary data or unverifiable compliance claim.
+          required: true
+        - label: I am willing to help review the domain workflow or its fixture.
+          required: false

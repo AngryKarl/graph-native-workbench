@@ -28,6 +28,14 @@ function healthSignals(value: unknown): Array<{ name: string; status: string; va
   return items(value);
 }
 
+function releaseContextLine(value: unknown): string {
+  const linked = object(value);
+  const sourceRunId = text(linked.source_run_id);
+  return linked.linked === true
+    ? `Prior approved release context: reused ${text(linked.release_id)} from approved run ${sourceRunId.slice(-8)}`
+    : 'Prior approved release: not found in the context graph';
+}
+
 export const softwareDeliveryHandlers: HandlerRegistry = {
   'software_delivery.normalize_intake': ({ state }) => ({
     intake: {
@@ -201,15 +209,26 @@ export const softwareDeliveryHandlers: HandlerRegistry = {
     rejection_reason: `Automated release quality gate failed for ${text(state.issue_id)}.`,
   }),
 
-  'software_delivery.assess_deployment': ({ state }) => {
+  'software_delivery.assess_deployment': async ({ state, context }) => {
     const signals = healthSignals(state.health_signals);
     const healthy = text(state.status) === 'succeeded'
       && signals.length > 0
       && signals.every((signal) => ['healthy', 'ok', 'passed'].includes(signal.status));
+    const releaseId = text(state.release_id);
+    const releases = await context?.queryObjects({ types: ['release'], statuses: ['confirmed'], currentOnly: true }) ?? [];
+    const linkedRelease = releases.find((candidate) => text(candidate.data.release_id) === releaseId);
     return {
       deployment_healthy: healthy,
+      release_context: linkedRelease ? {
+        linked: true,
+        object_id: linkedRelease.id,
+        version: linkedRelease.version,
+        release_id: releaseId,
+        source_run_id: linkedRelease.provenance.producedByRunId ?? '',
+        artifact_digest: text(linkedRelease.data.artifact_digest),
+      } : { linked: false, release_id: releaseId },
       observation_summary: {
-        release_id: text(state.release_id),
+        release_id: releaseId,
         deployment_id: text(state.deployment_id),
         environment: text(state.environment),
         status: text(state.status),
@@ -231,6 +250,7 @@ export const softwareDeliveryHandlers: HandlerRegistry = {
       `Environment: ${text(state.environment)}`,
       `Deployment: ${text(state.deployment_id)}`,
       `Artifact: ${text(state.artifact_digest)}`,
+      releaseContextLine(state.release_context),
       'Outcome: healthy',
       `Signals: ${healthSignals(state.health_signals).length}`,
     ].join('\n'),
@@ -243,6 +263,7 @@ export const softwareDeliveryHandlers: HandlerRegistry = {
       `Environment: ${text(state.environment)}`,
       `Deployment: ${text(state.deployment_id)}`,
       `Artifact: ${text(state.artifact_digest)}`,
+      releaseContextLine(state.release_context),
       `Outcome: unhealthy (${text(state.status)})`,
       `Rollback: ${state.rollback_completed === true ? 'completed' : 'not completed'}`,
       `Rollback evidence: ${text(state.rollback_reference)}`,

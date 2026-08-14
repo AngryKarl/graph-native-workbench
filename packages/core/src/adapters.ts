@@ -6,12 +6,15 @@ import type {
 } from '@graph-workbench/contracts';
 import type { GraphState } from './state.js';
 import type { CompiledGraph } from './compiler.js';
+import type { ContextQueryReader } from './context-query.js';
+import type { ContextGraphStore } from './context-store.js';
 
 export interface HandlerContext {
   readonly runId: string;
   readonly node: GraphNode;
   readonly state: Readonly<GraphState>;
   readonly signal: AbortSignal;
+  readonly context?: ContextQueryReader;
 }
 
 export type NodeHandler = (context: HandlerContext) => GraphState | Promise<GraphState>;
@@ -112,6 +115,7 @@ export interface RuntimeBindings {
   readonly pack?: IndustryPackManifest;
   readonly secrets?: SecretProvider;
   readonly authorizeTool?: ToolAuthorizer;
+  readonly contextStore?: ContextGraphStore;
   readonly subgraphs?: Readonly<Record<string, CompiledGraph>>;
   readonly clock?: () => Date;
 }

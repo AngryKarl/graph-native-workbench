@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { GraphDefinition, GraphNode } from '@graph-workbench/contracts';
-import { createAutomaticLayout, deriveStageBands, resolveRunDeliverable } from '../apps/workbench/src/client/graph-model.js';
+import {
+  createAutomaticLayout, deriveStageBands, graphFocusNeighborhood, initialGraphFocusNodeIds,
+  nodeAccessibleLabel, nodeRunStatus, resolveRunDeliverable, runFocusNodeIds,
+} from '../apps/workbench/src/client/graph-model.js';
 import type { RunSnapshot } from '../apps/workbench/src/client/types.js';
 
 function linearGraph(kinds: GraphNode['kind'][]): GraphDefinition {
@@ -31,6 +34,62 @@ function linearGraph(kinds: GraphNode['kind'][]): GraphDefinition {
 }
 
 describe('Workbench graph visual model', () => {
+  it('opens a long graph on its executable entry neighborhood instead of the entire overview', () => {
+    const graph = linearGraph([
+      'trigger', 'function', 'agent', 'function', 'router', 'human', 'function', 'map',
+    ]);
+
+    expect(initialGraphFocusNodeIds(graph)).toEqual(['node_0', 'node_1', 'node_2', 'node_3']);
+    expect(initialGraphFocusNodeIds(graph).length).toBeLessThan(graph.nodes.length);
+  });
+
+  it('keeps active run nodes and their immediate workflow context in focus', () => {
+    const graph = linearGraph(['trigger', 'function', 'agent', 'human', 'function', 'compensation']);
+    const run = {
+      runId: 'run-paused',
+      packId: 'visual_semantics',
+      graphId: graph.id,
+      status: 'paused',
+      state: {},
+      events: [
+        { runId: 'run-paused', seq: 1, type: 'node.started', timestamp: '2026-08-13T00:00:00.000Z', nodeId: 'node_3', detail: {} },
+        { runId: 'run-paused', seq: 2, type: 'human.requested', timestamp: '2026-08-13T00:00:01.000Z', nodeId: 'node_3', detail: {} },
+      ],
+    } satisfies RunSnapshot;
+
+    expect(nodeRunStatus(run, 'node_3')).toBe('waiting');
+    expect(runFocusNodeIds(graph, run)).toEqual(['node_3', 'node_2', 'node_4']);
+  });
+
+  it('prioritizes failure over concurrent waiting and running nodes', () => {
+    const graph = linearGraph(['trigger', 'agent', 'human', 'function']);
+    const run = {
+      runId: 'run-failed',
+      packId: 'visual_semantics',
+      graphId: graph.id,
+      status: 'failed',
+      state: {},
+      events: [
+        { runId: 'run-failed', seq: 1, type: 'node.started', timestamp: '2026-08-13T00:00:00.000Z', nodeId: 'node_1', detail: {} },
+        { runId: 'run-failed', seq: 2, type: 'tool.approval_requested', timestamp: '2026-08-13T00:00:01.000Z', nodeId: 'node_2', detail: {} },
+        { runId: 'run-failed', seq: 3, type: 'node.failed', timestamp: '2026-08-13T00:00:02.000Z', nodeId: 'node_3', detail: {} },
+      ],
+    } satisfies RunSnapshot;
+
+    expect(nodeRunStatus(run, 'node_2')).toBe('waiting');
+    expect(runFocusNodeIds(graph, run)).toEqual(['node_3', 'node_2']);
+  });
+
+  it('exposes node kind, label, status and description as one accessible name', () => {
+    const node = linearGraph(['agent']).nodes[0]!;
+    expect(nodeAccessibleLabel(node, 'running')).toBe('Agent node: agent 0. Status: running. Step 0.');
+  });
+
+  it('deduplicates anchors when deriving a bounded focus neighborhood', () => {
+    const graph = linearGraph(['trigger', 'function', 'agent', 'human']);
+    expect(graphFocusNeighborhood(graph, ['node_1', 'node_1'], 3)).toEqual(['node_1', 'node_0', 'node_2']);
+  });
+
   it('compresses a long linear workflow into readable stage columns', () => {
     const graph = linearGraph([
       'trigger', 'function', 'agent', 'function', 'router', 'human',

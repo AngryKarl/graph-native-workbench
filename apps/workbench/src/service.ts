@@ -460,6 +460,7 @@ export class WorkbenchService {
       agents: this.models.agents(workspace.modelProvider, graph),
       ...(runtime.tools ? { tools: runtime.tools } : {}),
       pack: manifest,
+      contextStore: this.contextStore,
       authorizeTool: this.authorizeTool,
     }).run(input, { actor });
     const session = await this.toSession(packId, graph, result, []);
@@ -492,6 +493,7 @@ export class WorkbenchService {
       agents: this.models.agents(this.store.snapshot().modelProvider, existing.graph),
       ...(runtime.tools ? { tools: runtime.tools } : {}),
       pack: manifest,
+      contextStore: this.contextStore,
       authorizeTool: this.authorizeTool,
     }).resume(existing.checkpoint, approval.kind === 'tool'
       ? {
@@ -527,6 +529,7 @@ export class WorkbenchService {
       agents: this.models.agents(this.store.snapshot().modelProvider, existing.graph),
       ...(runtime.tools ? { tools: runtime.tools } : {}),
       pack: manifest,
+      contextStore: this.contextStore,
       authorizeTool: this.authorizeTool,
     }).resume(existing.checkpoint, {
       actor,
@@ -703,12 +706,23 @@ export class WorkbenchService {
     );
     if (result.status === 'completed' && hasDeliverable && runtime.projector) {
       const store = new InMemoryContextGraphStore(runtime.manifest);
-      await runtime.projector(store, { ...result, events });
-      context = {
-        objects: await store.listObjects(),
-        relations: await store.listRelations(),
-      };
       await this.ensureContextHydrated();
+      const authorityObjects = [...new Map(Object.values(this.store.snapshot().runs)
+        .filter((session) => session.packId === packId && session.context)
+        .flatMap((session) => session.context?.objects ?? [])
+        .map((object) => [`${object.id}\u0000${object.version}`, object])).values()];
+      for (const object of authorityObjects) await store.appendObject(object);
+      const seededObjectKeys = new Set(authorityObjects.map((object) => `${object.id}\u0000${object.version}`));
+      await runtime.projector(store, { ...result, events });
+      const projectedObjects = await store.listObjects();
+      const projectedRelations = await store.listRelations();
+      const newRelations = projectedRelations.filter((relation) => relation.provenance.producedByRunId === result.runId);
+      const referencedObjectIds = new Set(newRelations.flatMap((relation) => [relation.sourceId, relation.targetId]));
+      context = {
+        objects: projectedObjects.filter((object) =>
+          !seededObjectKeys.has(`${object.id}\u0000${object.version}`) || referencedObjectIds.has(object.id)),
+        relations: newRelations,
+      };
       await this.appendContext(context);
     }
     return {

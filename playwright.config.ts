@@ -1,7 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
 const workspace = resolve('.graph-workbench/e2e');
+const runId = `${process.pid}-${randomUUID()}`;
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -22,10 +24,10 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 30_000,
     env: {
-      GRAPH_WORKBENCH_DATA: resolve(workspace, `workbench-${process.pid}.json`),
-      GRAPH_WORKBENCH_PACKS: resolve(workspace, `packs-${process.pid}`),
-      GRAPH_WORKBENCH_TRUST: resolve(workspace, `trust-${process.pid}.json`),
-      GRAPH_WORKBENCH_POLICY: resolve(workspace, `policy-${process.pid}.json`),
+      GRAPH_WORKBENCH_DATA: resolve(workspace, `workbench-${runId}.json`),
+      GRAPH_WORKBENCH_PACKS: resolve(workspace, `packs-${runId}`),
+      GRAPH_WORKBENCH_TRUST: resolve(workspace, `trust-${runId}.json`),
+      GRAPH_WORKBENCH_POLICY: resolve(workspace, `policy-${runId}.json`),
     },
   },
 });
