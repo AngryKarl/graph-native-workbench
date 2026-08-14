@@ -42,7 +42,7 @@
     "@graph-workbench/pack-software-delivery": "workspace:*",
     "@graph-workbench/pack-sdk": "workspace:*",
     "@playwright/test": "^1.62.1",
-    "@types/node": "^24.10.0",
+    "@types/node": "^26.2.0",
     "@types/pg": "^8.20.4",
     "concurrently": "^9.2.1",
     "esbuild": "^0.25.0",
