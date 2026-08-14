@@ -2,7 +2,7 @@ import type { IndustryPackManifest } from '@graph-workbench/contracts';
 
 export const cybersecurityResponsePack: IndustryPackManifest = {
   id: 'cybersecurity_response',
-  version: '0.4.1',
+  version: '0.5.0',
   name: 'Cybersecurity Incident Response Pack',
   description:
     'A governed signal-to-recovery workflow for attributable evidence, incident declaration, approved containment, verified recovery and lessons learned.',

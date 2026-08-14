@@ -7,6 +7,7 @@ import {
   Handle,
   MarkerType,
   MiniMap,
+  Panel,
   Position,
   ReactFlow,
   useNodesState,
@@ -23,7 +24,10 @@ import {
   Bot, Box, Braces, CircleDot, Clock3, GitFork, GitMerge, Hourglass, ListTree,
   Network, Repeat2, ShieldAlert, Undo2, UserRoundCheck, Workflow, Wrench,
 } from 'lucide-react';
-import { createAutomaticLayout, deriveStageBands, nextEdgeId, nextNodeId, nodeKindLabel, nodeRunStatus } from './graph-model.js';
+import {
+  createAutomaticLayout, deriveStageBands, graphFocusNeighborhood, initialGraphFocusNodeIds,
+  nextEdgeId, nextNodeId, nodeAccessibleLabel, nodeKindLabel, nodeRunStatus, runFocusNodeIds,
+} from './graph-model.js';
 import type { GraphDefinition, GraphNode, GraphPosition, PackDescription, RunSnapshot } from './types.js';
 
 const kindIcon = {
@@ -120,6 +124,12 @@ function NodeBadges({ data }: { data: WorkflowNodeData }) {
   </div>;
 }
 
+function NodeRunStatus({ status }: { status: WorkflowNodeData['status'] }) {
+  if (status === 'idle') return null;
+  const label = status === 'complete' ? 'Complete' : status[0]!.toUpperCase() + status.slice(1);
+  return <span className={`node-run-status status-${status}`} aria-hidden="true"><i className={`node-status status-${status}`} />{label}</span>;
+}
+
 const WorkflowNode = memo(function WorkflowNode({ data }: { data: WorkflowNodeData }) {
   const { zoom } = useViewport();
   const Icon = kindIcon[data.definition.kind];
@@ -130,6 +140,7 @@ const WorkflowNode = memo(function WorkflowNode({ data }: { data: WorkflowNodeDa
     return <div className={commonClass} title={data.definition.description}>
       {nodeHandles()}
       <div className="router-shape"><div><Icon size={16} /><strong>{data.definition.label}</strong></div></div>
+      <NodeRunStatus status={data.status} />
     </div>;
   }
 
@@ -139,6 +150,7 @@ const WorkflowNode = memo(function WorkflowNode({ data }: { data: WorkflowNodeDa
       <div className="join-bar"><Icon size={17} /></div>
       <strong>{data.definition.label}</strong>
       <small>{nodeDetail(data.definition)}</small>
+      <NodeRunStatus status={data.status} />
     </div>;
   }
 
@@ -150,7 +162,7 @@ const WorkflowNode = memo(function WorkflowNode({ data }: { data: WorkflowNodeDa
         <span className="node-kind">{nodeKindLabel[data.definition.kind]}</span>
         <strong>{data.definition.label}</strong>
       </span>
-      <i className={`node-status status-${data.status}`} />
+      <NodeRunStatus status={data.status} />
     </div>
     {data.definition.kind === 'trigger' && data.triggerDetail ? <div className="trigger-detail"><Network size={11} />{data.triggerDetail}</div> : null}
     {data.definition.kind === 'agent' ? <div className="agent-runtime"><Bot size={11} /><span>{data.modelLabel}</span><i /> <Box size={10} /><span>{data.definition.reads.length} context</span></div> : null}
@@ -203,6 +215,15 @@ export function FlowCanvas({ graph, positions, run, selectedNodeId, manifest, mo
     .filter((item) => item.graphId === graph.id)
     .map((item) => [item.stateField, item.label])), [graph.id, manifest.deliverables]);
   const stages = useMemo(() => deriveStageBands(graph, resolvedPositions), [graph, resolvedPositions]);
+  const initialFocusIds = useMemo(() => initialGraphFocusNodeIds(graph), [graph]);
+  const activeFocusIds = useMemo(() => runFocusNodeIds(graph, run), [graph, run]);
+  const selectedFocusIds = useMemo(
+    () => selectedNodeId ? graphFocusNeighborhood(graph, [selectedNodeId]) : [],
+    [graph, selectedNodeId],
+  );
+  const focusIds = activeFocusIds.length ? activeFocusIds
+    : selectedFocusIds.length ? selectedFocusIds
+      : initialFocusIds;
   const presentedNodes = useMemo<Node<CanvasNodeData>[]>(() => {
     const stageNodes: Node<CanvasNodeData>[] = stages.map((stage, index) => ({
       id: `__${stage.id}`,
@@ -229,6 +250,7 @@ export function FlowCanvas({ graph, positions, run, selectedNodeId, manifest, mo
         type: 'workflow',
         position: resolvedPositions[definition.id] ?? { x: 0, y: 0 },
         selected: selectedNodeId === definition.id,
+        ariaLabel: nodeAccessibleLabel(definition, nodeRunStatus(run, definition.id)),
         data: {
           type: 'workflow',
           definition,
@@ -264,12 +286,53 @@ export function FlowCanvas({ graph, positions, run, selectedNodeId, manifest, mo
     });
   }, [presentedNodes, setNodes]);
 
+  const initialFocusKey = initialFocusIds.join('|');
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      void instance.current?.fitView({ padding: 0.12, maxZoom: 0.82, duration: 240 });
+      void instance.current?.fitView({
+        nodes: initialFocusIds.map((id) => ({ id })),
+        padding: 0.22,
+        minZoom: 0.58,
+        maxZoom: 0.9,
+        duration: 240,
+      });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [graph.id]);
+  }, [graph.id, initialFocusKey]);
+
+  const activeFocusKey = activeFocusIds.join('|');
+  useEffect(() => {
+    if (!activeFocusIds.length) return;
+    const frame = window.requestAnimationFrame(() => {
+      void instance.current?.fitView({
+        nodes: activeFocusIds.map((id) => ({ id })),
+        padding: 0.3,
+        minZoom: 0.62,
+        maxZoom: 0.96,
+        duration: 320,
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeFocusKey]);
+
+  const focusCore = () => {
+    void instance.current?.fitView({
+      nodes: focusIds.map((id) => ({ id })),
+      padding: 0.26,
+      minZoom: 0.58,
+      maxZoom: 0.96,
+      duration: 240,
+    });
+  };
+  const showOverview = () => {
+    void instance.current?.fitView({
+      nodes: graph.nodes.map((node) => ({ id: node.id })),
+      padding: 0.12,
+      minZoom: 0.24,
+      maxZoom: 0.82,
+      duration: 240,
+    });
+  };
 
   const edges = useMemo<Edge[]>(() => graph.edges.map((edge) => {
     const source = resolvedPositions[edge.source] ?? { x: 0, y: 0 };
@@ -354,14 +417,26 @@ export function FlowCanvas({ graph, positions, run, selectedNodeId, manifest, mo
       onEdgesDelete={deleteEdges}
       onConnect={connect}
       fitView
-      fitViewOptions={{ padding: 0.12, maxZoom: 0.82 }}
+      fitViewOptions={{
+        nodes: initialFocusIds.map((id) => ({ id })),
+        padding: 0.22,
+        minZoom: 0.58,
+        maxZoom: 0.9,
+      }}
       minZoom={0.24}
       maxZoom={1.8}
+      aria-label={`${graph.name} workflow canvas`}
       defaultEdgeOptions={{ type: 'smoothstep' }}
       deleteKeyCode={['Backspace', 'Delete']}
       proOptions={{ hideAttribution: true }}
     >
       <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#cbd5e1" />
+      <Panel className="canvas-focus-controls" position="top-right">
+        <button type="button" className="canvas-focus-button" onClick={focusCore}>
+          {activeFocusIds.length ? 'Focus active' : selectedFocusIds.length ? 'Focus selection' : 'Focus start'}
+        </button>
+        <button type="button" className="canvas-focus-button" onClick={showOverview}>Overview</button>
+      </Panel>
       <MiniMap pannable zoomable nodeColor={(node) => {
         const data = node.data as CanvasNodeData;
         if (data.type === 'stage') return '#e8edf4';
@@ -372,7 +447,16 @@ export function FlowCanvas({ graph, positions, run, selectedNodeId, manifest, mo
               : kind === 'escalation' || kind === 'compensation' ? '#c43c3c'
                 : '#64748b';
       }} />
-      <Controls showInteractive={false} />
+      <Controls
+        showInteractive={false}
+        fitViewOptions={{
+          nodes: graph.nodes.map((node) => ({ id: node.id })),
+          padding: 0.12,
+          minZoom: 0.24,
+          maxZoom: 0.82,
+          duration: 240,
+        }}
+      />
     </ReactFlow>
   </div>;
 }

@@ -17,6 +17,8 @@ export const nodeKindLabel: Record<GraphNode['kind'], string> = {
 
 export type NodeRunStatus = 'idle' | 'running' | 'complete' | 'waiting' | 'failed';
 
+const focusStatusPriority: NodeRunStatus[] = ['failed', 'waiting', 'running'];
+
 export interface GraphStageBand {
   id: string;
   label: string;
@@ -30,6 +32,8 @@ export function nodeRunStatus(run: RunSnapshot | null, nodeId: string): NodeRunS
   if (!run) return 'idle';
   const events = run.events.filter((event) => event.nodeId === nodeId);
   if (events.some((event) => event.type === 'node.failed' || event.type === 'node.timed_out')) return 'failed';
+  if (events.some((event) => event.type === 'tool.approval_requested')
+    && !events.some((event) => event.type === 'tool.approval_resolved' || event.type === 'tool.denied')) return 'waiting';
   if (events.some((event) => event.type === 'human.requested')
     && !events.some((event) => event.type === 'human.resolved')) return 'waiting';
   if (events.some((event) => event.type === 'wait.scheduled' || event.type === 'event.waiting')
@@ -37,6 +41,72 @@ export function nodeRunStatus(run: RunSnapshot | null, nodeId: string): NodeRunS
   if (events.some((event) => event.type === 'node.completed')) return 'complete';
   if (events.some((event) => event.type === 'node.started')) return 'running';
   return 'idle';
+}
+
+export function nodeAccessibleLabel(node: GraphNode, status: NodeRunStatus): string {
+  const statusLabel = status === 'idle' ? 'not run' : status;
+  return `${nodeKindLabel[node.kind]} node: ${node.label}. Status: ${statusLabel}. ${node.description}`;
+}
+
+export function initialGraphFocusNodeIds(graph: GraphDefinition, maximum = 4): string[] {
+  if (maximum <= 0 || graph.nodes.length === 0) return [];
+  const nodeIds = new Set(graph.nodes.map((node) => node.id));
+  const incoming = new Map(graph.nodes.map((node) => [node.id, 0]));
+  const outgoing = new Map(graph.nodes.map((node) => [node.id, [] as string[]]));
+  for (const edge of graph.edges) {
+    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) continue;
+    incoming.set(edge.target, (incoming.get(edge.target) ?? 0) + 1);
+    outgoing.get(edge.source)?.push(edge.target);
+  }
+  const roots = graph.nodes.filter((node) => (incoming.get(node.id) ?? 0) === 0).map((node) => node.id);
+  const queue = roots.length ? roots : [graph.nodes[0]!.id];
+  const selected: string[] = [];
+  const seen = new Set<string>();
+  for (let index = 0; index < queue.length && selected.length < maximum; index += 1) {
+    const id = queue[index]!;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    selected.push(id);
+    for (const target of outgoing.get(id) ?? []) {
+      if (!seen.has(target)) queue.push(target);
+    }
+  }
+  return selected;
+}
+
+export function graphFocusNeighborhood(
+  graph: GraphDefinition,
+  anchors: readonly string[],
+  maximum = 6,
+): string[] {
+  if (maximum <= 0 || anchors.length === 0) return [];
+  const nodeIds = new Set(graph.nodes.map((node) => node.id));
+  const selected = anchors.filter((id, index) => nodeIds.has(id) && anchors.indexOf(id) === index).slice(0, maximum);
+  const selectedIds = new Set(selected);
+  const adjacent = graph.edges.flatMap((edge) => {
+    if (selectedIds.has(edge.source)) return [edge.target];
+    if (selectedIds.has(edge.target)) return [edge.source];
+    return [];
+  });
+  for (const id of adjacent) {
+    if (selected.length >= maximum) break;
+    if (nodeIds.has(id) && !selectedIds.has(id)) {
+      selected.push(id);
+      selectedIds.add(id);
+    }
+  }
+  return selected;
+}
+
+export function runFocusNodeIds(graph: GraphDefinition, run: RunSnapshot | null, maximum = 6): string[] {
+  if (!run || run.graphId !== graph.id) return [];
+  for (const status of focusStatusPriority) {
+    const anchors = graph.nodes
+      .filter((node) => nodeRunStatus(run, node.id) === status)
+      .map((node) => node.id);
+    if (anchors.length) return graphFocusNeighborhood(graph, anchors, maximum);
+  }
+  return [];
 }
 
 export function resolveRunDeliverable(

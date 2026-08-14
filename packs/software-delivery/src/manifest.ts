@@ -2,7 +2,7 @@ import type { IndustryPackManifest } from '@graph-workbench/contracts';
 
 export const softwareDeliveryPack: IndustryPackManifest = {
   id: 'software_delivery',
-  version: '0.4.1',
+  version: '0.5.0',
   name: 'Professional Software Delivery Pack',
   description:
     'A governed issue-to-release workflow with requirement traceability, risk classification, parallel verification, independent human gates, immutable release records, deployment observation, escalation and rollback.',
@@ -695,6 +695,7 @@ export const softwareDeliveryPack: IndustryPackManifest = {
           artifact_digest: { type: 'string', required: true, description: 'Observed immutable artifact digest.' },
           health_signals: { type: 'array', required: true, description: 'Post-deployment health evidence.' },
           deployment_healthy: { type: 'boolean', required: false, description: 'Health-gate result.' },
+          release_context: { type: 'object', required: false, description: 'Approved release context reused from a prior run.' },
           observation_summary: { type: 'object', required: false, description: 'Normalized deployment observation.' },
           rollback_completed: { type: 'boolean', required: false, description: 'Rollback compensation outcome.' },
           rollback_reference: { type: 'string', required: false, description: 'Rollback evidence locator.' },
@@ -703,13 +704,13 @@ export const softwareDeliveryPack: IndustryPackManifest = {
       },
       nodes: [
         { id: 'start', kind: 'trigger', label: 'Deployment observed', description: 'Accept a correlated deployment event.', reads: ['release_id', 'deployment_id', 'environment', 'status', 'artifact_digest', 'health_signals'], writes: [], config: {} },
-        { id: 'assess_deployment', kind: 'function', label: 'Assess deployment', description: 'Evaluate deployment status and service health signals.', handler: 'software_delivery.assess_deployment', reads: ['release_id', 'deployment_id', 'environment', 'status', 'health_signals'], writes: ['deployment_healthy', 'observation_summary'], config: { evaluationId: 'deployment_health' } },
+        { id: 'assess_deployment', kind: 'function', label: 'Assess deployment', description: 'Evaluate deployment status and service health signals against approved release context.', handler: 'software_delivery.assess_deployment', reads: ['release_id', 'deployment_id', 'environment', 'status', 'health_signals'], writes: ['deployment_healthy', 'release_context', 'observation_summary'], config: { evaluationId: 'deployment_health' } },
         { id: 'health_route', kind: 'router', label: 'Route health', description: 'Separate healthy delivery from incident recovery.', reads: ['deployment_healthy'], writes: [], config: {} },
-        { id: 'publish_healthy', kind: 'function', label: 'Publish healthy observation', description: 'Record successful production observation.', handler: 'software_delivery.publish_healthy_observation', reads: ['release_id', 'deployment_id', 'environment', 'artifact_digest', 'health_signals', 'observation_summary'], writes: ['deployment_record'], config: {} },
+        { id: 'publish_healthy', kind: 'function', label: 'Publish healthy observation', description: 'Record successful production observation and the approved release context it reused.', handler: 'software_delivery.publish_healthy_observation', reads: ['release_id', 'deployment_id', 'environment', 'artifact_digest', 'health_signals', 'release_context', 'observation_summary'], writes: ['deployment_record'], config: {} },
         { id: 'escalate_incident', kind: 'escalation', label: 'Escalate deployment incident', description: 'Raise accountable incident response for an unhealthy deployment.', reads: ['release_id', 'deployment_id', 'observation_summary'], writes: [], config: { reason: 'Deployment health gate failed; service-owner response is required.', severity: 'critical', roleId: 'service_owner' } },
         { id: 'rollback', kind: 'compensation', label: 'Rollback deployment', description: 'Restore the last known good deployment.', handler: 'software_delivery.rollback_deployment', reads: ['release_id', 'deployment_id'], writes: ['rollback_completed', 'rollback_reference'], config: { compensates: ['assess_deployment'] } },
         { id: 'recovery_join', kind: 'join', label: 'Join recovery', description: 'Wait for escalation and rollback evidence.', reads: ['rollback_completed', 'rollback_reference'], writes: [], config: { mode: 'all' } },
-        { id: 'publish_failed', kind: 'function', label: 'Publish incident record', description: 'Record unhealthy delivery and compensation outcome.', handler: 'software_delivery.publish_failed_observation', reads: ['release_id', 'deployment_id', 'environment', 'status', 'artifact_digest', 'health_signals', 'observation_summary', 'rollback_completed', 'rollback_reference'], writes: ['deployment_record'], config: {} },
+        { id: 'publish_failed', kind: 'function', label: 'Publish incident record', description: 'Record unhealthy delivery, reused release context and compensation outcome.', handler: 'software_delivery.publish_failed_observation', reads: ['release_id', 'deployment_id', 'environment', 'status', 'artifact_digest', 'health_signals', 'release_context', 'observation_summary', 'rollback_completed', 'rollback_reference'], writes: ['deployment_record'], config: {} },
       ],
       edges: [
         { id: 'e_start_assess', source: 'start', target: 'assess_deployment', on: 'success' },

@@ -1,6 +1,6 @@
 {
   "name": "graph-workbench",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Build governed AI workflows that connect Agent and human execution graphs to durable organizational context.",
   "type": "module",
   "license": "MIT",

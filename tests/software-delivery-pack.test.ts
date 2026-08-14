@@ -144,6 +144,27 @@ describe('Professional Software Delivery Pack', () => {
         state: { release_record: expect.stringContaining('# Release readiness record') },
       });
       expect(completed.context?.objects.some((item) => item.type === 'release')).toBe(true);
+
+      const deploymentFixture = softwareDeliveryPack.fixtures.find((item) => item.id === 'healthy_deployment')!;
+      const observed = await service.start(deploymentFixture.input, {
+        packId: 'software_delivery',
+        graphId: deploymentFixture.graphId,
+      });
+      expect(observed).toMatchObject({
+        status: 'completed',
+        state: {
+          release_context: {
+            linked: true,
+            version: 1,
+            source_run_id: completed.runId,
+          },
+          deployment_record: expect.stringContaining(`approved run ${completed.runId.slice(-8)}`),
+        },
+      });
+      const linkedReleaseId = (observed.state.release_context as { object_id: string }).object_id;
+      expect(observed.context?.relations).toEqual(expect.arrayContaining([
+        expect.objectContaining({ type: 'promotes', targetId: linkedReleaseId }),
+      ]));
     } finally {
       await service.close();
     }

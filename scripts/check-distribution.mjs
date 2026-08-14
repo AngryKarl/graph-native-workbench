@@ -61,7 +61,7 @@ try {
     throw new Error(`Unexpected distribution version: ${version.stdout}`);
   }
   const demo = await run(['demo'], workspace);
-  if (!demo.stdout.includes('Context graph: 7 objects, 9 typed relations')) throw new Error('Packaged demo output is incomplete.');
+  if (!demo.stdout.includes('Context graph: 14 objects, 14 typed relations')) throw new Error('Packaged demo output is incomplete.');
 
   const initialized = await run(['pack', 'init', 'distribution_smoke'], workspace);
   if (!initialized.stdout.includes('Next: npx graph-workbench pack test')) {

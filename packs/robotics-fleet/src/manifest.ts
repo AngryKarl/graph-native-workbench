@@ -97,7 +97,7 @@ const observationGraph: GraphDefinition = {
 
 const requiredString = (description: string) => ({ type: 'string' as const, required: true, description });
 export const roboticsFleetPack: IndustryPackManifest = {
-  id: 'robotics_fleet', version: '0.4.1', name: 'Robotics and Fleet Operations Pack', license: 'MIT',
+  id: 'robotics_fleet', version: '0.5.0', name: 'Robotics and Fleet Operations Pack', license: 'MIT',
   description: 'A governed task-to-dispatch and telemetry-to-recovery Pack. It preserves bids, allocation, resource and safety decisions, dispatch receipts, telemetry, replans and maintenance while leaving ROS 2/OpenRMF, resource locks, motion control and safety controllers as external authorities.',
   ontology: {
     objectTypes: [

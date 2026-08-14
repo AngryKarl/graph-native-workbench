@@ -1,0 +1,86 @@
+name: Connector request
+description: Propose a typed adapter to an external system without moving its authority into the core
+title: "[Connector]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Connectors carry typed queries, commands and events across system boundaries. Please describe the smallest useful integration instead of proposing a second client for the external product.
+  - type: input
+    id: system
+    attributes:
+      label: External system
+      placeholder: GitHub, GitLab, Jira, Airflow, Wazuh, FHIR server, OpenRMF...
+    validations:
+      required: true
+  - type: input
+    id: pack
+    attributes:
+      label: Industry Pack or workflow
+      placeholder: Professional Software Delivery
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: User outcome
+      description: What workflow becomes useful or more trustworthy when this connector exists?
+    validations:
+      required: true
+  - type: checkboxes
+    id: operations
+    attributes:
+      label: Required operation types
+      options:
+        - label: Query — read data without changing the external system
+        - label: Command — create or change external state
+        - label: Event — start or resume work from an external event
+    validations:
+      required: true
+  - type: textarea
+    id: contracts
+    attributes:
+      label: Smallest typed contract
+      description: List the required inputs, outputs and events. Include stable external identifiers and evidence locators.
+      placeholder: Read pull request -> repository, number, head SHA, checks, review state
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Permissions, risk and approval boundary
+      description: Identify read/write/external effects, required permissions and which operations require human approval.
+    validations:
+      required: true
+  - type: textarea
+    id: authentication
+    attributes:
+      label: Authentication and secret handling
+      description: Describe the official authentication method, secret names and least-privilege scope. Never paste credentials here.
+    validations:
+      required: true
+  - type: textarea
+    id: idempotency
+    attributes:
+      label: Idempotency and failure behavior
+      description: How are retries deduplicated, rate limits reported and partial external changes recovered?
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Zero-key reference path
+      description: How can CI exercise the same contract deterministically without a live account?
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I linked official API documentation and checked that its license permits this integration.
+          required: true
+        - label: I did not include credentials, private endpoints or proprietary payloads.
+          required: true

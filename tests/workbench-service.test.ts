@@ -8,8 +8,10 @@ import { bundledPackCatalog } from '../apps/workbench/src/catalog.js';
 import { WorkbenchService } from '../apps/workbench/src/service.js';
 
 describe('Workbench service', () => {
-  it('exposes the Architecture Pack and starts from its real fixture input', () => {
-    const description = new WorkbenchService().describePack();
+  it('exposes the Architecture Pack and starts from its real fixture input', async () => {
+    const service = new WorkbenchService();
+    await service.install('architecture');
+    const description = service.describePack();
     expect(description).toMatchObject({
       id: 'architecture',
       graph: { id: 'architecture.concept_workflow' },
@@ -20,6 +22,7 @@ describe('Workbench service', () => {
 
   it('runs to human review and projects an approved result into the context graph', async () => {
     const service = new WorkbenchService();
+    await service.install('architecture');
     const input = service.describePack().input;
     const paused = await service.start(input);
     expect(paused.status).toBe('paused');
@@ -59,6 +62,7 @@ describe('Workbench service', () => {
         roleIds: ['researcher'],
       },
     });
+    await service.install('architecture');
     const paused = await service.start(service.describePack().input);
     expect(paused.pendingApproval).toMatchObject({
       requiredRoleId: 'design_reviewer',
@@ -77,6 +81,7 @@ describe('Workbench service', () => {
     let second: WorkbenchService | undefined;
     try {
       first = new WorkbenchService({ dataFile });
+      await first.install('architecture');
       await first.upsertActor({
         id: 'member.designer',
         kind: 'human',
@@ -188,6 +193,7 @@ describe('Workbench service', () => {
 
   it('records a rejected review without publishing a deliverable', async () => {
     const service = new WorkbenchService();
+    await service.install('architecture');
     const paused = await service.start(service.describePack().input);
     const rejected = await service.decide(paused.runId, false);
     expect(rejected.status).toBe('completed');
@@ -198,6 +204,7 @@ describe('Workbench service', () => {
 
   it('exports a portable integrity-checked audit bundle for a Workbench run', async () => {
     const service = new WorkbenchService();
+    await service.install('architecture');
     const paused = await service.start(service.describePack().input);
     const completed = await service.decide(paused.runId, true);
     const audit = service.exportAudit(completed.runId);
@@ -415,6 +422,7 @@ describe('Workbench service', () => {
 
   it('validates, saves and executes an edited graph definition', async () => {
     const service = new WorkbenchService();
+    await service.install('architecture');
     const pack = service.describePack();
     const graph = {
       ...pack.graph,
@@ -449,7 +457,7 @@ describe('Workbench service', () => {
       second = new WorkbenchService({ dataFile });
       const restored = await second.describeWorkbench();
       expect(restored.activePackId).toBe('research');
-      expect(restored.installedPackIds).toEqual(['architecture', 'research']);
+      expect(restored.installedPackIds).toEqual(['software_delivery', 'architecture', 'research']);
       expect(restored.activePack.graph.name).toBe('Persistent research workflow');
       expect(second.get(paused.runId)?.status).toBe('paused');
     } finally {
@@ -485,6 +493,7 @@ describe('Workbench service', () => {
     let second: WorkbenchService | undefined;
     try {
       first = new WorkbenchService({ dataFile });
+      await first.install('architecture');
       const architecturePaused = await first.start(first.describePack().input);
       const architectureCompleted = await first.decide(architecturePaused.runId, true);
 

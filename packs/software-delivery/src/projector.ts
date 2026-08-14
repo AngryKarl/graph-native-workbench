@@ -250,21 +250,22 @@ async function projectDeployment(
   const releaseId = text(run.state.release_id);
   const version = releaseId.includes('@') ? releaseId.slice(releaseId.lastIndexOf('@') + 1) : 'unknown';
   const healthy = run.state.deployment_healthy === true;
+  const priorReleaseId = text(object(run.state.release_context).object_id);
   const ids = {
-    release: `${base}.release-reference`,
+    release: priorReleaseId || `${base}.release-reference`,
     deployment: `${base}.deployment`,
     incident: `${base}.incident`,
     record: `${base}.record`,
   };
-  const provenance = (nodeId: string, actorId = 'system.runtime') => ({
-    sourceIds: [],
+  const provenance = (nodeId: string, actorId = 'system.runtime', sourceIds: string[] = []) => ({
+    sourceIds,
     producedByRunId: run.runId,
     producedByNodeId: nodeId,
     actorId,
     recordedAt,
   });
   const objects: ContextObject[] = [
-    {
+    ...(!priorReleaseId ? [{
       id: ids.release,
       type: 'release',
       version: 1,
@@ -279,7 +280,7 @@ async function projectDeployment(
       validFrom: recordedAt,
       validTo: null,
       provenance: provenance('assess_deployment'),
-    },
+    } satisfies ContextObject] : []),
     {
       id: ids.deployment,
       type: 'deployment',
@@ -293,7 +294,7 @@ async function projectDeployment(
       },
       validFrom: recordedAt,
       validTo: null,
-      provenance: provenance('assess_deployment'),
+      provenance: provenance('assess_deployment', 'system.runtime', priorReleaseId ? [priorReleaseId] : []),
     },
     ...(!healthy ? [{
       id: ids.incident,
@@ -327,7 +328,7 @@ async function projectDeployment(
   for (const value of objects) await store.appendObject(value);
 
   const relations: ContextRelation[] = [
-    relation(`${base}.relation.deployment.release`, 'promotes', ids.deployment, ids.release, recordedAt, provenance('assess_deployment')),
+    relation(`${base}.relation.deployment.release`, 'promotes', ids.deployment, ids.release, recordedAt, provenance('assess_deployment', 'system.runtime', priorReleaseId ? [priorReleaseId] : [])),
     relation(`${base}.relation.record.deployment`, 'documents', ids.record, ids.deployment, recordedAt, provenance(healthy ? 'publish_healthy' : 'publish_failed')),
     ...(!healthy ? [
       relation(`${base}.relation.incident.deployment`, 'affects', ids.incident, ids.deployment, recordedAt, provenance('escalate_incident', 'role.service_owner')),

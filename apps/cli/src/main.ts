@@ -18,10 +18,14 @@ import {
   verifyRunAuditBundle,
 } from '@graph-workbench/core';
 import {
-  projectResearchRun,
   researchHandlers,
   researchPack,
 } from '@graph-workbench/pack-research';
+import {
+  projectSoftwareDeliveryRun,
+  softwareDeliveryHandlers,
+  softwareDeliveryPack,
+} from '@graph-workbench/pack-software-delivery';
 import {
   activateInstalledPack,
   buildPackArtifact,
@@ -174,21 +178,23 @@ function printEvent(event: GraphEvent): void {
 
 async function demo(): Promise<void> {
   const pauseForApproval = args.includes('--pause');
-  const compiledPack = compilePack(researchPack);
-  const graph = compiledPack.graphs.get('research.workflow');
-  if (!graph) throw new Error('Research workflow was not compiled.');
+  const compiledPack = compilePack(softwareDeliveryPack);
+  const graph = compiledPack.graphs.get('software_delivery.change_to_release');
+  if (!graph) throw new Error('Software Delivery workflow was not compiled.');
+  const fixture = softwareDeliveryPack.fixtures.find((item) => item.id === 'standard_feature_release');
+  if (!fixture) throw new Error('Software Delivery sample fixture is missing.');
 
   console.log(`Pack: ${compiledPack.manifest.name} v${compiledPack.manifest.version}`);
   console.log(`Graph: ${graph.definition.name}`);
   console.log(`Mode: ${pauseForApproval ? 'pause at human gate' : 'approve and finish'}\n`);
   const runtime = new GraphRuntime(graph, {
-    handlers: researchHandlers,
+    handlers: softwareDeliveryHandlers,
     pack: compiledPack.manifest,
   });
   const result = await runtime.run(
-    { goal: 'Can a graph-native workbench become reusable infrastructure for complex industries?' },
+    fixture.input,
     {
-      ...(pauseForApproval ? {} : { decisions: { approval: true } }),
+      ...(pauseForApproval ? {} : { decisions: fixture.decisions }),
       onEvent: printEvent,
     },
   );
@@ -196,8 +202,9 @@ async function demo(): Promise<void> {
   console.log('');
   if (result.status === 'completed') {
     const contextGraph = new InMemoryContextGraphStore(compiledPack.manifest);
-    await projectResearchRun(contextGraph, result);
-    console.log(String(result.state.deliverable ?? result.state.rejection_reason));
+    await projectSoftwareDeliveryRun(contextGraph, result);
+    const deliverableField = compiledPack.manifest.deliverables.find((item) => item.graphId === graph.definition.id)?.stateField;
+    console.log(String((deliverableField ? result.state[deliverableField] : undefined) ?? result.state.rejection_reason));
     console.log(
       `\nContext graph: ${(await contextGraph.listObjects()).length} objects, ` +
         `${(await contextGraph.listRelations()).length} typed relations`,

@@ -38,6 +38,12 @@ export interface ContextNeighborhood {
   readonly relations: readonly ContextRelation[];
 }
 
+export interface ContextQueryReader {
+  queryObjects(query?: ContextObjectQuery): Promise<readonly ContextObject[]>;
+  queryRelations(query?: ContextRelationQuery): Promise<readonly ContextRelation[]>;
+  traverse(rootId: string, options?: ContextTraversalOptions): Promise<ContextNeighborhood>;
+}
+
 function latestVersions<T extends { readonly id: string; readonly version: number }>(items: readonly T[]): T[] {
   const latest = new Map<string, T>();
   for (const item of items) {
@@ -156,5 +162,13 @@ export async function traverseContext(
     objects: [...objects.values()].sort((left, right) => left.id.localeCompare(right.id)),
     relations: [...relations.values()].sort((left, right) =>
       left.id.localeCompare(right.id) || left.version - right.version),
+  };
+}
+
+export function createContextQueryReader(store: ContextGraphStore): ContextQueryReader {
+  return {
+    queryObjects: (query) => queryContextObjects(store, query),
+    queryRelations: (query) => queryContextRelations(store, query),
+    traverse: (rootId, options) => traverseContext(store, rootId, options),
   };
 }
