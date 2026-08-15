@@ -25,7 +25,7 @@ npx graph-workbench
 跟随 60 秒引导运行，依次批准代码负责人和发布负责人两个关卡，在 **Outcome**
 查看交付物，然后选择 **Explore why** 查看相互连接的组织上下文。
 
-![Graph Workbench 默认打开可读的软件交付流程与引导示例](docs/assets/software-delivery-workbench.png)
+![Graph Workbench 五步旅程：从零密钥示例到责任人审批、可移植结果、可解释上下文和跨运行复用](docs/assets/software-delivery-journey.gif)
 
 ### 一次运行，两张相互连接的图
 

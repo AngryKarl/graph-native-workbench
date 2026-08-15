@@ -28,7 +28,7 @@ ready. Follow the 60-second guided run, approve the code-owner and release-manag
 gates, inspect the artifact under **Outcome**, then select **Explore why** for its
 connected context.
 
-![Graph Workbench opens on a readable Software Delivery workflow with a guided sample run](docs/assets/software-delivery-workbench.png)
+![Five-step Graph Workbench journey from a zero-key sample through accountable review, portable outcome, explainable context and cross-run reuse](docs/assets/software-delivery-journey.gif)
 
 ### One run, two connected graphs
 
