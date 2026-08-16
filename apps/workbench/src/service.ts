@@ -16,6 +16,7 @@ import {
   createRunAuditBundle,
   createPolicyToolAuthorizer,
   defaultToolPolicy,
+  EnvironmentSecretProvider,
   GraphRuntime,
   GraphTriggerDispatcher,
   eventTriggeredRunId,
@@ -29,7 +30,12 @@ import {
   type ToolAuthorizer,
   type ToolPolicy,
 } from '@graph-workbench/core';
-import { bundledPackCatalog, requirePackRuntime } from './catalog.js';
+import {
+  bundledPackCatalog,
+  gitHubConnector,
+  requirePackRuntime,
+  type PackRuntimeDefinition,
+} from './catalog.js';
 import { WorkbenchModelService } from './model-service.js';
 import {
   WorkbenchWorkspaceStore,
@@ -214,6 +220,7 @@ export class WorkbenchService {
   private readonly authorizeTool: ToolAuthorizer;
   private readonly actorOverride: ActorIdentity | undefined;
   private readonly contextStore: ContextGraphStore;
+  private readonly secretEnvironment: Readonly<Record<string, string | undefined>>;
   private contextHydration: Promise<void> | undefined;
 
   constructor(options: {
@@ -223,7 +230,9 @@ export class WorkbenchService {
     readonly toolPolicy?: ToolPolicy;
     readonly actor?: ActorIdentity;
     readonly contextStore?: ContextGraphStore;
+    readonly secretEnvironment?: Readonly<Record<string, string | undefined>>;
   } = {}) {
+    this.secretEnvironment = options.secretEnvironment ?? process.env;
     this.store = new WorkbenchWorkspaceStore(options.dataFile);
     if (options.dataFile) mkdirSync(dirname(options.dataFile), { recursive: true });
     this.contextStore = options.contextStore
@@ -247,6 +256,25 @@ export class WorkbenchService {
     ) {
       this.store.update((state) => ({ ...state, installedPackIds, activePackId }));
     }
+  }
+
+  /**
+   * Bindings every run shares. Secrets are resolved only for the names the
+   * Pack's own tool adapters declare, so a loaded Pack cannot reach an
+   * unrelated environment variable.
+   */
+  private packBindings(runtime: PackRuntimeDefinition) {
+    const declared = new Set(Object.values(runtime.tools ?? {})
+      .flatMap((adapter) => [...(adapter.requiredSecrets ?? [])]));
+    const secrets = declared.size > 0
+      ? new EnvironmentSecretProvider(this.secretEnvironment, declared)
+      : undefined;
+    return {
+      handlers: runtime.handlers,
+      ...(runtime.tools ? { tools: runtime.tools } : {}),
+      ...(secrets ? { secrets } : {}),
+      authorizeTool: this.authorizeTool,
+    };
   }
 
   describePack(packId = this.store.snapshot().activePackId, graphId?: string) {
@@ -313,6 +341,7 @@ export class WorkbenchService {
       actors: Object.values(workspace.actors).sort((left, right) => left.displayName.localeCompare(right.displayName)),
       actor,
       models: this.models.describe(workspace.modelProvider),
+      connectors: { github: gitHubConnector },
     };
   }
 
@@ -456,12 +485,10 @@ export class WorkbenchService {
     };
     const workflow = compilePack(manifest).graphs.get(graph.id)!;
     const result = await new GraphRuntime(workflow, {
-      handlers: runtime.handlers,
+      ...this.packBindings(runtime),
       agents: this.models.agents(workspace.modelProvider, graph),
-      ...(runtime.tools ? { tools: runtime.tools } : {}),
       pack: manifest,
       contextStore: this.contextStore,
-      authorizeTool: this.authorizeTool,
     }).run(input, { actor });
     const session = await this.toSession(packId, graph, result, []);
     this.saveSession(session);
@@ -489,12 +516,10 @@ export class WorkbenchService {
       );
     }
     const result = await new GraphRuntime(workflow, {
-      handlers: runtime.handlers,
+      ...this.packBindings(runtime),
       agents: this.models.agents(this.store.snapshot().modelProvider, existing.graph),
-      ...(runtime.tools ? { tools: runtime.tools } : {}),
       pack: manifest,
       contextStore: this.contextStore,
-      authorizeTool: this.authorizeTool,
     }).resume(existing.checkpoint, approval.kind === 'tool'
       ? {
           actor,
@@ -525,12 +550,10 @@ export class WorkbenchService {
     };
     const workflow = compilePack(manifest).graphs.get(existing.graph.id)!;
     const result = await new GraphRuntime(workflow, {
-      handlers: runtime.handlers,
+      ...this.packBindings(runtime),
       agents: this.models.agents(this.store.snapshot().modelProvider, existing.graph),
-      ...(runtime.tools ? { tools: runtime.tools } : {}),
       pack: manifest,
       contextStore: this.contextStore,
-      authorizeTool: this.authorizeTool,
     }).resume(existing.checkpoint, {
       actor,
       historyEvents: existing.events,
@@ -559,10 +582,8 @@ export class WorkbenchService {
     const existing = runId ? this.store.snapshot().runs[runId] : undefined;
     if (existing) return publicRun(existing, this.currentActor());
     const triggered = await new GraphTriggerDispatcher(compiled, {
-      handlers: runtime.handlers,
+      ...this.packBindings(runtime),
       agents: this.models.agents(this.store.snapshot().modelProvider, graph.definition),
-      ...(runtime.tools ? { tools: runtime.tools } : {}),
-      authorizeTool: this.authorizeTool,
     }).dispatchWebhook({ method, path: trigger.path, body: input }, {
       actor: this.currentActor(),
       ...(runId ? { runId } : {}),
@@ -604,10 +625,8 @@ export class WorkbenchService {
     const existing = this.store.snapshot().runs[runId];
     if (existing) return publicRun(existing, this.currentActor());
     const triggered = await new GraphTriggerDispatcher(compiled, {
-      handlers: runtime.handlers,
+      ...this.packBindings(runtime),
       agents: this.models.agents(this.store.snapshot().modelProvider, graph.definition),
-      ...(runtime.tools ? { tools: runtime.tools } : {}),
-      authorizeTool: this.authorizeTool,
     }).dispatchSchedule(graphId, occurrence, { actor: this.currentActor(), runId });
     const session = await this.toSession(packId, graph.definition, triggered.result, []);
     this.saveSession(session);
@@ -645,10 +664,8 @@ export class WorkbenchService {
           manifest: compiled.manifest,
           graphs: new Map([[graph.definition.id, graph]]),
         }, {
-          handlers: runtime.handlers,
+          ...this.packBindings(runtime),
           agents: this.models.agents(this.store.snapshot().modelProvider, graph.definition),
-          ...(runtime.tools ? { tools: runtime.tools } : {}),
-          authorizeTool: this.authorizeTool,
         }).dispatchEvent(event, { actor: this.currentActor(), runId });
         const item = triggered[0]!;
         const session = await this.toSession(packId, graph.definition, item.result, []);

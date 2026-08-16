@@ -5,6 +5,39 @@ versioning once public packages begin publishing.
 
 ## Unreleased
 
+### Added
+
+- Added `@graph-workbench/connector-github`, the first connector that makes a
+  standard Pack reach a real system. Professional Software Delivery now reads
+  issues, resolves real commit SHAs, and creates or updates pull requests and
+  deployments through the GitHub REST API, with no change to the Pack contract,
+  graph, roles, policy or approval path.
+- Added a tool secret boundary that actually resolves credentials. `SecretProvider`
+  was defined but never supplied, so any adapter declaring `requiredSecrets` was
+  denied at runtime. The Workbench now builds an `EnvironmentSecretProvider`
+  narrowed to the names the active Pack's own adapters declare.
+- Added a Workbench connector indicator so a reviewer can see whether the run in
+  front of them reaches real systems, reads only, or is deterministic.
+- Added ESLint with type-aware rules to CI and `release:check`, covering the
+  defect classes `tsc` cannot see.
+
+### Fixed
+
+- Fixed an availability defect in the Workbench HTTP server: its request handler
+  was an async function passed where a void return was expected, so a failure
+  raised after the response started became an unhandled rejection that
+  terminated the process. Failures after headers are sent now end the socket.
+- Included `scripts/**/*.ts` in type checking. The performance baseline runs in
+  CI but was never type checked.
+- Preserved the originating error as `cause` when re-throwing configuration and
+  artifact failures.
+
+### Changed
+
+- Pack documentation now states how far each Pack reaches. Software Delivery is
+  labelled as connector-backed; the other five standard Packs are labelled
+  reference models whose adapters return deterministic values.
+
 ## 0.5.0 - 2026-08-13
 
 ### Added

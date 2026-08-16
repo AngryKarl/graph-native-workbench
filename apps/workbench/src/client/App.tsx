@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bot, Box, Braces, Check, CircleDot, Cpu, GitFork, GitMerge,
-  History, Hourglass, LayoutDashboard, ListTree, LoaderCircle, Network, PackageOpen, Play, Repeat2, RotateCcw,
+  History, Hourglass, LayoutDashboard, ListTree, LoaderCircle, Network, PackageOpen, Play, Plug, Repeat2, RotateCcw,
   Save, ShieldAlert, SlidersHorizontal, Undo2, Redo2, UserRoundCheck, UsersRound, Workflow,
 } from 'lucide-react';
 import {
@@ -21,7 +21,7 @@ import { RunConsole } from './RunConsole.js';
 import { RunHistory } from './RunHistory.js';
 import { TeamManager } from './TeamManager.js';
 import type {
-  ActorIdentityView, GraphDefinition, GraphNode, GraphPosition, InspectorTab, PackDescription,
+  ActorIdentityView, ConnectorStatusView, GraphDefinition, GraphNode, GraphPosition, InspectorTab, PackDescription,
   PrimaryView, RegistrySource, RunSnapshot, WorkbenchBootstrap,
 } from './types.js';
 
@@ -59,6 +59,27 @@ const navItems: Array<{ view: PrimaryView; label: string; icon: typeof LayoutDas
 
 function Logo() {
   return <div className="brand-mark" aria-label="Graph Workbench"><i /><i /><i /><i /></div>;
+}
+
+/**
+ * Whether a run reaches real systems is the single most important thing to know
+ * before approving anything, so it stays visible rather than living in an
+ * environment variable the reviewer cannot see.
+ */
+function ConnectorBadge({ status }: { status: ConnectorStatusView }) {
+  const tone = !status.configured ? 'zero-key' : status.write ? 'live' : 'read-only';
+  const label = !status.configured
+    ? 'Zero-key run'
+    : status.write ? `GitHub · writes on` : 'GitHub · read-only';
+  return (
+    <span className={`connector-badge tone-${tone}`} title={status.reason ?? `Connected to ${status.repository}`}>
+      {status.configured ? <Plug size={13} /> : <CircleDot size={13} />}
+      <span>
+        <strong>{label}</strong>
+        <small>{status.configured ? status.repository : 'Deterministic adapters'}</small>
+      </span>
+    </span>
+  );
 }
 
 function sameEditor(left: EditorSnapshot, right: EditorSnapshot): boolean {
@@ -478,6 +499,7 @@ export function App() {
       <header className="topbar">
         <div className="workspace-name"><Box size={16} /><span><small>Local workspace</small><strong>Graph Workbench</strong></span></div>
         <div className="pack-switcher"><PackageOpen size={15} /><select value={pack.id} disabled={busyPackId !== null} onChange={(event) => { void mutatePack(event.target.value, 'activate'); }}>{bootstrap.catalog.filter((item) => bootstrap.installedPackIds.includes(item.id)).map((item) => <option key={item.id} value={item.id}>{item.name} · v{item.version}</option>)}</select></div>
+        <ConnectorBadge status={bootstrap.connectors.github} />
         <div className="identity-switcher"><UserRoundCheck size={15} /><select aria-label="Active identity" value={bootstrap.actor.id} disabled={teamBusy} onChange={(event) => { void switchIdentity(event.target.value); }}>{bootstrap.actors.map((actor) => <option key={actor.id} value={actor.id}>{actor.displayName}</option>)}</select></div>
         {view === 'editor' ? <div className="topbar-actions">
           <span className={`save-state state-${saveState}`}>{saveState === 'saving' ? <LoaderCircle className="spin" size={13} /> : saveState === 'saved' ? <Check size={13} /> : <CircleDot size={13} />}{saveState}</span>

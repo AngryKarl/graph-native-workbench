@@ -57,6 +57,19 @@ import {
   softwareDeliveryPack,
   softwareDeliveryTools,
 } from '@graph-workbench/pack-software-delivery';
+import {
+  createGitHubToolsFromEnvironment,
+  readGitHubConnectorStatus,
+  type GitHubConnectorStatus,
+} from '@graph-workbench/connector-github';
+
+/**
+ * Software Delivery runs against real GitHub when a token is configured and
+ * falls back to the deterministic zero-key adapters otherwise, so the
+ * credential-free first run keeps working unchanged.
+ */
+export const gitHubConnector: GitHubConnectorStatus = readGitHubConnectorStatus();
+const softwareDeliveryAdapters = createGitHubToolsFromEnvironment() ?? softwareDeliveryTools;
 
 export interface PackRuntimeDefinition {
   readonly manifest: IndustryPackManifest;
@@ -136,7 +149,7 @@ export const bundledPackCatalog = new Map<string, PackRuntimeDefinition>([
     {
       manifest: softwareDeliveryPack,
       handlers: softwareDeliveryHandlers,
-      tools: softwareDeliveryTools,
+      tools: softwareDeliveryAdapters,
       projector: projectSoftwareDeliveryRun,
       executionMode: 'in-process',
       trustSource: 'bundled',

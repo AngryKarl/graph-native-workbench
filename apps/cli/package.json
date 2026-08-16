@@ -8,6 +8,7 @@
     "graph-workbench": "./src/main.ts"
   },
   "dependencies": {
+    "@graph-workbench/connector-github": "workspace:*",
     "@graph-workbench/contracts": "workspace:*",
     "@graph-workbench/core": "workspace:*",
     "@graph-workbench/pack-research": "workspace:*",

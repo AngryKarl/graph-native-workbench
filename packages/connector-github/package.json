@@ -1,0 +1,11 @@
+{
+  "name": "@graph-workbench/connector-github",
+  "version": "0.5.0",
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@graph-workbench/core": "workspace:*"
+  }
+}

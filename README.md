@@ -49,10 +49,31 @@ Issue → parallel checks → accountable approvals → release artifact
   └──────────────── evidence, decisions and provenance ────────────────→ context
 ```
 
-The bundled zero-key adapters are deterministic reference implementations. They
+### Connect it to your own repository
+
+The flagship Pack runs against real GitHub as soon as you name a repository:
+
+```bash
+export GITHUB_TOKEN=ghp_your_token
+export GRAPH_WORKBENCH_GITHUB_REPOSITORY=your-org/your-repo
+npx graph-workbench
+```
+
+Work items, commit SHAs and pull requests now come from GitHub instead of the
+bundled fixture — with no change to the Pack contract, graph, roles, policy or
+approval path. Command tools stay in dry-run until you also set
+`GRAPH_WORKBENCH_GITHUB_WRITE=true`, so you can run the whole governed journey
+against a real repository and inspect every decision before granting write
+access. A `GITHUB_TOKEN` on its own never activates the connector, because that
+variable is ambient on most developer machines.
+
+See the [GitHub connector guide](docs/CONNECTOR_GITHUB.md) for the tool mapping,
+idempotency behavior, rate-limit handling and token permissions.
+
+The other bundled adapters remain deterministic reference implementations. They
 make every standard Pack executable without credentials; production teams replace
-them with reviewed connectors to systems such as GitHub, CI/CD and observability
-while keeping the same Pack contracts and governance path.
+them with reviewed connectors while keeping the same Pack contracts and
+governance path.
 
 To run a terminal-only smoke test instead:
 
@@ -128,14 +149,20 @@ the integration boundary; specialist systems retain production execution authori
 
 ![Six standard Industry Packs in the Workbench](docs/assets/reference-packs.png)
 
-| Industry Pack | Representative information flow |
-| --- | --- |
-| [Professional Software Delivery](docs/PACK_GALLERY.md#professional-software-delivery) | Issue → parallel verification → code/release approvals → deploy → observe or rollback |
-| [Data and MLOps Asset Release](docs/PACK_GALLERY.md#data-and-mlops-asset-release) | Partitions → quality and lineage → approval → registry → backfill or recovery |
-| [Cybersecurity Incident Response](docs/PACK_GALLERY.md#cybersecurity-incident-response) | Signal → evidence → declare → contain → recover → compensate and learn |
-| [Quantitative Finance Governance](docs/PACK_GALLERY.md#quantitative-finance-governance) | Hypothesis → instrument backtests → risk/compliance/execution gates → reconcile fills |
-| [Healthcare Diagnostic Coordination](docs/PACK_GALLERY.md#healthcare-diagnostic-coordination) | Consent → parallel advisory analysis → specialist decision → report → safe follow-up |
-| [Robotics and Fleet Operations](docs/PACK_GALLERY.md#robotics-and-fleet-operations) | Task → robot bid Map → safety approval → dispatch → telemetry → bounded replan |
+| Industry Pack | Representative information flow | Connector |
+| --- | --- | --- |
+| [Professional Software Delivery](docs/PACK_GALLERY.md#professional-software-delivery) | Issue → parallel verification → code/release approvals → deploy → observe or rollback | **GitHub** |
+| [Data and MLOps Asset Release](docs/PACK_GALLERY.md#data-and-mlops-asset-release) | Partitions → quality and lineage → approval → registry → backfill or recovery | Reference model |
+| [Cybersecurity Incident Response](docs/PACK_GALLERY.md#cybersecurity-incident-response) | Signal → evidence → declare → contain → recover → compensate and learn | Reference model |
+| [Quantitative Finance Governance](docs/PACK_GALLERY.md#quantitative-finance-governance) | Hypothesis → instrument backtests → risk/compliance/execution gates → reconcile fills | Reference model |
+| [Healthcare Diagnostic Coordination](docs/PACK_GALLERY.md#healthcare-diagnostic-coordination) | Consent → parallel advisory analysis → specialist decision → report → safe follow-up | Reference model |
+| [Robotics and Fleet Operations](docs/PACK_GALLERY.md#robotics-and-fleet-operations) | Task → robot bid Map → safety approval → dispatch → telemetry → bounded replan | Reference model |
+
+**Connector** states how far a Pack reaches today. *GitHub* means its tools call
+a real system. *Reference model* means the workflow, roles, gates and context
+projection are complete and executable, but its adapters return deterministic
+values — the Pack models the operating model rather than operating it. Software
+Delivery is the depth target; the others prove the kernel generalizes.
 
 [Open the full gallery of executable graphs →](docs/PACK_GALLERY.md)
 

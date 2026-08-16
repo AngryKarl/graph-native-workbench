@@ -61,7 +61,7 @@ async function loadToolPolicy(path: string): Promise<ToolPolicy> {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return defaultToolPolicy;
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Invalid tool policy at ${path}: ${message}`);
+    throw new Error(`Invalid tool policy at ${path}: ${message}`, { cause: error });
   }
 }
 
@@ -410,7 +410,7 @@ function openWorkbench(url: string): void {
   }
 }
 
-const server = createServer(async (request, response) => {
+async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
   applyWorkbenchSecurityHeaders(response);
   try {
     const url = new URL(request.url ?? '/', 'http://localhost');
@@ -423,11 +423,26 @@ const server = createServer(async (request, response) => {
     await staticFile(response, url.pathname);
   } catch (error) {
     const resolved = error instanceof Error ? error : new Error(String(error));
+    // A failure after the response started cannot be rewritten as JSON; ending
+    // the socket is the only honest option left.
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
     if (resolved instanceof HttpSecurityError && resolved.challenge) {
       response.setHeader('www-authenticate', 'Basic realm="Graph Workbench", charset="UTF-8"');
     }
     json(response, resolved instanceof HttpSecurityError ? resolved.status : 400, { error: resolved.message });
   }
+}
+
+const server = createServer((request, response) => {
+  // The handler must never reject: an unhandled rejection terminates the
+  // Workbench process and takes every in-flight run's HTTP client with it.
+  void handleRequest(request, response).catch((error: unknown) => {
+    console.error('Workbench request failed after the response started:', error);
+    if (!response.writableEnded) response.destroy();
+  });
 });
 server.headersTimeout = 15_000;
 server.requestTimeout = 30_000;

@@ -3,7 +3,6 @@ import { once } from 'node:events';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   ModelProviderClient,
-  ModelProviderError,
   type ModelProtocol,
 } from '@graph-workbench/core';
 
@@ -24,7 +23,13 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
 async function fakeProvider(
   handler: (request: IncomingMessage, response: ServerResponse, payload: Record<string, unknown>) => void,
 ): Promise<string> {
-  const server = createServer(async (request, response) => handler(request, response, await body(request)));
+  // A rejected body read must not surface as an unhandled rejection that takes
+  // down the test process; fail the fake request instead.
+  const server = createServer((request, response) => {
+    void body(request)
+      .then((payload) => { handler(request, response, payload); })
+      .catch(() => { response.statusCode = 500; response.end(); });
+  });
   servers.push(server);
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');

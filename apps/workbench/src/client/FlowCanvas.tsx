@@ -21,7 +21,7 @@ import {
   type ReactFlowInstance,
 } from '@xyflow/react';
 import {
-  Bot, Box, Braces, CircleDot, Clock3, GitFork, GitMerge, Hourglass, ListTree,
+  Bot, Box, Braces, CircleDot, GitFork, GitMerge, Hourglass, ListTree,
   Network, Repeat2, ShieldAlert, Undo2, UserRoundCheck, Workflow, Wrench,
 } from 'lucide-react';
 import {

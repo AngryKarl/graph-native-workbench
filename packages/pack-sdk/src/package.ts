@@ -244,7 +244,7 @@ function decodeArtifact(artifact: string): {
       error instanceof Error
       && (error.message.startsWith('Pack ') || error.message.startsWith('Expanded Pack '))
     ) throw error;
-    throw new Error(`"${artifact}" is not a readable .gpack artifact.`);
+    throw new Error(`"${artifact}" is not a readable .gpack artifact.`, { cause: error });
   }
   const names = Object.keys(files);
   if (names.some((name) => !allowed.has(name))) {
