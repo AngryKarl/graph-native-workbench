@@ -190,6 +190,8 @@ export interface ConnectorStatusView {
   repository?: string;
   baseUrl?: string;
   reason?: string;
+  identityLocked?: boolean;
+  login?: string;
 }
 
 export interface PortableArtifactView {

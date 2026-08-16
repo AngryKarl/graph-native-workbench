@@ -71,12 +71,15 @@ function ConnectorBadge({ status }: { status: ConnectorStatusView }) {
   const label = !status.configured
     ? 'Zero-key run'
     : status.write ? `GitHub · writes on` : 'GitHub · read-only';
+  const detail = !status.configured
+    ? 'Deterministic adapters'
+    : status.login ? `${status.repository} · @${status.login}` : status.repository;
   return (
     <span className={`connector-badge tone-${tone}`} title={status.reason ?? `Connected to ${status.repository}`}>
       {status.configured ? <Plug size={13} /> : <CircleDot size={13} />}
       <span>
         <strong>{label}</strong>
-        <small>{status.configured ? status.repository : 'Deterministic adapters'}</small>
+        <small>{detail}</small>
       </span>
     </span>
   );
@@ -500,7 +503,7 @@ export function App() {
         <div className="workspace-name"><Box size={16} /><span><small>Local workspace</small><strong>Graph Workbench</strong></span></div>
         <div className="pack-switcher"><PackageOpen size={15} /><select value={pack.id} disabled={busyPackId !== null} onChange={(event) => { void mutatePack(event.target.value, 'activate'); }}>{bootstrap.catalog.filter((item) => bootstrap.installedPackIds.includes(item.id)).map((item) => <option key={item.id} value={item.id}>{item.name} · v{item.version}</option>)}</select></div>
         <ConnectorBadge status={bootstrap.connectors.github} />
-        <div className="identity-switcher"><UserRoundCheck size={15} /><select aria-label="Active identity" value={bootstrap.actor.id} disabled={teamBusy} onChange={(event) => { void switchIdentity(event.target.value); }}>{bootstrap.actors.map((actor) => <option key={actor.id} value={actor.id}>{actor.displayName}</option>)}</select></div>
+        <div className="identity-switcher"><UserRoundCheck size={15} /><select aria-label="Active identity" value={bootstrap.actor.id} disabled={teamBusy || bootstrap.connectors.github.identityLocked === true} onChange={(event) => { void switchIdentity(event.target.value); }}>{bootstrap.actors.map((actor) => <option key={actor.id} value={actor.id}>{actor.displayName}</option>)}</select></div>
         {view === 'editor' ? <div className="topbar-actions">
           <span className={`save-state state-${saveState}`}>{saveState === 'saving' ? <LoaderCircle className="spin" size={13} /> : saveState === 'saved' ? <Check size={13} /> : <CircleDot size={13} />}{saveState}</span>
           <button className="icon-control" onClick={undo} disabled={!past.length} aria-label="Undo"><Undo2 size={16} /></button>

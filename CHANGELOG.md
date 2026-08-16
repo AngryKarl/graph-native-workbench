@@ -31,6 +31,21 @@ versioning once public packages begin publishing.
   delivery must carry a valid `X-Hub-Signature-256` or is rejected before
   reaching a graph. Verification runs over the exact received bytes.
 
+- Added verified identity binding. With the connector configured, the Workbench
+  asks GitHub who the token belongs to and locks the identity selector to that
+  account, so an approval records a login GitHub confirmed rather than one the
+  operator picked from a list. This authenticates the token holder, not every
+  person who can reach the Workbench.
+- Added CODEOWNERS resolution. `resolveReviewAuthority` answers whether GitHub
+  would ask a login to review a pull request, using GitHub's own precedence:
+  last matching rule wins within a path, owners union across the changed paths,
+  and a login may approve alone only when it owns every changed path. Unowned
+  paths and unexpandable team owners are reported rather than silently denied.
+- Added `graph-workbench feedback` and a first-run Discussions template. The
+  project collects no telemetry, so the only way to learn whether a first run
+  reached a usable outcome is to ask; the command prints a prefilled draft and
+  sends nothing from the machine.
+
 ### Fixed
 
 - Fixed an availability defect in the Workbench HTTP server: its request handler

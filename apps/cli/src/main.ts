@@ -142,6 +142,7 @@ function usage(): string {
     'Usage:',
     '  graph-workbench workbench [--port 4311] [--policy .graph-workbench/policy.json] [--no-open]',
     '  graph-workbench demo [--pause]',
+    '  graph-workbench feedback',
     '  graph-workbench audit export --database <runs.sqlite-or-postgres-url> --run <run-id> [--output run.audit.json]',
     '  graph-workbench audit verify <run.audit.json>',
     '  graph-workbench pack init <pack-id> [directory]',
@@ -710,8 +711,44 @@ async function workerCommand(): Promise<void> {
   }
 }
 
+/**
+ * Graph Workbench collects no telemetry, so the only way to learn whether a
+ * first run reached an outcome is to ask. This prints a prefilled Discussions
+ * link with the environment details a maintainer would otherwise have to
+ * request, and nothing that identifies the user or their work.
+ */
+function feedbackCommand(): void {
+  const environment = [
+    `Graph Workbench: ${graphWorkbenchVersion}`,
+    `Node: ${process.version}`,
+    `Platform: ${process.platform} ${process.arch}`,
+  ].join('\n');
+  const body = [
+    '## What did you try?',
+    '',
+    '## Did the first run reach an outcome you could use?',
+    '',
+    '## What stopped you, or what was missing?',
+    '',
+    '## Environment',
+    '',
+    '```',
+    environment,
+    '```',
+    '',
+  ].join('\n');
+  const url = 'https://github.com/AngryKarl/graph-workbench/discussions/new'
+    + `?category=first-run-feedback&title=${encodeURIComponent('First-run feedback')}`
+    + `&body=${encodeURIComponent(body)}`;
+  console.log('Share first-run feedback:\n');
+  console.log(url);
+  console.log('\nNothing is sent from this machine; the link opens a prefilled draft you can edit.');
+  console.log(`\n${environment}`);
+}
+
 async function main(): Promise<void> {
   const command = args[0] ?? (packagedDistribution ? 'workbench' : 'demo');
+  if (command === 'feedback') return feedbackCommand();
   if (command === 'workbench') return workbench();
   if (command === 'demo') return demo();
   if (command === 'audit') return auditCommand();

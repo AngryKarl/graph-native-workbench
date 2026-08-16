@@ -79,9 +79,11 @@ Delivery genuinely usable rather than adding a seventh industry.
 - [x] Keep the credential-free first run unchanged when a token is present
 - [x] State how far each Pack reaches, instead of listing them as equals
 - [x] Trigger a run from a signed GitHub webhook instead of a manual start
-- [ ] Bind workspace identity to GitHub, mapping approvals to CODEOWNERS
+- [x] Bind workspace identity to the verified GitHub account behind the token
+- [x] Resolve code-owner authority from CODEOWNERS and the changed paths
 - [x] Move Workbench run storage out of the workspace document into SQLite
-- [ ] Measure how many first runs reach an outcome
+- [x] Ask whether a first run reached an outcome (`graph-workbench feedback`)
+- [ ] Sign in individual reviewers, rather than the token holder alone
 
 The acceptance test for this milestone is not "issue to release runs". It is
 **a second run reusing the first run's approved release context**, because that

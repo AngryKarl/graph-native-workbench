@@ -159,6 +159,48 @@ compensation paths react correctly rather than treating every error the same:
 `retry-after` takes precedence over the reset header when GitHub sends it, which
 is how secondary rate limits are signalled.
 
+## Verified identity and code ownership
+
+Without a connector the acting identity is whatever the operator picked from a
+list, so an approval records a claim. When the connector is configured the
+Workbench asks GitHub who the token belongs to (`GET /user`), binds the
+workspace to that account, and locks the identity selector. Approvals then carry
+a login GitHub confirmed.
+
+**What this does not do.** It authenticates the *token holder*, not every person
+who can reach the Workbench. A shared or internet-facing deployment still needs
+per-user authentication in front of it, and a workspace owner can still resolve
+any checkpoint. Multi-user sign-in remains open work.
+
+### Code ownership
+
+`resolveReviewAuthority` answers whether GitHub would ask a given login to
+review a given pull request. It reads CODEOWNERS from the first of
+`.github/CODEOWNERS`, `CODEOWNERS` or `docs/CODEOWNERS`, lists the paths the
+pull request touches, and resolves ownership with GitHub's own precedence:
+
+- **within one path, the last matching rule wins** — a later, more specific line
+  is meant to override an earlier catch-all, so treating the matches as a union
+  would grant authority GitHub never would;
+- **across the changed paths, owners are unioned** — a change that reaches two
+  owned areas concerns both owners.
+
+A login can approve the change alone only when it owns *every* changed path.
+Owning part of a change is not enough: GitHub would still require the other
+owners, so accepting a partial owner would release code nobody responsible had
+seen.
+
+Two cases are reported rather than silently denied:
+
+- a path no rule claims, which means the change has no declared owner;
+- a team owner such as `@acme/platform`, whose membership CODEOWNERS does not
+  expose. Claiming a login is authorised when membership was never checked is
+  the failure that matters, so the team is named instead.
+
+The supported pattern subset is `*` within a segment, `**` across segments, a
+leading `/` to anchor at the repository root, a trailing `/` for everything
+beneath a directory, and unanchored patterns matching at any depth.
+
 ## Credential handling
 
 The connector declares `requiredSecrets: ['GITHUB_TOKEN']`. The runtime resolves

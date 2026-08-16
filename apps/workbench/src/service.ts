@@ -34,6 +34,7 @@ import {
   bundledPackCatalog,
   gitHubConnector,
   requirePackRuntime,
+  resolveVerifiedIdentity,
   type PackRuntimeDefinition,
 } from './catalog.js';
 import { WorkbenchModelService } from './model-service.js';
@@ -319,8 +320,47 @@ export class WorkbenchService {
     };
   }
 
+  /**
+   * Binds the acting identity to the GitHub account the token belongs to.
+   *
+   * Without this the identity is whatever the operator picked from a list, so
+   * an approval records a claim rather than a fact. When it succeeds the
+   * selector is locked: you are who your token says you are.
+   */
+  private async bindVerifiedIdentity(): Promise<{
+    readonly login?: string;
+    readonly displayName?: string;
+    readonly locked: boolean;
+    readonly reason?: string;
+  }> {
+    const resolved = await resolveVerifiedIdentity(this.secretEnvironment as NodeJS.ProcessEnv);
+    if (!resolved.identity) {
+      return { locked: false, ...(resolved.reason ? { reason: resolved.reason } : {}) };
+    }
+    const { login, displayName } = resolved.identity;
+    const actorId = `github:${login}`;
+    const workspace = this.store.snapshot();
+    const existing = workspace.actors[actorId];
+    if (!existing || workspace.currentActorId !== actorId) {
+      const actor = actorIdentitySchema.parse({
+        id: actorId,
+        kind: 'human',
+        displayName,
+        workspaceRole: existing?.workspaceRole ?? 'owner',
+        roleIds: existing?.roleIds ?? [],
+      });
+      this.store.update((state) => ({
+        ...state,
+        actors: { ...state.actors, [actorId]: actor },
+        currentActorId: actorId,
+      }));
+    }
+    return { login, displayName, locked: true };
+  }
+
   async describeWorkbench() {
     await this.ensureContextHydrated();
+    const verified = await this.bindVerifiedIdentity();
     const workspace = this.store.snapshot();
     const actor = this.currentActor(workspace);
     const catalog = [...bundledPackCatalog.values()].map((runtime) => {
@@ -357,7 +397,13 @@ export class WorkbenchService {
       actors: Object.values(workspace.actors).sort((left, right) => left.displayName.localeCompare(right.displayName)),
       actor,
       models: this.models.describe(workspace.modelProvider),
-      connectors: { github: gitHubConnector },
+      connectors: {
+        github: {
+          ...gitHubConnector,
+          identityLocked: verified.locked,
+          ...(verified.login ? { login: verified.login } : {}),
+        },
+      },
     };
   }
 
@@ -380,9 +426,18 @@ export class WorkbenchService {
     return this.describeWorkbench();
   }
 
-  activateActor(actorId: string) {
+  async activateActor(actorId: string) {
     const state = this.store.snapshot();
     if (!state.actors[actorId]) throw new Error(`Workspace actor "${actorId}" does not exist.`);
+    // A verified identity cannot be swapped for a chosen one; that would make
+    // the approval trail a claim again.
+    const verified = await resolveVerifiedIdentity(this.secretEnvironment as NodeJS.ProcessEnv);
+    if (verified.identity && actorId !== `github:${verified.identity.login}`) {
+      throw new Error(
+        `This workspace is bound to the verified GitHub identity @${verified.identity.login}; `
+        + 'clear GITHUB_TOKEN to choose an identity manually.',
+      );
+    }
     this.store.update((current) => ({ ...current, currentActorId: actorId }));
     return this.describeWorkbench();
   }

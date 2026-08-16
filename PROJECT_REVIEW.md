@@ -18,9 +18,11 @@
 | — | 工具密钥边界接线（此前 `SecretProvider` 从未被提供） | ✅ 已完成 |
 | — | 修复 Workbench HTTP 处理器的未捕获 rejection（会终止进程） | ✅ 已完成 |
 | P1.3 | Workbench 运行持久化迁移到 SQLite（workspace 文档降为 formatVersion 4 元数据） | ✅ 已完成 |
-| P1.4 | 首跑埋点 / 反馈通道 | ⬜ 未开始 |
-| P3.1 | 身份绑定 GitHub OAuth、角色映射 CODEOWNERS | ⬜ 未开始 |
+| P1.4 | 首跑反馈通道（`graph-workbench feedback` + Discussions 模板，不做遥测） | ✅ 已完成 |
+| P3.1 | 身份绑定已验证 GitHub 账号 + CODEOWNERS 权限解析 | ✅ 部分完成（见下） |
 | — | 签名校验的 webhook 入口（构建提交交付请求 → 同一批人工门） | ✅ 已完成 |
+
+**关于 P3.1 的边界**：连接器配置后，Workbench 用 `GET /user` 反查 token 归属的 GitHub 账号，绑定为工作区身份并**锁死身份下拉框**——批准记录的是 GitHub 确认过的登录名，不再是自选标签，A2.2.3 里「直接选 owner」那条演示击穿点因此不成立。CODEOWNERS 权限解析已完整实现（单路径最后匹配胜出、跨路径取并集、必须覆盖全部变更路径才可独自放行、团队成员身份无法核验时明确报告而非默认通过）。**仍未做**：多用户登录（当前认证的是 token 持有者，不是每个能访问 Workbench 的人），以及 owner 仍可绕过角色校验。共享部署前必须在前面加真正的按用户认证。
 
 **关于 P1.3 的实现说明**：没有复用内核的 `SQLiteRunStore`——它只建模 `RunStore` 接口那部分，而 `StoredRunSession` 还持有 `packId`、图定义、产物和上下文快照。因此新增了应用层的 `run-session-store.ts`（一行一个会话），workspace 文档降级为 `formatVersion 4` 的纯元数据，旧文档里的会话在首次打开时一次性搬运（搬运前备份原文档）。回归护栏是一条直接测量写放大的用例：**跑完 4 次运行后 `workbench.json` 的字节数与跑完 1 次时完全相同**。
 

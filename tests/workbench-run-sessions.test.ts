@@ -226,3 +226,22 @@ describe('Workbench workspace write cost', () => {
     }
   });
 });
+
+describe('verified identity binding', () => {
+  it('leaves identity selection open when no connector is configured', async () => {
+    // The zero-key path must keep working exactly as before: locking the
+    // selector without a verified identity would strand the operator.
+    const service = new WorkbenchService();
+    try {
+      const bootstrap = await service.describeWorkbench();
+      expect(bootstrap.connectors.github.identityLocked).toBe(false);
+      expect(bootstrap.connectors.github.login).toBeUndefined();
+      expect(bootstrap.actor.id).toBe('local.user');
+
+      const switched = await service.activateActor('local.user');
+      expect(switched.actor.id).toBe('local.user');
+    } finally {
+      await service.close();
+    }
+  });
+});
