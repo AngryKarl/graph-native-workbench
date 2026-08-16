@@ -737,8 +737,10 @@ function feedbackCommand(): void {
     '```',
     '',
   ].join('\n');
+  // No category is pinned: naming one that does not exist in the repository
+  // produces a dead link, and GitHub asks for the category anyway.
   const url = 'https://github.com/AngryKarl/graph-workbench/discussions/new'
-    + `?category=first-run-feedback&title=${encodeURIComponent('First-run feedback')}`
+    + `?title=${encodeURIComponent('First-run feedback')}`
     + `&body=${encodeURIComponent(body)}`;
   console.log('Share first-run feedback:\n');
   console.log(url);
