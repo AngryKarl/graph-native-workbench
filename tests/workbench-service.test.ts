@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { InMemoryContextGraphStore, verifyRunAuditBundle } from '@graph-workbench/core';
 import { researchPack } from '@graph-workbench/pack-research';
 import { bundledPackCatalog } from '../apps/workbench/src/catalog.js';
@@ -504,11 +505,19 @@ describe('Workbench service', () => {
 
       await first.close();
       first = undefined;
-      const persisted = JSON.parse(await readFile(dataFile, 'utf8')) as {
-        runs: Record<string, Record<string, unknown>>;
-      };
-      for (const session of Object.values(persisted.runs)) delete session.context;
-      await writeFile(dataFile, `${JSON.stringify(persisted, null, 2)}\n`, 'utf8');
+      // Strip the per-run context snapshots so the restored view can only come
+      // from the independent context authority, not from the run store.
+      const runsFile = join(directory, 'runs.sqlite');
+      const runsDatabase = new DatabaseSync(runsFile);
+      const rows = runsDatabase.prepare('SELECT run_id, document FROM run_sessions').all() as unknown as
+        Array<{ run_id: string; document: string }>;
+      for (const row of rows) {
+        const session = JSON.parse(row.document) as Record<string, unknown>;
+        delete session.context;
+        runsDatabase.prepare('UPDATE run_sessions SET document = ? WHERE run_id = ?')
+          .run(JSON.stringify(session), row.run_id);
+      }
+      runsDatabase.close();
 
       second = new WorkbenchService({ dataFile });
       const restored = await second.describeWorkbench();

@@ -44,6 +44,12 @@ versioning once public packages begin publishing.
 
 ### Changed
 
+- Moved Workbench run sessions out of the workspace JSON document into their own
+  SQLite store, and reduced the workspace document to metadata at
+  `formatVersion` 4. Every recorded run used to re-serialize the whole document,
+  so writing one event in the hundredth run rewrote the ninety-nine before it.
+  Sessions from an older workspace move across on first open, after the original
+  document is backed up.
 - Pack documentation now states how far each Pack reaches. Software Delivery is
   labelled as connector-backed; the other five standard Packs are labelled
   reference models whose adapters return deterministic values.

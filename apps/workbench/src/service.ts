@@ -38,6 +38,11 @@ import {
 } from './catalog.js';
 import { WorkbenchModelService } from './model-service.js';
 import {
+  InMemoryRunSessionStore,
+  SQLiteRunSessionStore,
+  type RunSessionStore,
+} from './run-session-store.js';
+import {
   WorkbenchWorkspaceStore,
   type StoredModelProvider,
   type StoredGraphDraft,
@@ -123,6 +128,11 @@ function pendingToolApproval(events: readonly GraphEvent[]) {
 function defaultContextFile(dataFile: string): string {
   const stem = basename(dataFile, extname(dataFile));
   return resolve(dirname(dataFile), stem === 'workbench' ? 'context.sqlite' : `${stem}.context.sqlite`);
+}
+
+function defaultRunSessionFile(dataFile: string): string {
+  const stem = basename(dataFile, extname(dataFile));
+  return resolve(dirname(dataFile), stem === 'workbench' ? 'runs.sqlite' : `${stem}.runs.sqlite`);
 }
 
 function actorCanResolve(actor: ActorIdentity, requiredRoleId?: string): boolean {
@@ -221,6 +231,7 @@ export class WorkbenchService {
   private readonly actorOverride: ActorIdentity | undefined;
   private readonly contextStore: ContextGraphStore;
   private readonly secretEnvironment: Readonly<Record<string, string | undefined>>;
+  private readonly runs: RunSessionStore;
   private contextHydration: Promise<void> | undefined;
 
   constructor(options: {
@@ -235,6 +246,12 @@ export class WorkbenchService {
     this.secretEnvironment = options.secretEnvironment ?? process.env;
     this.store = new WorkbenchWorkspaceStore(options.dataFile);
     if (options.dataFile) mkdirSync(dirname(options.dataFile), { recursive: true });
+    this.runs = options.dataFile
+      ? new SQLiteRunSessionStore(defaultRunSessionFile(options.dataFile))
+      : new InMemoryRunSessionStore();
+    // Sessions that were still inside a pre-v4 workspace document move across
+    // once. The workspace store keeps a backup of the document they came from.
+    for (const session of Object.values(this.store.takeLegacyRuns())) this.runs.save(session);
     this.contextStore = options.contextStore
       ?? (options.dataFile
         ? new SQLiteContextGraphStore(defaultContextFile(options.dataFile))
@@ -325,9 +342,8 @@ export class WorkbenchService {
         ...(runtime.publisherKeyId ? { publisherKeyId: runtime.publisherKeyId } : {}),
       };
     });
-    const runs = Object.values(workspace.runs)
-      .map((session) => publicRun(session, actor))
-      .sort((left, right) => right.events[0]!.timestamp.localeCompare(left.events[0]!.timestamp));
+    // The run store already returns newest first.
+    const runs = this.runs.list().map((session) => publicRun(session, actor));
     return {
       activePackId: workspace.activePackId,
       installedPackIds: workspace.installedPackIds,
@@ -497,7 +513,7 @@ export class WorkbenchService {
 
   async decide(runId: string, approved: boolean): Promise<WorkbenchRunSnapshot> {
     const actor = this.currentActor();
-    const existing = this.store.snapshot().runs[runId];
+    const existing = this.runs.get(runId);
     if (!existing) throw new Error(`Run "${runId}" does not exist.`);
     if (!existing.checkpoint || existing.status !== 'paused') {
       throw new Error(`Run "${runId}" is not waiting for a decision.`);
@@ -538,7 +554,7 @@ export class WorkbenchService {
 
   async resumeWaiting(runId: string, event?: ExternalEvent): Promise<WorkbenchRunSnapshot> {
     const actor = this.currentActor();
-    const existing = this.store.snapshot().runs[runId];
+    const existing = this.runs.get(runId);
     if (!existing) throw new Error(`Run "${runId}" does not exist.`);
     if (!existing.checkpoint || existing.status !== 'paused' || !pendingWait(existing)) {
       throw new Error(`Run "${runId}" is not waiting for a timer, event or subgraph.`);
@@ -579,7 +595,7 @@ export class WorkbenchService {
       throw new Error(`Graph "${graphId}" does not declare a webhook trigger.`);
     }
     const runId = invocationId ? webhookTriggeredRunId(packId, graphId, invocationId) : undefined;
-    const existing = runId ? this.store.snapshot().runs[runId] : undefined;
+    const existing = runId ? this.runs.get(runId) : undefined;
     if (existing) return publicRun(existing, this.currentActor());
     const triggered = await new GraphTriggerDispatcher(compiled, {
       ...this.packBindings(runtime),
@@ -622,7 +638,7 @@ export class WorkbenchService {
     const graph = compiled.graphs.get(graphId);
     if (!graph) throw new Error(`Graph "${graphId}" does not exist in Pack "${packId}".`);
     const runId = scheduleTriggeredRunId(packId, graphId, occurrence.id);
-    const existing = this.store.snapshot().runs[runId];
+    const existing = this.runs.get(runId);
     if (existing) return publicRun(existing, this.currentActor());
     const triggered = await new GraphTriggerDispatcher(compiled, {
       ...this.packBindings(runtime),
@@ -639,7 +655,7 @@ export class WorkbenchService {
     readonly started: readonly WorkbenchRunSnapshot[];
   }> {
     const event = externalEventSchema.parse(input);
-    const waitingRunIds = Object.values(this.store.snapshot().runs)
+    const waitingRunIds = this.runs.list()
       .filter((session) => {
         const wait = pendingWait(session);
         return wait?.mode === 'event'
@@ -659,7 +675,7 @@ export class WorkbenchService {
         && graph.definition.trigger.eventType === event.type);
       for (const graph of matchingGraphs) {
         const runId = eventTriggeredRunId(packId, graph.definition.id, event.id);
-        if (this.store.snapshot().runs[runId]) continue;
+        if (this.runs.get(runId)) continue;
         const triggered = await new GraphTriggerDispatcher({
           manifest: compiled.manifest,
           graphs: new Map([[graph.definition.id, graph]]),
@@ -677,17 +693,17 @@ export class WorkbenchService {
   }
 
   get(runId: string): WorkbenchRunSnapshot | undefined {
-    const session = this.store.snapshot().runs[runId];
+    const session = this.runs.get(runId);
     return session ? publicRun(session, this.currentActor()) : undefined;
   }
 
   listRuns(): readonly WorkbenchRunSnapshot[] {
     const actor = this.currentActor();
-    return Object.values(this.store.snapshot().runs).map((session) => publicRun(session, actor));
+    return this.runs.list().map((session) => publicRun(session, actor));
   }
 
   exportAudit(runId: string) {
-    const session = this.store.snapshot().runs[runId];
+    const session = this.runs.get(runId);
     if (!session) throw new Error(`Run "${runId}" does not exist.`);
     return createRunAuditBundle({
       run: {
@@ -724,7 +740,7 @@ export class WorkbenchService {
     if (result.status === 'completed' && hasDeliverable && runtime.projector) {
       const store = new InMemoryContextGraphStore(runtime.manifest);
       await this.ensureContextHydrated();
-      const authorityObjects = [...new Map(Object.values(this.store.snapshot().runs)
+      const authorityObjects = [...new Map(this.runs.list()
         .filter((session) => session.packId === packId && session.context)
         .flatMap((session) => session.context?.objects ?? [])
         .map((object) => [`${object.id}\u0000${object.version}`, object])).values()];
@@ -757,13 +773,11 @@ export class WorkbenchService {
   }
 
   private saveSession(session: StoredRunSession): void {
-    this.store.update((state) => ({
-      ...state,
-      runs: { ...state.runs, [session.runId]: session },
-    }));
+    this.runs.save(session);
   }
 
   async close(): Promise<void> {
+    this.runs.close();
     await this.contextStore.close?.();
   }
 
@@ -773,7 +787,7 @@ export class WorkbenchService {
   }
 
   private async hydrateContext(): Promise<void> {
-    const contexts = Object.values(this.store.snapshot().runs)
+    const contexts = this.runs.list()
       .filter((session): session is StoredRunSession & { context: WorkbenchContextSnapshot } => Boolean(session.context))
       .sort((left, right) => left.runId.localeCompare(right.runId))
       .map((session) => session.context);

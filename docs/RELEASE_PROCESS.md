@@ -37,14 +37,16 @@ reactivated or rolled back.
 ## Workspace migrations
 
 Workbench data has an independent integer `formatVersion`. The current format
-is version 2 and includes a stable workspace identity plus creation and update
-timestamps. When Graph Workbench opens a version 1 workspace it:
+is version 4: the workspace document holds installed Packs, drafts, team
+identities and the model-provider selection, while run sessions live in
+`runs.sqlite` beside it. When Graph Workbench opens an older workspace it:
 
 1. validates the legacy top-level structure;
-2. writes the untouched source to `workbench.json.v1.backup`;
+2. writes the untouched source to `workbench.json.v<n>.backup`;
 3. migrates it in memory without dropping Packs, drafts, runs, checkpoints or
    model-provider selection;
-4. atomically replaces the workspace file with format version 2.
+4. atomically replaces the workspace file with the current format version;
+5. moves any run sessions the old document carried into the run store.
 
 The backup is created once. Unknown future formats fail closed and are never
 rewritten. Every future workspace format change must add a deterministic

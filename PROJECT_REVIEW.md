@@ -17,12 +17,12 @@
 | P2.3 | ESLint 类型感知规则接入 CI 与 `release:check` | ✅ 已完成 |
 | — | 工具密钥边界接线（此前 `SecretProvider` 从未被提供） | ✅ 已完成 |
 | — | 修复 Workbench HTTP 处理器的未捕获 rejection（会终止进程） | ✅ 已完成 |
-| P1.3 | Workbench 运行持久化迁移到 SQLite | ⬜ 未开始，见下 |
+| P1.3 | Workbench 运行持久化迁移到 SQLite（workspace 文档降为 formatVersion 4 元数据） | ✅ 已完成 |
 | P1.4 | 首跑埋点 / 反馈通道 | ⬜ 未开始 |
 | P3.1 | 身份绑定 GitHub OAuth、角色映射 CODEOWNERS | ⬜ 未开始 |
 | — | 签名校验的 webhook 入口（构建提交交付请求 → 同一批人工门） | ✅ 已完成 |
 
-**关于 P1.3 的说明**：原计划本轮一并完成，实际评估后判定它不是机械迁移。`StoredRunSession` 除了运行态，还持有 `packId`、图定义、产物和上下文快照，而 `SQLiteRunStore` 只建模 `RunStore` 接口那部分。要做对需要新增会话元数据表、迁移路径和一套迁移测试——属于独立一轮的工作量。把它硬塞进本轮会在一个已经很大的改动里再叠一层持久化重写风险，因此明确留到下一轮，而不是仓促实现。
+**关于 P1.3 的实现说明**：没有复用内核的 `SQLiteRunStore`——它只建模 `RunStore` 接口那部分，而 `StoredRunSession` 还持有 `packId`、图定义、产物和上下文快照。因此新增了应用层的 `run-session-store.ts`（一行一个会话），workspace 文档降级为 `formatVersion 4` 的纯元数据，旧文档里的会话在首次打开时一次性搬运（搬运前备份原文档）。回归护栏是一条直接测量写放大的用例：**跑完 4 次运行后 `workbench.json` 的字节数与跑完 1 次时完全相同**。
 
 ---
 

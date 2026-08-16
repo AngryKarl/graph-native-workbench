@@ -80,7 +80,7 @@ Delivery genuinely usable rather than adding a seventh industry.
 - [x] State how far each Pack reaches, instead of listing them as equals
 - [x] Trigger a run from a signed GitHub webhook instead of a manual start
 - [ ] Bind workspace identity to GitHub, mapping approvals to CODEOWNERS
-- [ ] Move Workbench run and event storage to the existing SQLite run store
+- [x] Move Workbench run storage out of the workspace document into SQLite
 - [ ] Measure how many first runs reach an outcome
 
 The acceptance test for this milestone is not "issue to release runs". It is

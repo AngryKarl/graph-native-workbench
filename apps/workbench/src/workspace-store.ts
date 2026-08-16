@@ -48,15 +48,18 @@ export interface StoredModelProvider {
   readonly baseUrl?: string;
 }
 
+/**
+ * Workspace metadata only. Run sessions moved to their own store in
+ * formatVersion 4 so recording a run no longer rewrites the whole document.
+ */
 export interface WorkbenchWorkspaceState {
-  readonly formatVersion: 3;
+  readonly formatVersion: 4;
   readonly workspaceId: string;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly installedPackIds: readonly string[];
   readonly activePackId: string;
   readonly drafts: Readonly<Record<string, StoredGraphDraft>>;
-  readonly runs: Readonly<Record<string, StoredRunSession>>;
   readonly actors: Readonly<Record<string, ActorIdentity>>;
   readonly currentActorId: string;
   readonly modelProvider?: StoredModelProvider;
@@ -64,7 +67,9 @@ export interface WorkbenchWorkspaceState {
 
 export interface WorkspaceMigrationResult {
   readonly state: WorkbenchWorkspaceState;
-  readonly migratedFrom?: 1 | 2;
+  readonly migratedFrom?: 1 | 2 | 3;
+  /** Sessions found in a pre-v4 document, to be handed to the run store once. */
+  readonly legacyRuns?: Readonly<Record<string, StoredRunSession>>;
 }
 
 const localOwner = actorIdentitySchema.parse({
@@ -88,7 +93,6 @@ function workspaceFields(root: Record<string, unknown>) {
   }
   if (typeof root.activePackId !== 'string') throw new Error('Workspace activePackId must be a Pack id.');
   const drafts = object(root.drafts, 'Workspace drafts') as WorkbenchWorkspaceState['drafts'];
-  const runs = object(root.runs, 'Workspace runs') as WorkbenchWorkspaceState['runs'];
   const modelProvider = root.modelProvider === undefined
     ? undefined
     : object(root.modelProvider, 'Workspace modelProvider') as unknown as StoredModelProvider;
@@ -96,9 +100,13 @@ function workspaceFields(root: Record<string, unknown>) {
     installedPackIds: root.installedPackIds as string[],
     activePackId: root.activePackId,
     drafts,
-    runs,
     ...(modelProvider ? { modelProvider } : {}),
   };
+}
+
+/** Sessions carried by a pre-v4 document; absent once the move has happened. */
+function legacyRuns(root: Record<string, unknown>): Readonly<Record<string, StoredRunSession>> {
+  return object(root.runs, 'Workspace runs') as Readonly<Record<string, StoredRunSession>>;
 }
 
 function identityFields(root: Record<string, unknown>) {
@@ -120,7 +128,7 @@ export function migrateWorkbenchWorkspace(
   options: { readonly now?: Date; readonly workspaceId?: string } = {},
 ): WorkspaceMigrationResult {
   const root = object(input, 'Workspace data');
-  if (root.formatVersion === 3) {
+  if (root.formatVersion === 4) {
     if (typeof root.workspaceId !== 'string' || !root.workspaceId) throw new Error('Workspace id is missing.');
     if (typeof root.createdAt !== 'string' || !Number.isFinite(Date.parse(root.createdAt))) {
       throw new Error('Workspace createdAt must be an ISO timestamp.');
@@ -130,7 +138,28 @@ export function migrateWorkbenchWorkspace(
     }
     return {
       state: {
-        formatVersion: 3,
+        formatVersion: 4,
+        workspaceId: root.workspaceId,
+        createdAt: root.createdAt,
+        updatedAt: root.updatedAt,
+        ...workspaceFields(root),
+        ...identityFields(root),
+      },
+    };
+  }
+  if (root.formatVersion === 3) {
+    if (typeof root.workspaceId !== 'string' || !root.workspaceId) throw new Error('Workspace id is missing.');
+    if (typeof root.createdAt !== 'string' || !Number.isFinite(Date.parse(root.createdAt))) {
+      throw new Error('Workspace createdAt must be an ISO timestamp.');
+    }
+    if (typeof root.updatedAt !== 'string' || !Number.isFinite(Date.parse(root.updatedAt))) {
+      throw new Error('Workspace updatedAt must be an ISO timestamp.');
+    }
+    return {
+      migratedFrom: 3,
+      legacyRuns: legacyRuns(root),
+      state: {
+        formatVersion: 4,
         workspaceId: root.workspaceId,
         createdAt: root.createdAt,
         updatedAt: root.updatedAt,
@@ -149,8 +178,9 @@ export function migrateWorkbenchWorkspace(
     }
     return {
       migratedFrom: 2,
+      legacyRuns: legacyRuns(root),
       state: {
-        formatVersion: 3,
+        formatVersion: 4,
         workspaceId: root.workspaceId,
         createdAt: root.createdAt,
         updatedAt: root.updatedAt,
@@ -161,13 +191,14 @@ export function migrateWorkbenchWorkspace(
     };
   }
   if (root.version !== 1) {
-    throw new Error('Unsupported workspace data format. This Graph Workbench release can migrate version 1/2 or open formatVersion 3.');
+    throw new Error('Unsupported workspace data format. This Graph Workbench release can migrate version 1/2/3 or open formatVersion 4.');
   }
   const now = (options.now ?? new Date()).toISOString();
   return {
     migratedFrom: 1,
+    legacyRuns: legacyRuns(root),
     state: {
-      formatVersion: 3,
+      formatVersion: 4,
       workspaceId: options.workspaceId ?? `workspace-${randomUUID()}`,
       createdAt: now,
       updatedAt: now,
@@ -181,14 +212,13 @@ export function migrateWorkbenchWorkspace(
 function initialState(): WorkbenchWorkspaceState {
   const now = new Date().toISOString();
   return {
-    formatVersion: 3,
+    formatVersion: 4,
     workspaceId: `workspace-${randomUUID()}`,
     createdAt: now,
     updatedAt: now,
     installedPackIds: ['software_delivery', 'architecture'],
     activePackId: 'software_delivery',
     drafts: {},
-    runs: {},
     actors: { [localOwner.id]: localOwner },
     currentActorId: localOwner.id,
   };
@@ -196,16 +226,29 @@ function initialState(): WorkbenchWorkspaceState {
 
 export class WorkbenchWorkspaceStore {
   private state: WorkbenchWorkspaceState;
+  private pendingLegacyRuns: Readonly<Record<string, StoredRunSession>>;
 
   constructor(private readonly dataFile?: string) {
     const loaded = this.load();
     this.state = loaded.state;
+    this.pendingLegacyRuns = loaded.legacyRuns ?? {};
     if (loaded.migratedFrom) {
       if (!this.dataFile) throw new Error('Persistent workspace migration requires a data file.');
       const backup = `${this.dataFile}.v${loaded.migratedFrom}.backup`;
       if (!existsSync(backup)) copyFileSync(this.dataFile, backup);
       this.persist();
     }
+  }
+
+  /**
+   * Sessions read out of a pre-v4 document, returned once so the caller can
+   * move them into the run store. The backup written during migration is the
+   * recovery path if that move fails.
+   */
+  takeLegacyRuns(): Readonly<Record<string, StoredRunSession>> {
+    const runs = this.pendingLegacyRuns;
+    this.pendingLegacyRuns = {};
+    return runs;
   }
 
   snapshot(): WorkbenchWorkspaceState {
@@ -215,7 +258,7 @@ export class WorkbenchWorkspaceStore {
   update(mutator: (state: WorkbenchWorkspaceState) => WorkbenchWorkspaceState): WorkbenchWorkspaceState {
     this.state = {
       ...mutator(this.snapshot()),
-      formatVersion: 3,
+      formatVersion: 4,
       updatedAt: new Date().toISOString(),
     };
     this.persist();
