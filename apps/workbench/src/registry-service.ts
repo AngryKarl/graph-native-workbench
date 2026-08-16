@@ -149,7 +149,7 @@ export async function loadRegistryTrustConfig(path: string): Promise<RegistryTru
     return parseTrustConfig(JSON.parse(source) as unknown);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Invalid Registry trust config at ${path}: ${message}`);
+    throw new Error(`Invalid Registry trust config at ${path}: ${message}`, { cause: error });
   }
 }
 

@@ -157,19 +157,23 @@ export function createAutomaticLayout(graph: GraphDefinition): Record<string, { 
     });
     let y = 116;
     ordered.forEach((node) => {
-      positions[node.id] = { x: stage * 340 + 92, y };
-      y += estimatedNodeHeight(node.kind) + 42;
+      positions[node.id] = { x: stage * 380 + 92, y };
+      y += estimatedNodeHeight(node.kind) + 46;
     });
   }
   return positions;
 }
 
+/**
+ * Must stay in step with the `.workflow-node` heights in styles.css: the layout
+ * reserves this much vertical room, so an underestimate makes cards overlap.
+ */
 function estimatedNodeHeight(kind: GraphNode['kind']): number {
-  if (kind === 'agent') return 132;
-  if (kind === 'router') return 116;
-  if (kind === 'map' || kind === 'loop' || kind === 'subgraph') return 118;
-  if (kind === 'human') return 108;
-  return 88;
+  if (kind === 'agent') return 168;
+  if (kind === 'router') return 136;
+  if (kind === 'map' || kind === 'loop' || kind === 'subgraph') return 150;
+  if (kind === 'human') return 134;
+  return 110;
 }
 
 const stageNames: Record<number, string[]> = {
@@ -190,7 +194,7 @@ export function deriveStageBands(
     : []);
   if (!placed.length) return [];
   const minX = Math.min(...placed.map((item) => item.position.x)) - 72;
-  const maxX = Math.max(...placed.map((item) => item.position.x)) + 270;
+  const maxX = Math.max(...placed.map((item) => item.position.x)) + 300;
   const minY = Math.min(...placed.map((item) => item.position.y)) - 72;
   const maxY = Math.max(...placed.map((item) => item.position.y + estimatedNodeHeight(item.node.kind))) + 92;
   const count = Math.min(6, Math.max(1, Math.ceil(graph.nodes.length / 4)));

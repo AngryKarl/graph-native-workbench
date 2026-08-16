@@ -1,0 +1,46 @@
+# GitHub applies a discussion template only to the category whose slug matches
+# this file's name. This template stays inert until a "First run feedback"
+# category exists in the repository's Discussions settings; `graph-workbench
+# feedback` deliberately does not pin a category, so the command works either
+# way.
+title: "First-run feedback"
+labels: ["first-run"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Graph Workbench collects no telemetry, so this is the only way we learn
+        whether a first run actually reached a useful outcome. Partial answers
+        are worth more than none — a report that stops at "it failed here" is
+        exactly the useful case.
+
+        `npx graph-workbench feedback` prints a prefilled draft with your
+        environment details already filled in.
+  - type: textarea
+    id: attempt
+    attributes:
+      label: What did you try?
+      placeholder: The bundled sample, your own repository, or your own Pack.
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Did the first run reach an outcome you could use?
+      options:
+        - "Yes — I saw the artifact and its context"
+        - "Partly — it ran but the result was not useful"
+        - "No — it failed or I gave up first"
+    validations:
+      required: true
+  - type: textarea
+    id: friction
+    attributes:
+      label: What stopped you, or what was missing?
+      placeholder: The step where you got stuck, the thing you expected to find, or the integration you needed.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Output of `npx graph-workbench feedback`.
+      render: text

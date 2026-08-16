@@ -67,6 +67,28 @@ are recorded in the [industry workflow analysis](docs/INDUSTRY_WORKFLOW_ANALYSIS
 These first-party Packs are built and tested in this repository. External users
 may validate them, but their implementation is not a prerequisite for progress.
 
+## 0.6 — depth in one industry
+
+The six-industry program proved the kernel generalizes. It did not prove the
+project can take over real work: every standard Pack's adapters returned
+deterministic values. Development is now focused on making Professional Software
+Delivery genuinely usable rather than adding a seventh industry.
+
+- [x] Ship the first real connector (GitHub) behind the existing Pack contract
+- [x] Resolve tool credentials through the declared secret boundary
+- [x] Keep the credential-free first run unchanged when a token is present
+- [x] State how far each Pack reaches, instead of listing them as equals
+- [x] Trigger a run from a signed GitHub webhook instead of a manual start
+- [x] Bind workspace identity to the verified GitHub account behind the token
+- [x] Resolve code-owner authority from CODEOWNERS and the changed paths
+- [x] Move Workbench run storage out of the workspace document into SQLite
+- [x] Ask whether a first run reached an outcome (`graph-workbench feedback`)
+- [ ] Sign in individual reviewers, rather than the token holder alone
+
+The acceptance test for this milestone is not "issue to release runs". It is
+**a second run reusing the first run's approved release context**, because that
+is the capability branch protection does not have.
+
 ## Before stable 1.0
 
 - [x] Complete and validate all six first-party standard Industry Packs

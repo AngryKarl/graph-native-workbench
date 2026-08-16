@@ -12,6 +12,7 @@ export * from './context-store.js';
 export * from './triggers.js';
 export * from './runtime.js';
 export * from './run-store.js';
+export * from './secrets.js';
 export * from './sqlite-context-store.js';
 export * from './sqlite-run-store.js';
 export * from './state.js';

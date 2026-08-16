@@ -181,6 +181,17 @@ export interface WorkbenchBootstrap {
   actors: ActorIdentityView[];
   actor: ActorIdentityView;
   models: ModelProviderState;
+  connectors: { github: ConnectorStatusView };
+}
+
+export interface ConnectorStatusView {
+  configured: boolean;
+  write: boolean;
+  repository?: string;
+  baseUrl?: string;
+  reason?: string;
+  identityLocked?: boolean;
+  login?: string;
 }
 
 export interface PortableArtifactView {

@@ -43,9 +43,27 @@ Issue → 并行检查 → 责任人审批 → 发布交付物
   └────────────── 证据、决策和来源 ──────────────→ 组织上下文
 ```
 
-内置的零密钥适配器是确定性的参考实现，让所有标准 Pack 无需凭证即可运行。生产团队
-需要用经过审查的 GitHub、CI/CD、可观测性等系统连接器替换这些参考适配器，同时保留
-相同的 Pack 契约和治理路径。
+### 连接到你自己的仓库
+
+只要指明一个仓库，旗舰 Pack 就会对接真实的 GitHub：
+
+```bash
+export GITHUB_TOKEN=ghp_your_token
+export GRAPH_WORKBENCH_GITHUB_REPOSITORY=your-org/your-repo
+npx graph-workbench
+```
+
+工作项、commit SHA 和 Pull Request 从此来自 GitHub 而不是内置样例，而 Pack 契约、
+图、角色、策略与审批路径完全不变。除非同时设置 `GRAPH_WORKBENCH_GITHUB_WRITE=true`，
+否则写操作只做演练（dry-run）——你可以先对着真实仓库跑完整条治理旅程、逐项检查每个
+决策，再决定是否授予写权限。单独设置 `GITHUB_TOKEN` 不会激活连接器，因为这个变量在
+多数开发机上是环境里本来就有的。
+
+详见 [GitHub 连接器指南](docs/CONNECTOR_GITHUB.md)：工具映射、幂等行为、限流处理与
+所需 token 权限。
+
+其余内置适配器仍是确定性的参考实现，让所有标准 Pack 无需凭证即可运行。生产团队
+可以用经过审查的连接器替换它们，同时保留相同的 Pack 契约和治理路径。
 
 如果只想在终端运行一次冒烟体验：
 

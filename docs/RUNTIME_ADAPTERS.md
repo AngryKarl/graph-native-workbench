@@ -160,6 +160,13 @@ The runtime updates the checkpoint after each completed scheduling batch. A new
 runtime instance can call `resumeStored` after a process restart. Successful
 completion clears the checkpoint while retaining the final run and event trace.
 
+Workbench run sessions are stored per row in `runs.sqlite` next to
+`workbench.json`, so recording a run costs the size of that run rather than the
+size of the workspace's entire history. The workspace document itself holds only
+installed Packs, drafts, identities and the model-provider selection. A
+pre-version-4 document's sessions move into the run store on first open, after
+the original is backed up.
+
 The Workbench uses a separate `ContextGraphStore` as its organizational context
 authority. With no configuration it creates `context.sqlite` next to
 `workbench.json`, migrates legacy per-run projections idempotently, writes every
