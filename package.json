@@ -10,7 +10,7 @@
   "packageManager": "pnpm@11.17.0",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "eslint .",
+    "lint": "eslint apps packages packs scripts tests eslint.config.js playwright.config.ts vitest.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:e2e": "pnpm workbench:build && playwright test",

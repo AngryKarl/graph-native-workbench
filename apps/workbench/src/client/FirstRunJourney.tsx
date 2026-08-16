@@ -1,4 +1,5 @@
 import { Check, Circle, FileCheck2, Network, Play, ShieldCheck } from 'lucide-react';
+import { formatJourneyDuration, journeyElapsedMs } from './graph-model.js';
 import type { PackDescription, RunSnapshot } from './types.js';
 
 function resolvedHumanDecisions(run: RunSnapshot | null): number {
@@ -26,13 +27,23 @@ export function FirstRunJourney({ pack, run, deliverable, busy, onRun, onContext
     { label: 'Sample ready', detail: pack.fixtures[0]?.label ?? 'Bundled fixture', done: true },
     { label: 'Run the workflow', detail: run ? `${run.events.length} traceable events` : 'Zero-key deterministic run', done: Boolean(run) },
     { label: 'Review decisions', detail: expectedApprovals ? `${approvalCount} of ${expectedApprovals} accountable gates` : 'Policy checks', done: completed },
-    { label: 'Reuse the outcome', detail: reusedPriorContext ? 'Prior release context reused' : deliverable ? 'Artifact and context are ready' : 'Artifact + context graph', done: Boolean(deliverable) },
+    { label: 'Reuse the outcome', detail: reusedPriorContext ? 'Prior release context reused' : deliverable ? 'Artifact + context ready' : 'Artifact + context graph', done: Boolean(deliverable) },
   ];
+
+  // The header promises a 60-second run. Once there is an outcome, report what
+  // it actually took instead of leaving the claim unchecked.
+  const elapsedMs = deliverable && run ? journeyElapsedMs(run.events) : undefined;
 
   return (
     <section className="first-run-journey" aria-label="Guided sample journey">
       <div className="journey-intro">
-        <span className="journey-kicker">60-second guided run</span>
+        <span className="journey-kicker">
+          {/* Kept close to the width of the claim it replaces: a longer string
+              widens this column and truncates the step details beside it. */}
+          {elapsedMs === undefined
+            ? '60-second guided run'
+            : `Outcome reached in ${formatJourneyDuration(elapsedMs)}`}
+        </span>
         <strong>{journeyMessage}</strong>
       </div>
       <ol>

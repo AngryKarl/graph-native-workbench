@@ -6,6 +6,11 @@ import tseslint from 'typescript-eslint';
  * The type checker already enforces the strictest options TypeScript offers, so
  * linting is scoped to the defects `tsc` cannot see: unawaited promises,
  * misused async values and unreachable or unused code paths.
+ *
+ * The `lint` script passes the same roots `tsconfig.json` includes rather than
+ * linting the whole working tree. ESLint does not read `.git/info/exclude`, so
+ * `eslint .` also reports on a contributor's local scratch directories and
+ * fails their build over files the repository does not own.
  */
 export default tseslint.config(
   {
