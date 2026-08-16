@@ -1,4 +1,4 @@
-import type { GraphDefinition, GraphNode, IndustryPackManifest, RunSnapshot } from './types.js';
+import type { GraphDefinition, GraphEvent, GraphNode, IndustryPackManifest, RunSnapshot } from './types.js';
 
 export const nodeKindLabel: Record<GraphNode['kind'], string> = {
   trigger: 'Trigger',
@@ -232,4 +232,34 @@ export function nextEdgeId(graph: GraphDefinition, source: string, target: strin
   let id = base;
   while (graph.edges.some((edge) => edge.id === id)) id = `${base}_${index++}`.slice(0, 120);
   return id;
+}
+
+/**
+ * Wall-clock time from a run's first event to its last.
+ *
+ * This deliberately includes the time a reviewer spent at a human gate: the
+ * question the journey answers is how long it took *this person* to reach an
+ * outcome, not how long the machine was busy. Returns undefined until there is
+ * something to measure.
+ */
+export function journeyElapsedMs(events: readonly GraphEvent[]): number | undefined {
+  const first = events[0]?.timestamp;
+  const last = events[events.length - 1]?.timestamp;
+  if (!first || !last) return undefined;
+  const elapsed = Date.parse(last) - Date.parse(first);
+  return Number.isFinite(elapsed) && elapsed >= 0 ? elapsed : undefined;
+}
+
+/** Compact duration for the journey strip: `8s`, `1m 12s`, `1h 4m`. */
+export function formatJourneyDuration(elapsedMs: number): string {
+  const seconds = Math.max(1, Math.round(elapsedMs / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    const remainder = seconds % 60;
+    return remainder === 0 ? `${minutes}m` : `${minutes}m ${remainder}s`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes === 0 ? `${hours}h` : `${hours}h ${remainingMinutes}m`;
 }

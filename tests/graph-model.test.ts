@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { GraphDefinition, GraphNode } from '@graph-workbench/contracts';
 import {
   createAutomaticLayout, deriveStageBands, graphFocusNeighborhood, initialGraphFocusNodeIds,
-  nodeAccessibleLabel, nodeRunStatus, resolveRunDeliverable, runFocusNodeIds,
+  nodeAccessibleLabel, nodeRunStatus, resolveRunDeliverable,
+  journeyElapsedMs,
+  formatJourneyDuration, runFocusNodeIds,
 } from '../apps/workbench/src/client/graph-model.js';
 import type { RunSnapshot } from '../apps/workbench/src/client/types.js';
 
@@ -138,5 +140,45 @@ describe('Workbench graph visual model', () => {
         evidenceFields: [],
       },
     ], run)).toBe('# Governed fleet dispatch');
+  });
+});
+
+describe('guided journey duration', () => {
+  const event = (seq: number, timestamp: string) => ({
+    runId: 'run-1', seq, timestamp, type: 'node.completed' as const, detail: {},
+  });
+
+  it('measures from the first event to the last, including time spent at a human gate', () => {
+    // A reviewer thinking for two minutes is part of how long the journey took;
+    // reporting only machine time would flatter the number.
+    const elapsed = journeyElapsedMs([
+      event(1, '2026-08-16T10:00:00.000Z'),
+      event(2, '2026-08-16T10:02:07.000Z'),
+    ]);
+    expect(elapsed).toBe(127_000);
+  });
+
+  it('has nothing to report until a run has events', () => {
+    expect(journeyElapsedMs([])).toBeUndefined();
+    expect(journeyElapsedMs([event(1, 'not-a-timestamp')])).toBeUndefined();
+  });
+
+  it('ignores an out-of-order trace rather than showing a negative duration', () => {
+    expect(journeyElapsedMs([
+      event(1, '2026-08-16T10:05:00.000Z'),
+      event(2, '2026-08-16T10:00:00.000Z'),
+    ])).toBeUndefined();
+  });
+
+  it('formats a duration compactly at each scale', () => {
+    expect(formatJourneyDuration(8_400)).toBe('8s');
+    expect(formatJourneyDuration(60_000)).toBe('1m');
+    expect(formatJourneyDuration(127_000)).toBe('2m 7s');
+    expect(formatJourneyDuration(3_600_000)).toBe('1h');
+    expect(formatJourneyDuration(3_840_000)).toBe('1h 4m');
+  });
+
+  it('never reports a sub-second run as 0s', () => {
+    expect(formatJourneyDuration(120)).toBe('1s');
   });
 });
