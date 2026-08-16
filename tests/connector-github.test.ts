@@ -1,9 +1,12 @@
+import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
   createGitHubSoftwareDeliveryTools,
   createGitHubToolsFromEnvironment,
   GitHubError,
   readGitHubConnectorStatus,
+  verifyGitHubWebhookSignature,
+  assertGitHubWebhookSignature,
 } from '@graph-workbench/connector-github';
 import type { ToolExecutionContext } from '@graph-workbench/core';
 
@@ -274,5 +277,46 @@ describe('GitHub connector: activation', () => {
       .toMatchObject({ configured: true, write: true });
     expect(readGitHubConnectorStatus({ ...base, GRAPH_WORKBENCH_GITHUB_WRITE: 'yes' }))
       .toMatchObject({ write: false });
+  });
+});
+
+describe('GitHub webhook verification', () => {
+  const secret = 'webhook-shared-secret';
+  const payload = JSON.stringify({ issue_id: 'acme/api#1', title: 'Ship it' });
+  const signature = (body: string, key: string) =>
+    `sha256=${createHmac('sha256', key).update(body).digest('hex')}`;
+
+  it('accepts a delivery signed with the configured secret', () => {
+    expect(verifyGitHubWebhookSignature(payload, signature(payload, secret), secret)).toBe(true);
+    expect(() => assertGitHubWebhookSignature(payload, signature(payload, secret), secret)).not.toThrow();
+  });
+
+  it('rejects a body altered after signing, which is the attack it exists to stop', () => {
+    const tampered = payload.replace('Ship it', 'Ship anything');
+    expect(verifyGitHubWebhookSignature(tampered, signature(payload, secret), secret)).toBe(false);
+    expect(() => assertGitHubWebhookSignature(tampered, signature(payload, secret), secret))
+      .toThrow(/does not match/);
+  });
+
+  it('rejects a signature made with a different secret', () => {
+    expect(verifyGitHubWebhookSignature(payload, signature(payload, 'other-secret'), secret)).toBe(false);
+  });
+
+  it('rejects an unsigned delivery instead of trusting it', () => {
+    expect(verifyGitHubWebhookSignature(payload, undefined, secret)).toBe(false);
+    expect(() => assertGitHubWebhookSignature(payload, undefined, secret)).toThrow(/missing its X-Hub-Signature-256/);
+  });
+
+  it('verifies the exact received bytes, not a re-serialized copy', () => {
+    // GitHub signs the wire bytes; JSON.parse + stringify changes spacing and
+    // key order, so verification must never round-trip the payload.
+    const spaced = '{ "issue_id": "acme/api#1",  "title": "Ship it" }';
+    const valid = signature(spaced, secret);
+    expect(verifyGitHubWebhookSignature(spaced, valid, secret)).toBe(true);
+    expect(verifyGitHubWebhookSignature(JSON.stringify(JSON.parse(spaced)), valid, secret)).toBe(false);
+  });
+
+  it('refuses to verify when no secret is configured', () => {
+    expect(verifyGitHubWebhookSignature(payload, signature(payload, ''), '')).toBe(false);
   });
 });

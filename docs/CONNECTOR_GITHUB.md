@@ -26,6 +26,7 @@ npx graph-workbench
 | `GRAPH_WORKBENCH_GITHUB_REPOSITORY` | yes | Target repository as `owner/repo`. Also the default for work items that do not name one. |
 | `GRAPH_WORKBENCH_GITHUB_WRITE` | no | `true` allows command tools to change GitHub. Anything else keeps them in dry-run. |
 | `GRAPH_WORKBENCH_GITHUB_API` | no | Base URL for GitHub Enterprise Server. |
+| `GRAPH_WORKBENCH_GITHUB_WEBHOOK_SECRET` | no | When set, every `/hooks` delivery must carry a valid `X-Hub-Signature-256`. |
 
 ### Two deliberate safety defaults
 
@@ -44,6 +45,67 @@ decision before granting write access.
 
 The Workbench reports the active mode in its bootstrap payload under
 `connectors.github`, including the reason the connector is inactive.
+
+## Webhook ingress: the build, not the issue
+
+The Software Delivery graph accepts a delivery request at:
+
+```text
+POST /hooks/software-delivery/delivery-request
+```
+
+**Why this is not driven by `issues.opened`.** The graph requires ten fields
+before it will start, two of which — `artifact_digest` and `release_version` —
+do not exist when an issue is opened. Triggering on issue creation would mean
+inventing them, and the release record produced at the end would then cite an
+artifact digest that never identified anything. The whole point of the record is
+that it is checkable, so the ingress is the job that *produced* the artifact.
+
+A request missing any required field is refused at ingress with `400` rather
+than starting a run that cannot produce a valid record.
+
+### Posting from GitHub Actions
+
+```yaml
+- name: Request governed release
+  env:
+    WORKBENCH_URL: ${{ secrets.WORKBENCH_URL }}
+    WEBHOOK_SECRET: ${{ secrets.GRAPH_WORKBENCH_WEBHOOK_SECRET }}
+  run: |
+    payload=$(jq -nc \
+      --arg issue "${{ github.repository }}#${{ github.event.number }}" \
+      --arg title "${{ github.event.pull_request.title }}" \
+      --arg repo "${{ github.repository }}" \
+      --arg base "${{ github.event.pull_request.base.ref }}" \
+      --arg version "${{ steps.build.outputs.version }}" \
+      --arg digest "${{ steps.build.outputs.digest }}" \
+      '{issue_id:$issue, title:$title, repository:$repo, base_ref:$base,
+        target_environment:"production", release_version:$version,
+        artifact_digest:$digest, acceptance_criteria:[], affected_components:[],
+        risk_flags:[]}')
+    signature="sha256=$(printf '%s' "$payload" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | awk '{print $2}')"
+    curl -sSf "$WORKBENCH_URL/hooks/software-delivery/delivery-request" \
+      -H 'content-type: application/json' \
+      -H "x-hub-signature-256: $signature" \
+      -H "idempotency-key: ${{ github.sha }}" \
+      -d "$payload"
+```
+
+Using the commit SHA as the `Idempotency-Key` makes a re-run of the workflow
+resolve to the same governed run rather than opening a second one.
+
+### Signature verification
+
+Set `GRAPH_WORKBENCH_GITHUB_WEBHOOK_SECRET` on the Workbench and every `/hooks`
+delivery must carry a matching `X-Hub-Signature-256`, or it is rejected with
+`401` before reaching a graph. Verification runs over the exact received bytes:
+parsing and re-serializing JSON changes key order and whitespace, so the digest
+would never match a round-tripped copy. `tests/connector-github.test.ts` asserts
+that property directly.
+
+With the variable unset, `/hooks` stays open — appropriate for a loopback
+Workbench, not for an internet-facing one. Combine it with
+`GRAPH_WORKBENCH_AUTH_TOKEN`, which any non-loopback listener already requires.
 
 ## Tool mapping
 

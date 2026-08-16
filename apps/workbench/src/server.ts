@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { inspectPackArtifact, installPackArtifact } from '@graph-workbench/pack-sdk';
+import { assertGitHubWebhookSignature } from '@graph-workbench/connector-github';
 import {
   defaultToolPolicy,
   parseToolPolicy,
@@ -45,6 +46,8 @@ const trustFile = process.env.GRAPH_WORKBENCH_TRUST
 const policyFile = process.env.GRAPH_WORKBENCH_POLICY
   ?? resolve(workspaceDirectory, '.graph-workbench/policy.json');
 const contextDatabase = process.env.GRAPH_WORKBENCH_CONTEXT_DATABASE;
+// When set, every /hooks delivery must carry a matching GitHub signature.
+const gitHubWebhookSecret = process.env.GRAPH_WORKBENCH_GITHUB_WEBHOOK_SECRET?.trim();
 const httpSecurity = createWorkbenchHttpSecurity(host, process.env.GRAPH_WORKBENCH_AUTH_TOKEN);
 const discovery = await discoverInstalledPackRuntimes(packRoot);
 const service = new WorkbenchService({
@@ -88,7 +91,8 @@ function json(response: ServerResponse, status: number, value: unknown): void {
   response.end(JSON.stringify(value));
 }
 
-async function body(request: IncomingMessage): Promise<unknown> {
+/** The exact bytes received, which webhook signature verification requires. */
+async function rawBody(request: IncomingMessage): Promise<Buffer> {
   requireContentType(request, ['application/json']);
   const chunks: Buffer[] = [];
   let size = 0;
@@ -98,7 +102,15 @@ async function body(request: IncomingMessage): Promise<unknown> {
     if (size > 2_000_000) throw new Error('Request body exceeds 2 MB.');
     chunks.push(buffer);
   }
-  return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as unknown;
+  return Buffer.concat(chunks);
+}
+
+function parseJsonBody(raw: Buffer): unknown {
+  return JSON.parse(raw.toString('utf8') || '{}') as unknown;
+}
+
+async function body(request: IncomingMessage): Promise<unknown> {
+  return parseJsonBody(await rawBody(request));
 }
 
 async function artifactBody(request: IncomingMessage): Promise<Buffer> {
@@ -149,10 +161,28 @@ function artifactPreview(filePath: string) {
 
 async function api(request: IncomingMessage, response: ServerResponse, pathname: string): Promise<boolean> {
   if ((request.method === 'POST' || request.method === 'PUT' || request.method === 'PATCH') && pathname.startsWith('/hooks/')) {
+    const raw = await rawBody(request);
+    if (gitHubWebhookSecret) {
+      try {
+        assertGitHubWebhookSignature(
+          raw,
+          typeof request.headers['x-hub-signature-256'] === 'string'
+            ? request.headers['x-hub-signature-256']
+            : undefined,
+          gitHubWebhookSecret,
+        );
+      } catch (error) {
+        // An unverified delivery must never reach a graph run.
+        throw new HttpSecurityError(
+          error instanceof Error ? error.message : 'Webhook verification failed.',
+          401,
+        );
+      }
+    }
     json(response, 201, await service.triggerWebhookPath(
       request.method,
       pathname.slice('/hooks'.length),
-      await body(request),
+      parseJsonBody(raw),
       typeof request.headers['idempotency-key'] === 'string' ? request.headers['idempotency-key'] : undefined,
     ));
     return true;

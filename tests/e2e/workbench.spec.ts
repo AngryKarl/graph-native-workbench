@@ -185,6 +185,45 @@ test('accepts webhook, schedule and typed-event ingress through the Workbench AP
   expect(await schedule.json()).toMatchObject({ status: 'completed', state: { scan_attempt: 2 } });
 });
 
+test('governs a delivery request posted by a build, and rejects an incomplete one', async ({ request }) => {
+  const deliveryRequest = {
+    issue_id: 'acme/billing-api#4821',
+    title: 'Add idempotent capture retry',
+    repository: 'acme/billing-api',
+    base_ref: 'main',
+    target_environment: 'production',
+    release_version: '2.9.0',
+    artifact_digest: 'sha256:e2e0000000000000000000000000000000000000000000000000000000000001',
+    acceptance_criteria: ['Duplicate captures are rejected'],
+    affected_components: ['capture-worker'],
+    risk_flags: ['production deployment'],
+  };
+
+  const accepted = await request.post('/hooks/software-delivery/delivery-request', {
+    headers: { 'idempotency-key': 'e2e-delivery-1' },
+    data: deliveryRequest,
+  });
+  expect(accepted.ok()).toBe(true);
+  // The build's request must land on the same accountable gate a manual run reaches.
+  const body = await accepted.json();
+  expect(body).toMatchObject({ status: 'paused', pendingApproval: { nodeId: 'code_review' } });
+
+  const replay = await request.post('/hooks/software-delivery/delivery-request', {
+    headers: { 'idempotency-key': 'e2e-delivery-1' },
+    data: deliveryRequest,
+  });
+  expect((await replay.json()).runId).toBe(body.runId);
+
+  // A request without its artifact digest cannot be governed, so it is refused
+  // at ingress rather than producing a release record citing nothing.
+  const { artifact_digest: _omitted, ...incomplete } = deliveryRequest;
+  const rejected = await request.post('/hooks/software-delivery/delivery-request', {
+    headers: { 'idempotency-key': 'e2e-delivery-2' },
+    data: incomplete,
+  });
+  expect(rejected.status()).toBe(400);
+});
+
 test('keeps the run outcome and context readable at 390px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.request.post('/api/actors/local.user/activate');

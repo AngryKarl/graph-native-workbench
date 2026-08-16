@@ -567,7 +567,35 @@ export const softwareDeliveryPack: IndustryPackManifest = {
       version: 1,
       name: 'Issue-to-release governance',
       description: 'Normalize a work item, assess risk, plan a reversible change, execute parallel verification and require independent code-owner and release-manager approval.',
-      trigger: { type: 'manual' },
+      // A delivery request can only be governed once its artifact exists, so the
+      // ingress is the build that produced the digest — not the issue that
+      // requested the change. A CI job posts this after a successful build.
+      trigger: {
+        type: 'webhook',
+        method: 'POST',
+        path: '/software-delivery/delivery-request',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            issue_id: { type: 'string', minLength: 1 },
+            title: { type: 'string', minLength: 1 },
+            repository: { type: 'string', minLength: 1 },
+            base_ref: { type: 'string', minLength: 1 },
+            target_environment: { type: 'string', minLength: 1 },
+            release_version: { type: 'string', minLength: 1 },
+            artifact_digest: { type: 'string', minLength: 1 },
+            acceptance_criteria: { type: 'array', items: { type: 'string' } },
+            affected_components: { type: 'array', items: { type: 'string' } },
+            risk_flags: { type: 'array', items: { type: 'string' } },
+          },
+          required: [
+            'issue_id', 'title', 'repository', 'base_ref', 'target_environment',
+            'release_version', 'artifact_digest', 'acceptance_criteria',
+            'affected_components', 'risk_flags',
+          ],
+          additionalProperties: false,
+        },
+      },
       state: {
         fields: {
           issue_id: { type: 'string', required: true, description: 'Stable issue identifier.' },

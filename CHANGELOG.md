@@ -20,6 +20,16 @@ versioning once public packages begin publishing.
   front of them reaches real systems, reads only, or is deterministic.
 - Added ESLint with type-aware rules to CI and `release:check`, covering the
   defect classes `tsc` cannot see.
+- Added a signed webhook ingress for Software Delivery. A build posts its
+  delivery request to `/hooks/software-delivery/delivery-request` and reaches the
+  same accountable gates a manual run reaches. The ingress is the job that
+  produced the artifact rather than `issues.opened`, because `artifact_digest`
+  and `release_version` do not exist when an issue is opened, and a release
+  record citing an invented digest is not checkable. Requests missing a required
+  field are refused at ingress.
+- Added `GRAPH_WORKBENCH_GITHUB_WEBHOOK_SECRET`. When set, every `/hooks`
+  delivery must carry a valid `X-Hub-Signature-256` or is rejected before
+  reaching a graph. Verification runs over the exact received bytes.
 
 ### Fixed
 

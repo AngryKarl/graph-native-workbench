@@ -78,7 +78,7 @@ Delivery genuinely usable rather than adding a seventh industry.
 - [x] Resolve tool credentials through the declared secret boundary
 - [x] Keep the credential-free first run unchanged when a token is present
 - [x] State how far each Pack reaches, instead of listing them as equals
-- [ ] Trigger a run from a GitHub webhook instead of a manual start
+- [x] Trigger a run from a signed GitHub webhook instead of a manual start
 - [ ] Bind workspace identity to GitHub, mapping approvals to CODEOWNERS
 - [ ] Move Workbench run and event storage to the existing SQLite run store
 - [ ] Measure how many first runs reach an outcome
