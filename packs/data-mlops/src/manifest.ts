@@ -2,7 +2,7 @@ import type { IndustryPackManifest } from '@graph-workbench/contracts';
 
 export const dataMlopsPack: IndustryPackManifest = {
   id: 'data_mlops',
-  version: '0.5.0',
+  version: '0.6.0',
   name: 'Data and MLOps Asset Release Pack',
   description:
     'A governed data and model asset workflow for partition quality, lineage, accountable registry publication, controlled backfill, post-release monitoring, escalation and rollback.',

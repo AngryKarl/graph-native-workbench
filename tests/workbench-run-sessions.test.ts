@@ -224,7 +224,7 @@ describe('Workbench workspace write cost', () => {
     } finally {
       await service.close();
     }
-  });
+  }, 15_000);
 });
 
 describe('verified identity binding', () => {

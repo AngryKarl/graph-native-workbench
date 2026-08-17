@@ -2,7 +2,7 @@ import type { IndustryPackManifest } from '@graph-workbench/contracts';
 
 export const softwareDeliveryPack: IndustryPackManifest = {
   id: 'software_delivery',
-  version: '0.5.0',
+  version: '0.6.0',
   name: 'Professional Software Delivery Pack',
   description:
     'A governed issue-to-release workflow with requirement traceability, risk classification, parallel verification, independent human gates, immutable release records, deployment observation, escalation and rollback.',

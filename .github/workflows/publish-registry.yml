@@ -49,6 +49,11 @@ jobs:
             --expires-in-days "$EXPIRES_IN_DAYS" \
             --output-dir registry-site/registry
 
+      - name: Add GitHub Pages product landing
+        run: |
+          cp docs/pages/index.html registry-site/index.html
+          cp docs/assets/software-delivery-journey.gif registry-site/software-delivery-journey.gif
+
       - name: Sign and verify Registry
         env:
           REGISTRY_PRIVATE_KEY: ${{ secrets.REGISTRY_ED25519_PRIVATE_KEY }}

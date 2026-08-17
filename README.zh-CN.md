@@ -8,7 +8,7 @@
 [![Node.js 24+](https://img.shields.io/badge/Node.js-24%2B-339933?logo=node.js&logoColor=white)](package.json)
 [![Industry Packs](https://img.shields.io/badge/标准行业%20Pack-6-6f42c1)](docs/PACK_GALLERY.md)
 
-[English](README.md) · [Pack 图集](docs/PACK_GALLERY.md) · [为什么需要两张图？](docs/WHY_TWO_GRAPHS.md) · [路线图](ROADMAP.md)
+[English](README.md) · [Pack 图集](docs/PACK_GALLERY.md) · [贡献一个 Pack 配方](https://github.com/AngryKarl/graph-workbench/issues/12) · [为什么需要两张图？](docs/WHY_TWO_GRAPHS.md) · [路线图](ROADMAP.md)
 
 Graph Workbench 是一个面向复杂行业工作的开源 Graph-native Workbench。它的旗舰
 体验把软件 Issue 变成经过并行验证、责任人审批和恢复路径治理的发布，并生成可移植
@@ -71,7 +71,8 @@ npx graph-workbench
 npx graph-workbench demo
 ```
 
-`0.5.0` 公开 Alpha 已包含六行业 Pack 目录和 Pack System Map。也可以从源码运行：
+`0.6.0` 公开 Alpha 已包含连接真实 GitHub 的软件交付流程、六行业 Pack 目录和
+Pack System Map。也可以从源码运行：
 
 ```bash
 git clone https://github.com/AngryKarl/graph-workbench.git
