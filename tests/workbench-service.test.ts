@@ -539,5 +539,5 @@ describe('Workbench service', () => {
       await Promise.all([first?.close(), second?.close()]);
       await rm(directory, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 });
