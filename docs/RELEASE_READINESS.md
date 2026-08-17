@@ -15,7 +15,7 @@ a clean temporary npm installation and public metadata validation.
 | Boundary | Evidence |
 | --- | --- |
 | First five minutes | clean npm install; Workbench health, API, static client and zero-key demo |
-| Browser product loop | open fresh workspace, run Architecture Pack, approve, complete and inspect context |
+| Browser product loop | open fresh workspace, run Professional Software Delivery, approve, inspect Outcome and reuse its Context |
 | Public contracts | compiler, runtime, Pack lifecycle, compatibility and migration tests |
 | Governance | policy evaluation, bound approvals, ordered events and portable audit verification |
 | Team execution | PostgreSQL Store and pg-boss retry tests on embedded PostgreSQL |

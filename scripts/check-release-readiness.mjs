@@ -20,6 +20,7 @@ const requiredFiles = [
   'docs/THREAT_MODEL.md',
   'docs/WHY_TWO_GRAPHS.md',
   'docs/CUSTOMER_SUCCESS_CASE.md',
+  'docs/pages/index.html',
   'docs/assets/graph-workbench-social-preview.jpg',
   'registry/reference-public.pem',
 ];
@@ -30,6 +31,7 @@ const manifestPaths = [
   'apps/distribution/package.json',
   'apps/cli/package.json',
   'apps/workbench/package.json',
+  'packages/connector-github/package.json',
   'packages/contracts/package.json',
   'packages/core/package.json',
   'packages/pack-sdk/package.json',

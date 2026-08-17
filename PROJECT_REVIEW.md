@@ -64,7 +64,7 @@
 ### A1.1 值得肯定
 
 - **TypeScript 配置是我见过的开源项目里最严的档位之一**：`strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` 同时开启（[tsconfig.json](tsconfig.json)）。后两个选项绝大多数项目不敢开，代码却能零 error 通过——这是真实的质量信号，不是配置摆设。
-- **运行时依赖极度克制**：`contracts` 只依赖 `zod`；`core` 只依赖 `pg` + `pg-boss`；没有 Express、没有 ORM、没有状态管理库。持久化用 Node 24 内置的 `node:sqlite`（[sqlite-run-store.ts:1](packages/core/src/sqlite-run-store.ts:1)），队列直接复用 `pg-boss` 而不是自造租约协议——「不重复造轮子」这条执行得很好。
+- **运行时依赖极度克制**：`contracts` 只依赖 `zod`；`core` 只依赖 `pg` + `pg-boss`；没有 Express、没有 ORM、没有状态管理库。持久化用 Node 24 内置的 `node:sqlite`（[sqlite-run-store.ts:1](packages/core/src/sqlite-run-store.ts#L1)），队列直接复用 `pg-boss` 而不是自造租约协议——「不重复造轮子」这条执行得很好。
 - **分层干净**：`contracts → core → pack-sdk → packs → apps`，依赖方向单一，没有回环。
 - **分发方案务实**：esbuild 打成单文件 + `npx graph-workbench` 零安装入口（[apps/distribution](apps/distribution/package.json)）。
 
@@ -96,9 +96,9 @@
 
 同样值得肯定的内核细节：
 
-- **并行写冲突显式报错**（[runtime.ts:278](packages/core/src/runtime.ts:278)）：同批次两个节点写同一字段直接抛错，而不是后写覆盖。这是「显式失败优于静默」的正确实现。
-- **工具调用五重校验 + 审批与输入摘要绑定**（[runtime.ts:867-909](packages/core/src/runtime.ts:867)）：审批 ID 由 `runId + nodeId + roleId + toolId + SHA-256(input)` 派生，改了输入就得重新审批。这是真治理，不是弹窗确认。
-- **容器隔离参数达到生产水准**（[isolation.ts:103-122](packages/pack-sdk/src/isolation.ts:103)）：`--read-only`、`--cap-drop=ALL`、`--no-new-privileges`、非 root uid、pids/memory/cpu 限制、`--network=none` 默认。并且代码里明确写着「Node 的权限模型不是恶意代码沙箱」——这种诚实很少见。
+- **并行写冲突显式报错**（[runtime.ts:278](packages/core/src/runtime.ts#L278)）：同批次两个节点写同一字段直接抛错，而不是后写覆盖。这是「显式失败优于静默」的正确实现。
+- **工具调用五重校验 + 审批与输入摘要绑定**（[runtime.ts:867-909](packages/core/src/runtime.ts#L867-L909)）：审批 ID 由 `runId + nodeId + roleId + toolId + SHA-256(input)` 派生，改了输入就得重新审批。这是真治理，不是弹窗确认。
+- **容器隔离参数达到生产水准**（[isolation.ts:103-122](packages/pack-sdk/src/isolation.ts#L103-L122)）：`--read-only`、`--cap-drop=ALL`、`--no-new-privileges`、非 root uid、pids/memory/cpu 限制、`--network=none` 默认。并且代码里明确写着「Node 的权限模型不是恶意代码沙箱」——这种诚实很少见。
 
 ### A2.2 缺陷（按严重度排序）
 
@@ -128,7 +128,7 @@ apps/workbench/src/service.ts:745               // runs: { ...state.runs, [runId
 
 **A2.2.3 本地角色治理是装饰性的（中等，但直击价值主张）**
 
-身份从顶栏下拉框选择（[App.tsx:481](apps/workbench/src/client/App.tsx:481)），无任何认证；且 `workspaceRole === 'owner'` 可绕过所有角色校验（[runtime.ts:1014](packages/core/src/runtime.ts:1014)）。文档在 [RUNTIME_ADAPTERS.md:135](docs/RUNTIME_ADAPTERS.md) 诚实地说明了这一点（"identity 是授权输入，不是认证机制"），Roadmap 也把「绑定生产认证」列为 1.0 前未完成项。
+身份从顶栏下拉框选择（[App.tsx:481](apps/workbench/src/client/App.tsx#L481)），无任何认证；且 `workspaceRole === 'owner'` 可绕过所有角色校验（[runtime.ts:1014](packages/core/src/runtime.ts#L1014)）。文档在 [RUNTIME_ADAPTERS.md:135](docs/RUNTIME_ADAPTERS.md#L135) 诚实地说明了这一点（"identity 是授权输入，不是认证机制"），Roadmap 也把「绑定生产认证」列为 1.0 前未完成项。
 
 问题在于：**产品最核心的卖点是「可问责的人工门」**，而在唯一能开箱运行的形态（本地 Workbench）里，这个卖点是不可信的。任何人切换下拉框就能以任意角色批准。演示时很容易被一句「那我直接选 owner 呢」击穿。
 
@@ -224,7 +224,7 @@ Product Charter 的成功测试是定性的：「新用户能安装、无 key �
 - **信息架构合理**：Editor / Runs / Context / Team / Models / Packs 六个视图，映射清晰。
 - **首跑引导直击要害**：[FirstRunJourney.tsx](apps/workbench/src/client/FirstRunJourney.tsx) 的四步（样例就绪 → 运行 → 审阅决策 → 复用产出）状态随真实运行事件推进，不是静态装饰。
 - **节点视觉语法有真实区分**：Agent / Human / Router / Wait / Loop / Map / Escalation / Compensation 各有形状、边框样式与配色（router 是旋转 45° 的菱形，wait 是虚线，恢复类节点用暖色虚线）。语义缩放（`zoom-compact` / `zoom-overview`）在大图时隐藏细节——这是专业级图形编辑器的做法。
-- **保存状态机完整**：`saved / saving / dirty / invalid` + 900ms 防抖自动保存 + 50 步撤销重做 + 保存时的版本号竞态检查（[App.tsx:248-267](apps/workbench/src/client/App.tsx:248)）。
+- **保存状态机完整**：`saved / saving / dirty / invalid` + 900ms 防抖自动保存 + 50 步撤销重做 + 保存时的版本号竞态检查（[App.tsx:248-267](apps/workbench/src/client/App.tsx#L248-L267)）。
 
 ### A5.2 问题（全部可直接修）
 
@@ -246,7 +246,7 @@ Product Charter 的成功测试是定性的：「新用户能安装、无 key �
 **A5.2.4 键盘可达性不足**
 全部客户端组件加起来只有 20 余处 aria 属性。画布节点选择、审批按钮、Pack 安装等关键路径缺少键盘操作路径。对一个强调「可问责审批」的工具，审批动作不可键盘完成是个不小的落差。
 
-另：快捷键的 `useEffect` 没有依赖数组（[App.tsx:143](apps/workbench/src/client/App.tsx:143)），每次渲染都重新绑定/解绑事件。功能正确（这也是它闭包能拿到最新 `persist` 的原因），但属于隐式依赖，建议显式声明。
+另：快捷键的 `useEffect` 没有依赖数组（[App.tsx:143](apps/workbench/src/client/App.tsx#L143)），每次渲染都重新绑定/解绑事件。功能正确（这也是它闭包能拿到最新 `persist` 的原因），但属于隐式依赖，建议显式声明。
 
 **A5.2.5 窄屏形态未真正可用**
 820px 断点把 shell 改成上下布局，但编辑器仍是 `160px + minmax(280px,1fr) + 290px` 三栏。平板上基本不可用。
@@ -324,7 +324,7 @@ Product Charter 的成功测试是定性的：「新用户能安装、无 key �
 
 ### 10.1 好消息：契约层已经为真实连接器准备好了
 
-`software_delivery` 的工具已经声明了完整的类型契约——`operation: query/command`、JSON Schema 输入输出、`idempotency: keyed` 加 `idempotencyKeyField`（[manifest.ts:329-405](packs/software-delivery/src/manifest.ts:329)）。也就是说**换成真实 GitHub 调用不需要改任何契约、图定义或治理逻辑**，改动收敛在 [tools.ts](packs/software-delivery/src/tools.ts) 这一个文件加上密钥注入。架构在这里是对的，欠的只是实现。
+`software_delivery` 的工具已经声明了完整的类型契约——`operation: query/command`、JSON Schema 输入输出、`idempotency: keyed` 加 `idempotencyKeyField`（[manifest.ts:329-405](packs/software-delivery/src/manifest.ts#L329-L405)）。也就是说**换成真实 GitHub 调用不需要改任何契约、图定义或治理逻辑**，改动收敛在 [tools.ts](packs/software-delivery/src/tools.ts) 这一个文件加上密钥注入。架构在这里是对的，欠的只是实现。
 
 ### 10.2 必须正面回答的问题：为什么不用 GitHub Actions + branch protection
 
@@ -348,7 +348,7 @@ branch protection 留下的是**记录**，Graph Workbench 留下的是**可复�
 
 ### 10.4 做深意味着还要补三件事（当前不在 P1）
 
-1. **真实入口**：主图的 trigger 目前是 `{ type: 'manual' }`（[manifest.ts:570](packs/software-delivery/src/manifest.ts:570)），意味着必须有人打开 Workbench 点「Run」。做深要求 GitHub webhook（issue opened / PR opened）直接起 run——0.5 的 webhook trigger 机制已经具备，缺的是接线。
+1. **真实入口**：主图的 trigger 目前是 `{ type: 'manual' }`（[manifest.ts:570](packs/software-delivery/src/manifest.ts#L570)），意味着必须有人打开 Workbench 点「Run」。做深要求 GitHub webhook（issue opened / PR opened）直接起 run——0.5 的 webhook trigger 机制已经具备，缺的是接线。
 2. **身份天然可解**：一旦要连 GitHub，工作区身份就应该直接绑 GitHub 用户，角色映射到 CODEOWNERS 或 repo 权限。**A2.2.3 那个「下拉框选身份」的治理缺口，会被 P1.1 顺手解决**——这是做深路线的一个额外红利，值得排进同一个迭代。
 3. **失败面变宽**：真实连接器带来限流、token 过期、网络抖动、GitHub 侧的部分失败。现有的 retry/timeout/compensation 机制是为此设计的，但从未在真实故障下验证过。
 

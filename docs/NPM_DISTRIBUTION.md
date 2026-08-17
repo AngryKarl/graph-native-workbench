@@ -21,8 +21,8 @@ actual Workbench HTTP API and static client. `dist:pack` creates
 Test the tarball through the same temporary installation path used by `dlx`:
 
 ```bash
-pnpm dlx /absolute/path/to/release/npm/graph-workbench-0.5.0.tgz --version
-pnpm dlx /absolute/path/to/release/npm/graph-workbench-0.5.0.tgz demo
+pnpm dlx /absolute/path/to/release/npm/graph-workbench-0.6.0.tgz --version
+pnpm dlx /absolute/path/to/release/npm/graph-workbench-0.6.0.tgz demo
 ```
 
 The public user entrypoints are:

@@ -8,7 +8,7 @@
 [![Node.js 24+](https://img.shields.io/badge/Node.js-24%2B-339933?logo=node.js&logoColor=white)](package.json)
 [![Industry Packs](https://img.shields.io/badge/standard%20Industry%20Packs-6-6f42c1)](docs/PACK_GALLERY.md)
 
-[简体中文](README.zh-CN.md) · [Pack Gallery](docs/PACK_GALLERY.md) · [Why two graphs?](docs/WHY_TWO_GRAPHS.md) · [Roadmap](ROADMAP.md)
+[简体中文](README.zh-CN.md) · [Pack Gallery](docs/PACK_GALLERY.md) · [Contribute a Pack recipe](https://github.com/AngryKarl/graph-workbench/issues/12) · [Why two graphs?](docs/WHY_TWO_GRAPHS.md) · [Roadmap](ROADMAP.md)
 
 Graph Workbench is an open-source, graph-native workbench for complex industry
 work. Its flagship journey turns a software issue into a governed release through
@@ -81,7 +81,8 @@ To run a terminal-only smoke test instead:
 npx graph-workbench demo
 ```
 
-The public `0.5.0` alpha includes the six-Pack catalog and Pack system maps. To
+The public `0.6.0` alpha includes the GitHub-connected Software Delivery journey,
+the six-Pack catalog and Pack system maps. To
 work from source:
 
 ```bash

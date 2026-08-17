@@ -40,6 +40,18 @@ closed loop: Run B queries the approved Release created by Run A, records its
 object ID, version and source run, and links the new deployment observation
 back to it.
 
+## Connect a real GitHub repository
+
+```bash
+export GITHUB_TOKEN=ghp_your_token
+export GRAPH_WORKBENCH_GITHUB_REPOSITORY=your-org/your-repo
+npx graph-workbench
+```
+
+The connector reads issues, commits and pull requests while the command tools
+remain in dry-run. Set `GRAPH_WORKBENCH_GITHUB_WRITE=true` only after reviewing
+the governed journey and approval path.
+
 ## See the graph runtime work
 
 ```bash
@@ -61,3 +73,6 @@ npx graph-workbench pack build packs/customer_success/src/index.mjs \
 Run `npx graph-workbench help` for the complete Pack lifecycle and signed
 Registry commands. Documentation, examples and security boundaries are in the
 [main repository](https://github.com/AngryKarl/graph-workbench).
+
+To contribute without changing runtime code, start with the
+[45–90 minute Industry Pack recipe](https://github.com/AngryKarl/graph-workbench/issues/12).

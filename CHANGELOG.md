@@ -5,6 +5,8 @@ versioning once public packages begin publishing.
 
 ## Unreleased
 
+## 0.6.0 - 2026-08-17
+
 ### Added
 
 - Added `@graph-workbench/connector-github`, the first connector that makes a
