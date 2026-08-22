@@ -1,0 +1,20 @@
+# Graph Workbench
+
+> Graph Workbench is an open-source, graph-native workbench for governed AI workflows. It connects execution graphs with durable context graphs and packages domain workflows as installable Industry Packs.
+
+## Start here
+
+- [What is Graph Workbench?](https://angrykarl.github.io/graph-workbench/what-is-graph-workbench/): Product boundary, first-run journey and use cases.
+- [Execution graph vs context graph](https://angrykarl.github.io/graph-workbench/execution-graph-vs-context-graph/): Why workflow control and durable organizational state are separate but connected.
+- [Cross-run Agent memory](https://angrykarl.github.io/graph-workbench/cross-run-agent-memory/): How approved objects and relations become typed input to later runs.
+- [Industry Packs](https://angrykarl.github.io/graph-workbench/industry-packs/): The installable unit for domain workflows, roles, tools, quality policy and context semantics.
+
+## Primary sources
+
+- [Source repository](https://github.com/AngryKarl/graph-workbench)
+- [Architecture decision](https://github.com/AngryKarl/graph-workbench/blob/main/docs/architecture/0001-dual-graph-kernel.md)
+- [Industry Pack Gallery](https://github.com/AngryKarl/graph-workbench/blob/main/docs/PACK_GALLERY.md)
+- [Pack authoring guide](https://github.com/AngryKarl/graph-workbench/blob/main/docs/PACK_AUTHORING.md)
+- [npm package](https://www.npmjs.com/package/graph-workbench)
+
+The Pages articles are concise discovery aids. The repository, versioned contracts and executable tests remain the authoritative sources for implementation details.

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>What is Graph Workbench?</title>
+  <meta name="description" content="Graph Workbench is an open-source workbench for governed AI workflows that connects execution graphs with durable context graphs.">
+  <link rel="canonical" href="https://angrykarl.github.io/graph-workbench/what-is-graph-workbench/">
+  <link rel="stylesheet" href="/graph-workbench/styles.css">
+  <meta property="og:title" content="What is Graph Workbench?">
+  <meta property="og:description" content="A practical introduction to governed AI workflows, reusable context and Industry Packs.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://angrykarl.github.io/graph-workbench/what-is-graph-workbench/">
+  <meta property="og:image" content="https://raw.githubusercontent.com/AngryKarl/graph-workbench/main/docs/assets/graph-workbench-social-preview.jpg">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "What is Graph Workbench?",
+    "description": "A practical introduction to governed AI workflows, reusable context and Industry Packs.",
+    "datePublished": "2026-08-22",
+    "dateModified": "2026-08-22",
+    "author": {"@type": "Organization", "name": "Graph Workbench contributors", "url": "https://github.com/AngryKarl/graph-workbench"},
+    "mainEntityOfPage": "https://angrykarl.github.io/graph-workbench/what-is-graph-workbench/"
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/graph-workbench/">Graph Workbench</a>
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a href="/graph-workbench/what-is-graph-workbench/" aria-current="page">What it is</a>
+      <a href="/graph-workbench/execution-graph-vs-context-graph/">Two graphs</a>
+      <a href="/graph-workbench/industry-packs/">Industry Packs</a>
+      <a class="github-link" href="https://github.com/AngryKarl/graph-workbench">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+  <main>
+    <header class="article-hero">
+      <div class="article-hero-inner">
+        <p class="eyebrow">Overview</p>
+        <h1>What is Graph Workbench?</h1>
+        <p class="article-summary">Graph Workbench is an open-source, graph-native workbench for governed AI workflows. It connects execution graphs with durable context graphs and packages domain workflows as installable Industry Packs.</p>
+        <p class="article-meta">Verified against the open-source implementation · Updated August 22, 2026</p>
+      </div>
+    </header>
+    <article class="article-body">
+      <h2>The problem it solves</h2>
+      <p>Agent workflows can coordinate tools and produce an answer, but organizations also need to know which evidence was used, which policy applied, who approved the result and what later work may safely reuse. A run log records activity; it does not automatically become trustworthy organizational memory.</p>
+      <p>Graph Workbench joins those concerns without treating them as the same graph. The execution graph controls the current run. After quality and human gates succeed, a Pack projects selected results into a typed context graph with provenance.</p>
+
+      <h2>The first-run journey</h2>
+      <p>The bundled Professional Software Delivery Pack demonstrates the full loop without an account, database or model key:</p>
+      <div class="flow" aria-label="Software delivery journey">
+        <span>Issue and release input</span><span>Parallel verification</span><span>Human approvals</span><span>Portable release record</span><span>Context reused by Run B</span>
+      </div>
+      <pre><code>npx graph-workbench</code></pre>
+      <p>A fresh workspace opens with a zero-key fixture. The workflow runs unit, integration, security and supply-chain checks, pauses for accountable approval, produces an integrity-bound release record and preserves the approved evidence and decisions. A follow-up deployment observation then reads that prior Release object instead of reconstructing it from chat or logs.</p>
+
+      <h2>What is included</h2>
+      <ul>
+        <li>An executable graph runtime with Agent, function, tool, human, router, join, map, loop, subgraph, wait, escalation and compensation semantics.</li>
+        <li>Durable checkpoints, role-owned approvals, retries, recovery paths and integrity-checked audit bundles.</li>
+        <li>A context graph for typed objects, relations, versions and production provenance.</li>
+        <li>Provider-neutral Agent adapters and a deterministic zero-key runtime.</li>
+        <li>Installable Industry Packs containing domain ontology, workflow, roles, tools, quality gates, fixtures, deliverables and context projection.</li>
+      </ul>
+
+      <h2>What it does not replace</h2>
+      <p>Graph Workbench is not a graph database, a general integration catalog or a replacement for domain systems such as source control, an EHR, a broker or robot middleware. It governs the work and the evidence crossing those systems. Production teams connect reviewed adapters while keeping Pack contracts and governance paths stable.</p>
+      <div class="callout"><p><strong>In one sentence:</strong> use Graph Workbench when an AI-assisted workflow must produce not only an output, but an explainable, reviewable and reusable organizational result.</p></div>
+
+      <h2>Where to go next</h2>
+      <ul>
+        <li><a href="/graph-workbench/execution-graph-vs-context-graph/">Understand the execution graph and context graph boundary.</a></li>
+        <li><a href="/graph-workbench/cross-run-agent-memory/">See how approved context becomes memory for later Agents.</a></li>
+        <li><a href="/graph-workbench/industry-packs/">Explore the Industry Pack model and six executable examples.</a></li>
+      </ul>
+      <a class="source-link" href="https://github.com/AngryKarl/graph-workbench">Inspect the source and run the project on GitHub →</a>
+    </article>
+  </main>
+  <footer class="site-footer"><p>Graph Workbench is open source under the MIT License.</p><div><a href="/graph-workbench/">Home</a><a href="https://github.com/AngryKarl/graph-workbench">Source</a><a href="https://www.npmjs.com/package/graph-workbench">npm</a></div></footer>
+</body>
+</html>

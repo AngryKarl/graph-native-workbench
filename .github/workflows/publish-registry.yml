@@ -51,8 +51,10 @@ jobs:
 
       - name: Add GitHub Pages product landing
         run: |
-          cp docs/pages/index.html registry-site/index.html
-          cp docs/assets/software-delivery-journey.gif registry-site/software-delivery-journey.gif
+          cp -R docs/pages/. registry-site/
+          mkdir -p registry-site/assets
+          cp docs/assets/software-delivery-journey.gif registry-site/assets/software-delivery-journey.gif
+          cp docs/assets/software-delivery-context-reuse.png registry-site/assets/software-delivery-context-reuse.png
 
       - name: Sign and verify Registry
         env:

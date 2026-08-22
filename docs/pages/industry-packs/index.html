@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Industry Packs for governed AI workflows</title>
+  <meta name="description" content="Industry Packs package domain workflows, roles, tools, quality gates, deliverables and context semantics for Graph Workbench.">
+  <link rel="canonical" href="https://angrykarl.github.io/graph-workbench/industry-packs/">
+  <link rel="stylesheet" href="/graph-workbench/styles.css">
+  <meta property="og:title" content="Industry Packs for governed AI workflows">
+  <meta property="og:description" content="Install a complete domain operating model without forking the Graph Workbench kernel.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://angrykarl.github.io/graph-workbench/industry-packs/">
+  <meta property="og:image" content="https://raw.githubusercontent.com/AngryKarl/graph-workbench/main/docs/assets/reference-packs.png">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Industry Packs for governed AI workflows","description":"How Graph Workbench packages domain workflow and context semantics as installable Industry Packs.","datePublished":"2026-08-22","dateModified":"2026-08-22","author":{"@type":"Organization","name":"Graph Workbench contributors","url":"https://github.com/AngryKarl/graph-workbench"},"mainEntityOfPage":"https://angrykarl.github.io/graph-workbench/industry-packs/"}
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/graph-workbench/">Graph Workbench</a>
+    <nav class="site-nav" aria-label="Primary navigation"><a href="/graph-workbench/what-is-graph-workbench/">What it is</a><a href="/graph-workbench/execution-graph-vs-context-graph/">Two graphs</a><a href="/graph-workbench/industry-packs/" aria-current="page">Industry Packs</a><a class="github-link" href="https://github.com/AngryKarl/graph-workbench">GitHub <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main>
+    <header class="article-hero"><div class="article-hero-inner"><p class="eyebrow">Installable operating models</p><h1>Industry Packs for governed AI workflows</h1><p class="article-summary">An Industry Pack carries the workflow and the domain meaning together: ontology, roles, tools, policies, quality gates, deliverables, fixtures and context projection.</p><p class="article-meta">Six standard Packs run without credentials · Updated August 22, 2026</p></div></header>
+    <article class="article-body">
+      <h2>Why the Pack is the unit of reuse</h2>
+      <p>A generic workflow engine cannot know what “ready,” “approved” or “safe to publish” means in software delivery, incident response, model governance or healthcare coordination. Those semantics belong to the domain.</p>
+      <p>An Industry Pack installs that domain model without placing industry-specific behavior in the kernel. Teams can replace connectors and handlers while preserving the graph, roles, contracts and governance path.</p>
+
+      <h2>What a Pack contains</h2>
+      <table><thead><tr><th>Part</th><th>Purpose</th></tr></thead><tbody>
+        <tr><td>Ontology</td><td>Typed business objects and the semantic relations allowed between them.</td></tr>
+        <tr><td>Execution graph</td><td>Stages, parallel work, loops, approvals, escalation and recovery.</td></tr>
+        <tr><td>Roles and tools</td><td>Who owns decisions and which external capabilities nodes may use.</td></tr>
+        <tr><td>Quality policy</td><td>Evaluations and blocking gates that define domain readiness.</td></tr>
+        <tr><td>Deliverables</td><td>Portable outputs with evidence and integrity metadata.</td></tr>
+        <tr><td>Fixtures and handlers</td><td>Executable zero-key examples, success and rejection paths.</td></tr>
+        <tr><td>Context projector</td><td>The approved state promoted into durable organizational context.</td></tr>
+      </tbody></table>
+
+      <h2>Six standard executable Packs</h2>
+      <table><thead><tr><th>Industry Pack</th><th>Representative governed flow</th><th>Connector depth</th></tr></thead><tbody>
+        <tr><td>Professional Software Delivery</td><td>Issue → verification → code and release approvals → deployment → observation or rollback</td><td>Real GitHub connector</td></tr>
+        <tr><td>Data and MLOps Asset Release</td><td>Partitions → quality and lineage → approval → registry → backfill or recovery</td><td>Reference adapter</td></tr>
+        <tr><td>Cybersecurity Incident Response</td><td>Signal → evidence → declaration → containment → recovery and lessons</td><td>Reference adapter</td></tr>
+        <tr><td>Quantitative Finance Governance</td><td>Hypothesis → backtests → risk and compliance gates → execution → reconciliation</td><td>Reference adapter</td></tr>
+        <tr><td>Healthcare Diagnostic Coordination</td><td>Consent → advisory analysis → specialist decision → report → follow-up</td><td>Reference adapter</td></tr>
+        <tr><td>Robotics and Fleet Operations</td><td>Task → robot bids → safety approval → dispatch → telemetry → bounded replan</td><td>Reference adapter</td></tr>
+      </tbody></table>
+      <p>Reference adapters execute deterministically without credentials; they model integration boundaries rather than claiming to operate specialist systems. Software Delivery is the depth reference because its connector can read real GitHub work items, commits and pull requests while keeping writes disabled by default.</p>
+
+      <h2>Create a Pack</h2>
+      <p>The public CLI scaffolds a standalone Pack with an executable graph, real handler, fixture, deliverable and context projector:</p>
+      <pre><code>npx graph-workbench pack init claims_operations
+npx graph-workbench pack test packs/claims_operations/src/index.mjs
+npx graph-workbench pack run packs/claims_operations/src/index.mjs --set topic=claim-1042</code></pre>
+      <div class="callout"><p>The Pack boundary keeps Graph Workbench general: domain semantics extend through versioned contracts instead of forks or industry-specific kernel branches.</p></div>
+      <a class="source-link" href="https://github.com/AngryKarl/graph-workbench/blob/main/docs/PACK_GALLERY.md">Open the complete Pack Gallery with graph screenshots →</a>
+    </article>
+  </main>
+  <footer class="site-footer"><p>Graph Workbench is open source under the MIT License.</p><div><a href="/graph-workbench/">Home</a><a href="https://github.com/AngryKarl/graph-workbench/blob/main/docs/PACK_AUTHORING.md">Authoring guide</a><a href="https://github.com/AngryKarl/graph-workbench">Source</a></div></footer>
+</body>
+</html>
