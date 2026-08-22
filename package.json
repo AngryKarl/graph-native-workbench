@@ -29,7 +29,7 @@
     "pack:inspect": "tsx apps/cli/src/main.ts pack inspect"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.4",
+    "@electric-sql/pglite": "^0.5.5",
     "@eslint/js": "^10.0.1",
     "@graph-workbench/connector-github": "workspace:*",
     "@graph-workbench/contracts": "workspace:*",
@@ -53,7 +53,7 @@
     "fflate": "^0.8.2",
     "globals": "^17.11.0",
     "pg-boss": "^12.27.0",
-    "tsx": "^4.20.0",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.67.0",
     "vitest": "^4.0.0"
