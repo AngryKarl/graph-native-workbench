@@ -21,6 +21,13 @@ const requiredFiles = [
   'docs/WHY_TWO_GRAPHS.md',
   'docs/CUSTOMER_SUCCESS_CASE.md',
   'docs/pages/index.html',
+  'docs/pages/styles.css',
+  'docs/pages/sitemap.xml',
+  'docs/pages/llms.txt',
+  'docs/pages/what-is-graph-workbench/index.html',
+  'docs/pages/execution-graph-vs-context-graph/index.html',
+  'docs/pages/cross-run-agent-memory/index.html',
+  'docs/pages/industry-packs/index.html',
   'docs/assets/graph-workbench-social-preview.jpg',
   'registry/reference-public.pem',
 ];

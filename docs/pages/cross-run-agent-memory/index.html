@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cross-run Agent memory with a context graph</title>
+  <meta name="description" content="See how Graph Workbench lets a later Agent query approved objects and relations from prior runs while preserving provenance.">
+  <link rel="canonical" href="https://angrykarl.github.io/graph-workbench/cross-run-agent-memory/">
+  <link rel="stylesheet" href="/graph-workbench/styles.css">
+  <meta property="og:title" content="Cross-run Agent memory with a context graph">
+  <meta property="og:description" content="Approved context becomes typed, provenance-aware input to later governed runs.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://angrykarl.github.io/graph-workbench/cross-run-agent-memory/">
+  <meta property="og:image" content="https://raw.githubusercontent.com/AngryKarl/graph-workbench/main/docs/assets/software-delivery-context-reuse.png">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Cross-run Agent memory with a context graph","description":"How approved context becomes typed, provenance-aware input to later governed runs.","datePublished":"2026-08-22","dateModified":"2026-08-22","author":{"@type":"Organization","name":"Graph Workbench contributors","url":"https://github.com/AngryKarl/graph-workbench"},"mainEntityOfPage":"https://angrykarl.github.io/graph-workbench/cross-run-agent-memory/"}
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/graph-workbench/">Graph Workbench</a>
+    <nav class="site-nav" aria-label="Primary navigation"><a href="/graph-workbench/what-is-graph-workbench/">What it is</a><a href="/graph-workbench/execution-graph-vs-context-graph/">Two graphs</a><a href="/graph-workbench/industry-packs/">Industry Packs</a><a class="github-link" href="https://github.com/AngryKarl/graph-workbench">GitHub <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main>
+    <header class="article-hero"><div class="article-hero-inner"><p class="eyebrow">Durable Agent context</p><h1>Cross-run Agent memory with a context graph</h1><p class="article-summary">Graph Workbench memory is not a transcript buffer. It is a set of typed, approved objects and relations that later nodes can query with their source intact.</p><p class="article-meta">Demonstrated by the executable Software Delivery Pack · Updated August 22, 2026</p></div></header>
+    <article class="article-body">
+      <h2>What “memory” means here</h2>
+      <p>Long chat history and vector retrieval can provide useful background, but they do not by themselves identify the current approved decision. Graph Workbench treats reusable memory as organizational state: typed objects, semantic relations, versions and provenance produced through a governed workflow.</p>
+      <p>The runtime exposes a read-only context query interface to handlers, including Agent handlers. A node can query objects by type and properties, inspect relations or traverse a bounded neighborhood. The Pack still decides what the query means for its domain.</p>
+
+      <h2>The approval boundary</h2>
+      <div class="flow" aria-label="Cross-run context reuse"><span>Run A produces evidence</span><span>Quality and human approval</span><span>Project typed context</span><span>Run B queries objects and relations</span><span>New output cites the source run</span></div>
+      <p>Only the Pack's context projector promotes selected state. This prevents raw model output, failed work and rejected drafts from becoming trusted memory merely because they appeared in a run.</p>
+      <ul>
+        <li><strong>Typed:</strong> a Release is different from a Review decision or Verification.</li>
+        <li><strong>Related:</strong> evidence supports a decision; a decision authorizes a release.</li>
+        <li><strong>Versioned:</strong> later objects can supersede earlier ones without erasing history.</li>
+        <li><strong>Attributable:</strong> every object retains its producing run, node, actor and source identifiers.</li>
+      </ul>
+
+      <h2>The executable Run A → Run B example</h2>
+      <p>In the bundled Professional Software Delivery Pack, Run A creates an approved Release after parallel verification and two human gates. Run B is a separate deployment-observation graph. It queries the prior Release object, uses its object ID, version and source run while evaluating deployment health, and creates a relation from the new Deployment back to that Release.</p>
+      <img src="/graph-workbench/assets/software-delivery-context-reuse.png" alt="A deployment observation run reusing the approved Release object and provenance created by an earlier run">
+      <p>The test suite also proves that relations affect behavior: a later run reports missing support until the required evidence relation exists, then changes its result after the relation is added. Context is therefore executable input rather than a passive history screen.</p>
+
+      <h2>How this supports multi-Agent collaboration</h2>
+      <p>Agents coordinate through explicit workflow state during a run and through approved context across runs. Each role reads a bounded, typed view instead of sharing an unrestricted scratchpad. Human gates and policy checks remain visible in the execution graph, while the context graph carries the decisions and artifacts that survived them.</p>
+      <div class="callout"><p>This design favors accountable organizational memory over unconstrained autonomous memory. Storage remains an adapter, so teams can use the reference store or connect a production database without changing Pack semantics.</p></div>
+      <a class="source-link" href="https://github.com/AngryKarl/graph-workbench/blob/main/tests/context-runtime-query.test.ts">Inspect the cross-run context integration test →</a>
+    </article>
+  </main>
+  <footer class="site-footer"><p>Graph Workbench is open source under the MIT License.</p><div><a href="/graph-workbench/">Home</a><a href="/graph-workbench/execution-graph-vs-context-graph/">Two graphs</a><a href="https://github.com/AngryKarl/graph-workbench">Source</a></div></footer>
+</body>
+</html>

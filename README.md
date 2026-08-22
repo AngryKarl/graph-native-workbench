@@ -8,13 +8,13 @@
 [![Node.js 24+](https://img.shields.io/badge/Node.js-24%2B-339933?logo=node.js&logoColor=white)](package.json)
 [![Industry Packs](https://img.shields.io/badge/standard%20Industry%20Packs-6-6f42c1)](docs/PACK_GALLERY.md)
 
-[简体中文](README.zh-CN.md) · [Pack Gallery](docs/PACK_GALLERY.md) · [Contribute a Pack recipe](https://github.com/AngryKarl/graph-workbench/issues/12) · [Why two graphs?](docs/WHY_TWO_GRAPHS.md) · [Roadmap](ROADMAP.md)
+[Website](https://angrykarl.github.io/graph-workbench/) · [简体中文](README.zh-CN.md) · [Pack Gallery](docs/PACK_GALLERY.md) · [Contribute a Pack recipe](https://github.com/AngryKarl/graph-workbench/issues/12) · [Why two graphs?](docs/WHY_TWO_GRAPHS.md) · [Roadmap](ROADMAP.md)
 
-Graph Workbench is an open-source, graph-native workbench for complex industry
-work. Its flagship journey turns a software issue into a governed release through
-parallel verification, accountable human gates, recovery paths and a portable
-release record. The same runtime can install complete operating models as
-**Industry Packs**.
+Graph Workbench is an open-source, graph-native workbench for governed AI
+workflows. It connects execution graphs with durable context graphs and packages
+domain workflows as installable **Industry Packs**. Its flagship journey turns a
+software issue into a governed release through parallel verification, accountable
+human gates, recovery paths and a portable release record.
 
 Requires Node.js 24+.
 

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Execution graph vs context graph</title>
+  <meta name="description" content="Learn why governed AI workflows need both an execution graph for control flow and a context graph for durable organizational state.">
+  <link rel="canonical" href="https://angrykarl.github.io/graph-workbench/execution-graph-vs-context-graph/">
+  <link rel="stylesheet" href="/graph-workbench/styles.css">
+  <meta property="og:title" content="Execution graph vs context graph">
+  <meta property="og:description" content="One graph coordinates a run. The other preserves what the organization can reuse.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://angrykarl.github.io/graph-workbench/execution-graph-vs-context-graph/">
+  <meta property="og:image" content="https://raw.githubusercontent.com/AngryKarl/graph-workbench/main/docs/assets/graph-workbench-social-preview.jpg">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Execution graph vs context graph","description":"Why governed AI workflows need separate but connected execution and context graphs.","datePublished":"2026-08-22","dateModified":"2026-08-22","author":{"@type":"Organization","name":"Graph Workbench contributors","url":"https://github.com/AngryKarl/graph-workbench"},"mainEntityOfPage":"https://angrykarl.github.io/graph-workbench/execution-graph-vs-context-graph/"}
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/graph-workbench/">Graph Workbench</a>
+    <nav class="site-nav" aria-label="Primary navigation"><a href="/graph-workbench/what-is-graph-workbench/">What it is</a><a href="/graph-workbench/execution-graph-vs-context-graph/" aria-current="page">Two graphs</a><a href="/graph-workbench/industry-packs/">Industry Packs</a><a class="github-link" href="https://github.com/AngryKarl/graph-workbench">GitHub <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main>
+    <header class="article-hero"><div class="article-hero-inner"><p class="eyebrow">Dual-graph architecture</p><h1>Execution graph vs context graph</h1><p class="article-summary">An execution graph answers what should run next. A context graph answers what is now true, why it is trusted and what future work may reuse.</p><p class="article-meta">Based on the Graph Workbench architecture decision · Updated August 22, 2026</p></div></header>
+    <article class="article-body">
+      <h2>They represent different kinds of truth</h2>
+      <table><thead><tr><th></th><th>Execution graph</th><th>Context graph</th></tr></thead><tbody>
+        <tr><th>Primary question</th><td>What should run next?</td><td>What is now true and why?</td></tr>
+        <tr><th>Nodes</th><td>Agents, tools, functions, gates, waits and recovery actions</td><td>Evidence, requirements, risks, decisions, plans and deliverables</td></tr>
+        <tr><th>Edges</th><td>Control flow, branching, joins, retries and loops</td><td>Supports, governs, authorizes, contains, supersedes and derives from</td></tr>
+        <tr><th>Lifetime</th><td>The current run and its checkpoint history</td><td>Durable organizational state across runs</td></tr>
+      </tbody></table>
+
+      <h2>What breaks when only one graph exists</h2>
+      <h3>Execution history without durable context</h3>
+      <p>A later Agent must reconstruct the current decision from logs, prompts or chat. The team can see that a node ran, but not which result is authoritative or which evidence survived review.</p>
+      <h3>Context without execution provenance</h3>
+      <p>Objects appear in a knowledge graph without a reliable account of the policy, quality gate, tool call or human decision that promoted them. The organization cannot explain why a draft became confirmed context.</p>
+
+      <h2>The projection boundary connects them</h2>
+      <div class="flow" aria-label="Dual graph projection loop"><span>Goal and Industry Pack</span><span>Execution graph</span><span>Quality and human gate</span><span>Context projection</span><span>Next run queries context</span></div>
+      <p>A Pack declares a context projector. It runs only after the workflow reaches an approved state and converts selected run state into typed, versioned objects and relations. Every projected object keeps the producing run, node, actor, timestamp and source identifiers.</p>
+      <ul>
+        <li>Temporary implementation state stays in the execution layer.</li>
+        <li>Rejected or incomplete work does not silently become organizational truth.</li>
+        <li>Durable context remains domain-oriented rather than tied to one handler or storage engine.</li>
+        <li>Later runs can query confirmed context through a read-only runtime interface.</li>
+      </ul>
+
+      <div class="callout"><p>The connection is not an analytics add-on. It is the mechanism that turns a disposable Agent run into governed organizational work.</p></div>
+      <h2>A concrete software-delivery example</h2>
+      <p>Run A verifies a change, records code-owner and release-manager decisions, and projects a Release object after approval. Run B observes deployment health, queries that exact approved Release, records its object ID, version and source run, then links a new Deployment observation back to it.</p>
+      <a class="source-link" href="https://github.com/AngryKarl/graph-workbench/blob/main/docs/WHY_TWO_GRAPHS.md">Read the canonical architecture explanation on GitHub →</a>
+    </article>
+  </main>
+  <footer class="site-footer"><p>Graph Workbench is open source under the MIT License.</p><div><a href="/graph-workbench/">Home</a><a href="/graph-workbench/cross-run-agent-memory/">Agent memory</a><a href="https://github.com/AngryKarl/graph-workbench">Source</a></div></footer>
+</body>
+</html>
