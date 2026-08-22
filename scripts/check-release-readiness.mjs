@@ -24,6 +24,7 @@ const requiredFiles = [
   'docs/pages/styles.css',
   'docs/pages/sitemap.xml',
   'docs/pages/llms.txt',
+  'docs/pages/googlebc466a694798aa5c.html',
   'docs/pages/what-is-graph-workbench/index.html',
   'docs/pages/execution-graph-vs-context-graph/index.html',
   'docs/pages/cross-run-agent-memory/index.html',
