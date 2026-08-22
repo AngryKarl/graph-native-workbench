@@ -49,4 +49,12 @@ describe('GitHub Pages discovery surface', () => {
     for (const { canonical } of pages) expect(sitemap).toContain(`<loc>${canonical}</loc>`);
     for (const { canonical } of pages.slice(1)) expect(llms).toContain(`](${canonical})`);
   });
+
+  it('publishes the Google Search Console ownership proof at the site root', async () => {
+    const verification = await readFile(
+      resolve(root, 'docs/pages/googlebc466a694798aa5c.html'),
+      'utf8',
+    );
+    expect(verification.trim()).toBe('google-site-verification: googlebc466a694798aa5c.html');
+  });
 });
